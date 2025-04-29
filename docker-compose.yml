@@ -14,6 +14,17 @@ services:
       - FLASK_APP=app.py
       - PYTHONUNBUFFERED=1
 
+  backend-fastapi:
+    build:
+      context: ./
+      dockerfile: ./server2/Dockerfile
+    ports:
+      - "5001:5000"
+    volumes:
+      - ./server2:/app/server2
+    environment:
+      - PYTHONUNBUFFERED=1
+
   frontend:
     build:
       context: ./
@@ -26,3 +37,4 @@ services:
       - NODE_ENV=development
     depends_on:
       - backend
+      - backend-fastapi
