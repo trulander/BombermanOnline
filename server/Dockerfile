@@ -1,13 +1,20 @@
-FROM python:3.9-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY ./server/requirements.txt ./server/
+# Устанавливаем uv
+RUN pip install --no-cache-dir uv
 
-RUN pip install --no-cache-dir -r server/requirements.txt
+# Копируем pyproject.toml и другие необходимые файлы
+COPY ./pyproject.toml ./
+COPY ./README.md ./
 
+# Устанавливаем зависимости через uv (с флагом --system)
+RUN uv pip install --no-cache-dir --system -e .
+
+# Копируем остальные файлы сервера
 COPY ./server ./server
 
 EXPOSE 5000
 
-CMD ["python", "server/app.py"]
+CMD ["uv", "run", "server/app.py"]
