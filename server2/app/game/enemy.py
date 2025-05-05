@@ -2,6 +2,7 @@ import random
 
 class Enemy:
     def __init__(self, x: float, y: float, size: int, speed: float):
+        self.id: int = None
         self.x: float = x
         self.y: float = y
         self.width: int = size

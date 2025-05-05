@@ -154,13 +154,27 @@ class Game:
         # Move with collision detection (X axis)
         if dx != 0:
             new_x: float = player.x + dx
-            if not self.check_collision(new_x, player.y, player.width, player.height, player):
+            if not self.check_collision(
+                    x=new_x,
+                    y=player.y,
+                    width=player.width,
+                    height=player.height,
+                    entity=player,
+                    ignore_entity=player
+            ):
                 player.x = new_x
         
         # Move with collision detection (Y axis)
         if dy != 0:
             new_y: float = player.y + dy
-            if not self.check_collision(player.x, new_y, player.width, player.height, player):
+            if not self.check_collision(
+                    x=player.x,
+                    y=new_y,
+                    width=player.width,
+                    height=player.height,
+                    entity=player,
+                    ignore_entity=player
+            ):
                 player.y = new_y
         
         # Check collision with power-ups
@@ -207,7 +221,14 @@ class Game:
         new_y: float = enemy.y + dy
         
         # If there's a collision, try a different direction
-        if self.check_collision(new_x, new_y, enemy.width, enemy.height):
+        if self.check_collision(
+                x=new_x,
+                y=new_y,
+                width=enemy.width,
+                height=enemy.height,
+                entity=enemy,
+                ignore_entity=None
+        ):
             enemy.direction = self.get_random_direction()
         else:
             enemy.x = new_x
@@ -294,7 +315,15 @@ class Game:
                 if self.check_explosion_collision(bomb, other_bomb):
                     self.handle_explosion(other_bomb)
     
-    def check_collision(self, x: float, y: float, width: int, height: int, ignore_entity=None) -> bool:
+    def check_collision(
+            self,
+            x: float,
+            y: float,
+            width: int,
+            height: int,
+            entity: Player | Enemy,
+            ignore_entity=None,
+    ) -> bool:
         """
         Check if an entity at (x, y) with the given width and height would collide with any walls,
         blocks, or other entities.
@@ -313,23 +342,25 @@ class Game:
         
         # Check collision with bombs (we don't walk through bombs)
         for bomb in self.bombs:
-            if not bomb.exploded and bomb != ignore_entity:
+            if not bomb.exploded and bomb != ignore_entity and bomb.owner_id != entity.id:
                 bomb_grid_x: int = int((bomb.x + bomb.width/2) / self.cell_size)
                 bomb_grid_y: int = int((bomb.y + bomb.height/2) / self.cell_size)
                 
                 if (bomb_grid_x >= grid_left and bomb_grid_x <= grid_right and
                     bomb_grid_y >= grid_top and bomb_grid_y <= grid_bottom):
                     return True
-        
+
         return False
-    
+
+
     def check_entity_collision(self, entity1: Any, entity2: Any) -> bool:
         """Check if two entities collide using simple rectangle collision detection"""
         return (entity1.x < entity2.x + entity2.width and
                 entity1.x + entity1.width > entity2.x and
                 entity1.y < entity2.y + entity2.height and
                 entity1.y + entity1.height > entity2.y)
-    
+
+
     def check_explosion_collision(self, bomb: Bomb, entity: Any) -> bool:
         """Check if an entity is within the explosion radius of a bomb"""
         entity_grid_x: int = int((entity.x + entity.width/2) / self.cell_size)
@@ -359,19 +390,14 @@ class Game:
             player.invulnerable_timer = 0
         else:
             # Check if game is over (all players dead)
-            all_dead: bool = True
-            for p in self.players.values():
-                if p.lives > 0:
-                    all_dead = False
-                    break
-            
-            if all_dead:
+            alive_players = [p for p in self.players.values() if p.lives > 0]
+            if not alive_players:
                 self.game_over = True
     
     def spawn_power_up(self, x: float, y: float) -> None:
         """Spawn a random power-up at the given position"""
         power_type: PowerUpType = random.choice(list(PowerUpType))
-        self.power_ups.append(PowerUp(x, y, self.cell_size * 0.6, power_type))
+        self.power_ups.append(PowerUp(x, y, self.cell_size, power_type))
     
     def apply_power_up(self, player: Player, power_up: PowerUp) -> None:
         """Apply a power-up to a player"""
@@ -412,14 +438,21 @@ class Game:
                 return False
         
         # Create and add the bomb
-        bomb: Bomb = Bomb(bomb_x, bomb_y, self.cell_size * 0.8, player.bomb_power, player.id)
+        bomb: Bomb = Bomb(
+            x=bomb_x,
+            y=bomb_y,
+            size=self.cell_size,
+            power=player.bomb_power,
+            owner_id=player.id
+        )
         self.bombs.append(bomb)
-        
         return True
     
     def level_complete(self) -> None:
         """Handle level completion logic"""
         self.level += 1
+        # Bonus score for completing level
+        self.score += 500
         
         # Reset map for next level
         self.map.generate_map()
@@ -445,19 +478,18 @@ class Game:
                 player.x = x * self.cell_size
                 player.y = y * self.cell_size
         
-        # Bonus score for completing level
-        self.score += 500
+
     
     def is_active(self) -> bool:
         """Check if the game is still active (not over)"""
-        return not self.game_over
+        return not self.game_over and len(self.players) > 0
     
     def get_state(self) -> Dict[str, Any]:
         """Get the current game state to send to clients"""
         player_states: dict = {}
         for player_id, player in self.players.items():
             player_states[player_id] = {
-                # 'id': player.id,
+                'id': player.id,
                 'x': player.x,
                 'y': player.y,
                 'width': player.width,
@@ -490,7 +522,7 @@ class Game:
                         'y': y * self.cell_size
                     })
 
-            bomb_data: Dict[str, Any] = {
+            bomb_states.append({
                 'x': bomb.x,
                 'y': bomb.y,
                 'width': bomb.width,
@@ -498,11 +530,8 @@ class Game:
                 'exploded': bomb.exploded,
                 'explosionCells': explosion_cells,
                 'ownerId': bomb.owner_id
-            }
-            
+            })
 
-            
-            bomb_states.append(bomb_data)
         
         power_up_states: List[Dict[str, Any]] = []
         for power_up in self.power_ups:

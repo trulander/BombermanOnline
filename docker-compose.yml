@@ -35,6 +35,4 @@ services:
       - ./frontend/src:/app/src
     environment:
       - NODE_ENV=development
-    depends_on:
-      - backend
-      - backend-fastapi
+
