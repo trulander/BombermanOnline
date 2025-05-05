@@ -103,6 +103,7 @@ class Map:
             - end: кортеж (x, y) конечной точки
             - width: ширина видимой области
             - height: высота видимой области
+            - view_offset: смещение видимой области относительно начала карты
         """
         # Если координаты игрока не переданы, возвращаем всю карту
         if player_x is None or player_y is None:
@@ -111,41 +112,34 @@ class Map:
                 'start': (0, 0),
                 'end': (self.width, self.height),
                 'width': self.width,
-                'height': self.height
+                'height': self.height,
+                'view_offset': {'x': 0, 'y': 0}
             }
             
         # Преобразуем координаты игрока в координаты сетки
-        grid_x = int(player_x / 10)  # 40 - размер ячейки
-        grid_y = int(player_y / 10)
+        cell_size = 40  # размер ячейки
+        grid_x = int(player_x / cell_size)
+        grid_y = int(player_y / cell_size)
         
-        # Определяем размер видимой области (по 10 клеток в каждую сторону от игрока)
-        view_radius = 5
+        # Определяем размер видимой области (по 7 клеток в каждую сторону от игрока)
+        view_radius = 7
+        view_width = view_radius * 2 + 1
+        view_height = view_radius * 2 + 1
         
         # Вычисляем начальные координаты видимой области
-        start_x = grid_x - view_radius
-        start_y = grid_y - view_radius
+        start_x = max(0, min(self.width - view_width, grid_x - view_radius))
+        start_y = max(0, min(self.height - view_height, grid_y - view_radius))
         
         # Вычисляем конечные координаты видимой области
-        end_x = grid_x + view_radius + 1
-        end_y = grid_y + view_radius + 1
-        
-        # Если игрок находится близко к краю карты, смещаем видимую область
-        if start_x < 0:
-            end_x = min(end_x - start_x, self.width)  # Расширяем в противоположную сторону
-            start_x = 0
-        elif end_x > self.width:
-            start_x = max(0, start_x - (end_x - self.width))  # Расширяем в противоположную сторону
-            end_x = self.width
-            
-        if start_y < 0:
-            end_y = min(end_y - start_y, self.height)  # Расширяем в противоположную сторону
-            start_y = 0
-        elif end_y > self.height:
-            start_y = max(0, start_y - (end_y - self.height))  # Расширяем в противоположную сторону
-            end_y = self.height
+        end_x = min(self.width, start_x + view_width)
+        end_y = min(self.height, start_y + view_height)
         
         # Получаем срез карты
         grid_slice = self.grid[start_y:end_y, start_x:end_x].copy()
+        
+        # Вычисляем смещение видимой области относительно начала карты в пикселях
+        view_offset_x = start_x * cell_size
+        view_offset_y = start_y * cell_size
         
         # Формируем словарь с данными
         return {
@@ -153,5 +147,9 @@ class Map:
             'start': (start_x, start_y),
             'end': (end_x, end_y),
             'width': end_x - start_x,
-            'height': end_y - start_y
+            'height': end_y - start_y,
+            'view_offset': {
+                'x': view_offset_x,
+                'y': view_offset_y
+            }
         }
