@@ -210,29 +210,80 @@ export class Renderer {
         if (!gameState.enemies) return;
 
         for (const enemy of gameState.enemies) {
-            if (enemy.destroyed) {
-                continue; // Skip rendering destroyed enemies
+            if (enemy.destroyed) continue; // Don't render destroyed enemies
+
+            const x = enemy.x;
+            const y = enemy.y;
+            const width = enemy.width;
+            const height = enemy.height;
+            const centerX = x + width / 2;
+            const centerY = y + height / 2;
+
+            // Draw based on type
+            switch (enemy.type) {
+                case "coin":
+                    this.ctx.fillStyle = "#FFD700"; // Gold
+                    this.ctx.beginPath();
+                    this.ctx.arc(centerX, centerY, width / 2, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    // Add a simple shine effect
+                    this.ctx.fillStyle = "#FFFFE0"; // Light yellow
+                    this.ctx.beginPath();
+                    this.ctx.arc(centerX - width * 0.15, centerY - height * 0.15, width / 5, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    break;
+                case "bear":
+                    this.ctx.fillStyle = "#8B4513"; // SaddleBrown
+                    this.ctx.fillRect(x, y, width, height);
+                    // Simple ears
+                    this.ctx.fillStyle = "#A0522D"; // Sienna
+                    this.ctx.beginPath();
+                    this.ctx.arc(x + width * 0.25, y, width / 4, Math.PI, Math.PI * 2);
+                    this.ctx.arc(x + width * 0.75, y, width / 4, Math.PI, Math.PI * 2);
+                    this.ctx.fill();
+                    // Simple eyes
+                    this.ctx.fillStyle = "#000";
+                    const bearEyeSize = width / 8;
+                    this.ctx.fillRect(x + width * 0.2, y + height * 0.3, bearEyeSize, bearEyeSize);
+                    this.ctx.fillRect(x + width * 0.6, y + height * 0.3, bearEyeSize, bearEyeSize);
+                    break;
+                case "ghost":
+                    this.ctx.fillStyle = "#E6E6FA"; // Lavender
+                    this.ctx.globalAlpha = 0.8; // Make it slightly transparent
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x, y + height);
+                    this.ctx.quadraticCurveTo(x, y, centerX, y);
+                    this.ctx.quadraticCurveTo(x + width, y, x + width, y + height);
+                    // Wavy bottom
+                    this.ctx.quadraticCurveTo(x + width * 0.75, y + height * 0.8, centerX, y + height);
+                    this.ctx.quadraticCurveTo(x + width * 0.25, y + height * 0.8, x, y + height);
+                    this.ctx.fill();
+                    this.ctx.globalAlpha = 1.0; // Reset alpha
+                    // Simple eyes
+                    this.ctx.fillStyle = "#4B0082"; // Indigo
+                    const ghostEyeSize = width / 7;
+                    this.ctx.beginPath();
+                    this.ctx.arc(centerX - width * 0.2, centerY - height * 0.1, ghostEyeSize / 2, 0, Math.PI * 2);
+                    this.ctx.arc(centerX + width * 0.2, centerY - height * 0.1, ghostEyeSize / 2, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    break;
+                default:
+                    // Default fallback rendering (magenta square)
+                    this.ctx.fillStyle = "#FF00FF";
+                    this.ctx.fillRect(x, y, width, height);
+                    break;
             }
 
-            // Draw enemy
-            this.ctx.fillStyle = "#E74C3C"; // Red
-            this.ctx.fillRect(enemy.x, enemy.y, enemy.width, enemy.height);
-
-            // Draw enemy details (eyes)
-            this.ctx.fillStyle = "white";
-            const eyeSize = enemy.width / 6;
-            this.ctx.fillRect(
-                enemy.x + enemy.width / 3 - eyeSize / 2,
-                enemy.y + enemy.height / 3,
-                eyeSize,
-                eyeSize
-            );
-            this.ctx.fillRect(
-                enemy.x + enemy.width * 2 / 3 - eyeSize / 2,
-                enemy.y + enemy.height / 3,
-                eyeSize,
-                eyeSize
-            );
+            // Display lives above the enemy (consistent for all types)
+            this.ctx.fillStyle = "#FFF";
+            this.ctx.strokeStyle = "#000"; // Black outline for visibility
+            this.ctx.lineWidth = 1;
+            this.ctx.font = `bold ${height / 3}px Arial`;
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "bottom";
+            const livesText = enemy.lives.toString();
+            this.ctx.strokeText(livesText, centerX, y - 2);
+            this.ctx.fillText(livesText, centerX, y - 2);
         }
     }
 

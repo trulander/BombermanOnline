@@ -5,9 +5,10 @@ from typing import Dict, List, Tuple, Optional, Any
 
 from app.entities.map import Map
 from app.entities.player import Player
-from app.entities.enemy import Enemy
+from app.entities.enemy import Enemy, EnemyType  # Import EnemyType
 from app.entities.bomb import Bomb
 from app.entities.power_up import PowerUp, PowerUpType
+
 
 class GameService:
     def __init__(self):
@@ -70,13 +71,14 @@ class GameService:
         """Create enemies for the current level"""
         num_enemies: int = 3 + self.level
         self.enemies = []
-        
+        enemy_types = list(EnemyType)
+
         for _ in range(num_enemies):
             valid_position: bool = False
             while not valid_position:
                 x: int = random.randint(1, self.width - 2)
                 y: int = random.randint(1, self.height - 2)
-                
+
                 # Ensure enemy is not on walls or blocks and not too close to players
                 if self.map.get_cell_type(x, y) == 0:
                     # Check distance to all players
@@ -88,19 +90,22 @@ class GameService:
                         if dist < 3:  # Must be at least 3 cells away from players
                             too_close = True
                             break
-                    
+
                     if not too_close:
                         valid_position = True
                         speed: float = 1 + random.random() * 0.5
+                        # Choose a random enemy type
+                        chosen_type: EnemyType = random.choice(enemy_types)
                         self.enemies.append(
                             Enemy(
                                 x=x * self.cell_size,
                                 y=y * self.cell_size,
                                 size=self.cell_size,
-                                speed=speed
+                                speed=speed,
+                                enemy_type=chosen_type  # Assign the chosen type
                             )
                         )
-    
+
     def update(self) -> Dict[str, Any]:
         """Update game state and return the new state"""
         # Calculate delta time
@@ -134,6 +139,8 @@ class GameService:
         """Update a single player"""
         if player.lives <= 0:
             return
+
+        player.update(delta_time=delta_time)
         
         # Handle player movement
         dx: float = 0
@@ -195,13 +202,7 @@ class GameService:
                 if not enemy.destroyed and self.check_entity_collision(player, enemy):
                     self.handle_player_hit(player)
         
-        # Update invulnerability
-        if player.invulnerable:
-            player.invulnerable_timer += delta_time
-            if player.invulnerable_timer >= 2:  # 2 seconds of invulnerability
-                player.invulnerable = False
-                player.invulnerable_timer = 0
-    
+
     def update_enemy(self, enemy: Enemy, delta_time: float) -> None:
         """Update a single enemy"""
         if enemy.destroyed:
@@ -209,6 +210,8 @@ class GameService:
             if enemy.destroy_animation_timer >= 0.5:  # Animation duration
                 self.enemies.remove(enemy)
             return
+
+        enemy.update(delta_time=delta_time)
         
         # Update movement timer
         enemy.move_timer += delta_time
@@ -240,17 +243,17 @@ class GameService:
             enemy.x = new_x
             enemy.y = new_y
         
-        # Check collision with bombs (explosions)
-        for bomb in self.bombs:
-            if bomb.exploded and self.check_explosion_collision(bomb, enemy):
-                enemy.destroyed = True
-                self.score += 100
-                
-                # Chance to spawn power-up when an enemy is destroyed
-                if random.random() < 0.3:  # 30% chance
-                    self.spawn_power_up(enemy.x, enemy.y)
-                
-                break
+        # # Check collision with bombs (explosions)
+        # for bomb in self.bombs:
+        #     if bomb.exploded and self.check_explosion_collision(bomb, enemy):
+        #         enemy.destroyed = True
+        #         self.score += 100
+        #
+        #         # Chance to spawn power-up when an enemy is destroyed
+        #         if random.random() < 0.3:  # 30% chance
+        #             self.spawn_power_up(enemy.x, enemy.y)
+        #
+        #         break
     
     def update_bomb(self, bomb: Bomb, delta_time: float) -> None:
         """Update a single bomb"""
@@ -304,23 +307,39 @@ class GameService:
         for player in list(self.players.values()):
             if not player.invulnerable and self.check_explosion_collision(bomb, player):
                 self.handle_player_hit(player)
-        
-        # Check collision with enemies
+
+        # Check if explosion hits enemies
         for enemy in list(self.enemies):
-            if not enemy.destroyed and self.check_explosion_collision(bomb, enemy):
-                enemy.destroyed = True
-                self.score += 100
-                
-                # Chance to spawn power-up when an enemy is destroyed
-                if random.random() < 0.3:  # 30% chance
-                    self.spawn_power_up(enemy.x, enemy.y)
-        
+            if not enemy.destroyed and not enemy.invulnerable and self.check_explosion_collision(bomb, enemy):
+                self.handle_enemy_hit(enemy)
+
         # Check collision with other bombs, triggering chain reactions
         for other_bomb in self.bombs:
             if other_bomb != bomb and not other_bomb.exploded:
                 if self.check_explosion_collision(bomb, other_bomb):
                     self.handle_explosion(other_bomb)
-    
+
+
+    def handle_enemy_hit(self, enemy):
+        """Handle enemy being hit by explosion"""
+        if enemy.invulnerable:
+            return
+
+        enemy.lives -= 1  # Decrease lives
+        if enemy.lives > 0:
+            # Make enemy invulnerable for a short time
+            enemy.invulnerable = True
+            enemy.invulnerable_timer = 2
+        else:
+            enemy.destroyed = True
+            enemy.destroy_animation_timer = 0
+            self.score += 100
+
+            # Chance to spawn powerup
+            if random.random() < 0.3:  # 30% chance
+                self.spawn_power_up(enemy.x, enemy.y)
+
+
     def check_collision(
             self,
             x: float,
@@ -393,7 +412,7 @@ class GameService:
         if player.lives > 0:
             # Make player invulnerable for a short time
             player.invulnerable = True
-            player.invulnerable_timer = 0
+            player.invulnerable_timer = 2
         else:
             # Check if game is over (all players dead)
             alive_players = [p for p in self.players.values() if p.lives > 0]
@@ -491,36 +510,38 @@ class GameService:
         return not self.game_over and len(self.players) > 0
     
     def get_state(self) -> Dict[str, Any]:
-        """Get the current game state to send to clients"""
-        player_states: dict = {}
+        """Get the full game state to send to clients"""
+        players_data: Dict[str, Dict[str, Any]] = {}
         for player_id, player in self.players.items():
-            player_states[player_id] = {
+            players_data[player_id] = {
                 'id': player.id,
                 'x': player.x,
                 'y': player.y,
                 'width': player.width,
                 'height': player.height,
-                'color': player.color,
                 'lives': player.lives,
-                'max_bombs': player.max_bombs,
-                'bomb_power': player.bomb_power,
-                'invulnerable': player.invulnerable
+                'maxBombs': player.max_bombs,
+                'bombPower': player.bomb_power,
+                'invulnerable': player.invulnerable,
+                'color': player.color
             }
-        
-        enemy_states: List[Dict[str, Any]] = []
+
+        enemies_data: List[Dict[str, Any]] = []
         for enemy in self.enemies:
-            if not enemy.destroyed:
-                enemy_states.append({
-                    'x': enemy.x,
-                    'y': enemy.y,
-                    'width': enemy.width,
-                    'height': enemy.height,
-                    'destroyed': enemy.destroyed
-                })
-        
-        bomb_states: List[Dict[str, Any]] = []
+            enemies_data.append({
+                'x': enemy.x,
+                'y': enemy.y,
+                'width': enemy.width,
+                'height': enemy.height,
+                'type': enemy.type.value,  # Add enemy type
+                'lives': enemy.lives,      # Add enemy lives
+                'invulnerable': enemy.invulnerable,
+                'destroyed': enemy.destroyed
+            })
+
+        bombs_data: List[Dict[str, Any]] = []
         for bomb in self.bombs:
-            explosion_cells = []
+            explosion_cells: List[Dict[str, float]] = []
             if bomb.exploded:
                 for x, y in bomb.explosion_cells:
                     explosion_cells.append({
@@ -528,7 +549,7 @@ class GameService:
                         'y': y * self.cell_size
                     })
 
-            bomb_states.append({
+            bombs_data.append({
                 'x': bomb.x,
                 'y': bomb.y,
                 'width': bomb.width,
@@ -538,10 +559,9 @@ class GameService:
                 'ownerId': bomb.owner_id
             })
 
-        
-        power_up_states: List[Dict[str, Any]] = []
+        power_ups_data: List[Dict[str, Any]] = []
         for power_up in self.power_ups:
-            power_up_states.append({
+            power_ups_data.append({
                 'x': power_up.x,
                 'y': power_up.y,
                 'width': power_up.width,
@@ -549,7 +569,7 @@ class GameService:
                 'type': power_up.type.value
             })
 
-        map_data = {
+        map_data: Dict[str, Any] = {
             'width': self.width,
             'height': self.height,
             'cellSize': self.cell_size,
@@ -557,12 +577,12 @@ class GameService:
         }
 
         return {
-            'players': player_states,
-            'enemies': enemy_states,
-            'bombs': bomb_states,
-            'powerUps': power_up_states,
+            'players': players_data,
+            'enemies': enemies_data,
+            'bombs': bombs_data,
+            'powerUps': power_ups_data,
             'map': map_data,
             'score': self.score,
             'level': self.level,
             'gameOver': self.game_over
-        } 
+        }

@@ -17,6 +17,8 @@ export interface GameState {
         y: number;
         width: number;
         height: number;
+        type: string; // Add enemy type
+        lives: number; // Add enemy lives
         destroyed: boolean;
     }[];
     bombs: {

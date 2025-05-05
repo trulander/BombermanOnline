@@ -32,8 +32,13 @@ class Entity:
         self.color: str = color
 
     def update(self, delta_time: float) -> None:
-        """Обновляет состояние сущности. Должен быть переопределен в дочерних классах."""
-        pass
+        """Обновляет состояние сущности. Должен быть расширен в дочерних классах."""
+        # Update invulnerability
+        if self.invulnerable:
+            self.invulnerable_timer -= delta_time
+            if self.invulnerable_timer <= 0:
+                self.invulnerable = False
+                self.invulnerable_timer = 0
 
     def draw(self) -> dict:
         """Возвращает данные для отрисовки сущности. Может быть переопределен."""

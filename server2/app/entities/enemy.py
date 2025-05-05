@@ -1,13 +1,26 @@
 import random
+from enum import Enum
 from .entity import Entity
 
+class EnemyType(Enum):
+    COIN = "coin"
+    BEAR = "bear"
+    GHOST = "ghost"
+
 class Enemy(Entity):
+    ENEMY_LIVES: dict[EnemyType, int] = {
+        EnemyType.COIN: 1,
+        EnemyType.BEAR: 3,
+        EnemyType.GHOST: 2,
+    }
+
     def __init__(
             self,
             x: float,
             y: float,
             size: float,
-            speed: float
+            speed: float,
+            enemy_type: EnemyType
     ):
         super().__init__(
             x=x,
@@ -16,9 +29,12 @@ class Enemy(Entity):
             height=size * 0.8,
             speed=speed,
             ai=True,
-            name="Enemy"
+            name=f"Enemy_{enemy_type.value}"
         )
         
+        self.type: EnemyType = enemy_type
+        self.lives: int = self.ENEMY_LIVES[enemy_type]
+
         # Movement
         self.move_timer: float = 0
         self.change_direction_interval: float = 1.0 + random.random() * 2.0
@@ -29,7 +45,7 @@ class Enemy(Entity):
         # State
         self.destroyed: bool = False
         self.destroy_animation_timer: float = 0
-    
+
     def get_random_direction(self) -> tuple[float, float]:
         """Get a random normalized direction vector"""
         # Choose one of four cardinal directions
