@@ -1,6 +1,6 @@
 from enum import Enum
 
-from app.game.player import Player
+from app.entities.player import Player
 
 
 class PowerUpType(Enum):

@@ -10,7 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app.routes.api import router
 from config import settings
 
-from services.game_service import GameService
+from services.socket_io_service import SocketIOService
 
 # Создаем FastAPI приложение
 app = FastAPI(
@@ -28,10 +28,10 @@ app.add_middleware(
 )
 
 # Инициализируем игровой сервис
-game_service = GameService()
+socket_io_service = SocketIOService()
 
 # Создаем приложение Socket.IO
-socket_app = socketio.ASGIApp(game_service.sio)
+socket_app = socketio.ASGIApp(socket_io_service.sio)
 
 # Монтируем Socket.IO приложение под путь "/socket.io/"
 app.mount("/socket.io", socket_app)
@@ -47,7 +47,7 @@ if os.path.exists(static_dir):
 # Запускаем игровой цикл при старте приложения
 @app.on_event("startup")
 async def startup_event() -> None:
-    asyncio.create_task(game_service.start_game_loop())
+    asyncio.create_task(socket_io_service.start_game_loop())
     # await game_service.start_game_loop()
 
 
