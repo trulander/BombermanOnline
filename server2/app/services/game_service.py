@@ -92,8 +92,14 @@ class GameService:
                     if not too_close:
                         valid_position = True
                         speed: float = 1 + random.random() * 0.5
-                        self.enemies.append(Enemy(x * self.cell_size, y * self.cell_size, 
-                                                  self.cell_size, speed))
+                        self.enemies.append(
+                            Enemy(
+                                x=x * self.cell_size,
+                                y=y * self.cell_size,
+                                size=self.cell_size,
+                                speed=speed
+                            )
+                        )
     
     def update(self) -> Dict[str, Any]:
         """Update game state and return the new state"""

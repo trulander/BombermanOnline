@@ -1,7 +1,6 @@
 from enum import Enum
-
-from app.entities.player import Player
-
+from .entity import Entity
+from .player import Player # Keep for type hinting in apply_to_player
 
 class PowerUpType(Enum):
     BOMB_UP = 'BOMB_UP'
@@ -9,12 +8,17 @@ class PowerUpType(Enum):
     SPEED_UP = 'SPEED_UP'
     LIFE_UP = 'LIFE_UP'
 
-class PowerUp:
-    def __init__(self, x: float, y: float, size: int, power_type: PowerUpType):
-        self.width: float = size * 0.7
-        self.height: float = size * 0.7
-        self.x: float = x + (size - self.width) / 2
-        self.y: float = y + (size - self.height) / 2
+class PowerUp(Entity):
+    def __init__(self, x: float, y: float, size: float, power_type: PowerUpType):
+        width = size * 0.7
+        height = size * 0.7
+        super().__init__(
+            x=x + (size - width) / 2,
+            y=y + (size - height) / 2,
+            width=width,
+            height=height,
+            name=f"PowerUp_{power_type.name}"
+        )
         self.type: PowerUpType = power_type
         
     def apply_to_player(self, player: Player) -> None:

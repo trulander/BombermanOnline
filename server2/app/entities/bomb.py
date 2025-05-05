@@ -1,9 +1,8 @@
-class Bomb:
-    def __init__(self, x: float, y: float, size: int, power: int, owner_id: str):
-        self.x: float = x
-        self.y: float = y
-        self.width: int = size
-        self.height: int = size
+from .entity import Entity
+
+class Bomb(Entity):
+    def __init__(self, x: float, y: float, size: float, power: int, owner_id: str):
+        super().__init__(x=x, y=y, width=size, height=size, name="Bomb")
         self.power: int = power
         self.owner_id: str = owner_id
         
@@ -13,4 +12,4 @@ class Bomb:
         self.explosion_timer: float = 0
         
         # Explosion cells will be populated when the bomb explodes
-        self.explosion_cells: list[tuple[int, int]] = [] 
+        self.explosion_cells: list[tuple[int, int]] = []

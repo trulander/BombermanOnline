@@ -1,4 +1,5 @@
-from typing import TypedDict, Optional
+from typing import TypedDict
+from .entity import Entity
 
 class PlayerInputs(TypedDict):
     up: bool
@@ -7,23 +8,21 @@ class PlayerInputs(TypedDict):
     right: bool
     bomb: bool
 
-class Player:
+class Player(Entity):
     # Colors for different players
     COLORS: list[str] = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12']
     
     def __init__(self, player_id: str):
-        self.id: str = player_id
-        self.x: float = 0
-        self.y: float = 0
-        self.width: int = 32  # Slightly smaller than cell size
-        self.height: int = 32
-        self.speed: float = 3
+        super().__init__(
+            entity_id=player_id,
+            width=32.0,
+            height=32.0,
+            speed=3.0,
+            lives=3,
+            color=self.COLORS[0] # Default color, will be assigned later
+        )
         self.max_bombs: int = 1
         self.bomb_power: int = 1
-        self.lives: int = 3
-        self.invulnerable: bool = False
-        self.invulnerable_timer: float = 0
-        self.color: str = self.COLORS[0]  # Default color, will be assigned based on player index
         
         # Input state
         self.inputs: PlayerInputs = {
@@ -38,4 +37,4 @@ class Player:
         """Update player inputs"""
         for key, value in inputs.items():
             if key in self.inputs:
-                self.inputs[key] = value 
+                self.inputs[key] = value

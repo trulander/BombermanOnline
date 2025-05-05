@@ -1,13 +1,23 @@
 import random
+from .entity import Entity
 
-class Enemy:
-    def __init__(self, x: float, y: float, size: int, speed: float):
-        self.id: int = None
-        self.x: float = x
-        self.y: float = y
-        self.width: int = size * 0.8
-        self.height: int = size * 0.8
-        self.speed: float = speed
+class Enemy(Entity):
+    def __init__(
+            self,
+            x: float,
+            y: float,
+            size: float,
+            speed: float
+    ):
+        super().__init__(
+            x=x,
+            y=y,
+            width=size * 0.8,
+            height=size * 0.8,
+            speed=speed,
+            ai=True,
+            name="Enemy"
+        )
         
         # Movement
         self.move_timer: float = 0
@@ -24,4 +34,4 @@ class Enemy:
         """Get a random normalized direction vector"""
         # Choose one of four cardinal directions
         choices = [(0, 1), (1, 0), (0, -1), (-1, 0)]
-        return random.choice(choices) 
+        return random.choice(choices)
