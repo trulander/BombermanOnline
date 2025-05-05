@@ -89,12 +89,12 @@ class Map:
         if self.grid[y, x] == CellType.BREAKABLE_BLOCK:
             self.grid[y, x] = CellType.EMPTY
             
-    def get_map(self, start: Tuple[int, int] | None = None, end: Tuple[int, int] | None = None) -> dict:
-        """Получает часть карты в указанных границах
+    def get_map(self, player_x: float | None = None, player_y: float | None = None) -> dict:
+        """Получает часть карты в указанных границах, центрированную относительно позиции игрока
         
         Args:
-            start: Кортеж (x, y) начальной точки области. По умолчанию (0, 0)
-            end: Кортеж (x, y) конечной точки области. По умолчанию (50, 50)
+            player_x: X-координата игрока
+            player_y: Y-координата игрока
             
         Returns:
             Словарь с данными карты, содержащий:
@@ -104,21 +104,45 @@ class Map:
             - width: ширина видимой области
             - height: высота видимой области
         """
-        # Устанавливаем значения по умолчанию
-        if start is None:
-            start = (0, 0)
-        if end is None:
-            end = (50, 50)
+        # Если координаты игрока не переданы, возвращаем всю карту
+        if player_x is None or player_y is None:
+            return {
+                'grid': self.grid.tolist(),
+                'start': (0, 0),
+                'end': (self.width, self.height),
+                'width': self.width,
+                'height': self.height
+            }
             
-        # Получаем координаты
-        start_x, start_y = start
-        end_x, end_y = end
+        # Преобразуем координаты игрока в координаты сетки
+        grid_x = int(player_x / 10)  # 40 - размер ячейки
+        grid_y = int(player_y / 10)
         
-        # Проверяем и корректируем границы
-        start_x = max(0, min(start_x, self.width - 1))
-        start_y = max(0, min(start_y, self.height - 1))
-        end_x = max(0, min(end_x, self.width))
-        end_y = max(0, min(end_y, self.height))
+        # Определяем размер видимой области (по 10 клеток в каждую сторону от игрока)
+        view_radius = 5
+        
+        # Вычисляем начальные координаты видимой области
+        start_x = grid_x - view_radius
+        start_y = grid_y - view_radius
+        
+        # Вычисляем конечные координаты видимой области
+        end_x = grid_x + view_radius + 1
+        end_y = grid_y + view_radius + 1
+        
+        # Если игрок находится близко к краю карты, смещаем видимую область
+        if start_x < 0:
+            end_x = min(end_x - start_x, self.width)  # Расширяем в противоположную сторону
+            start_x = 0
+        elif end_x > self.width:
+            start_x = max(0, start_x - (end_x - self.width))  # Расширяем в противоположную сторону
+            end_x = self.width
+            
+        if start_y < 0:
+            end_y = min(end_y - start_y, self.height)  # Расширяем в противоположную сторону
+            start_y = 0
+        elif end_y > self.height:
+            start_y = max(0, start_y - (end_y - self.height))  # Расширяем в противоположную сторону
+            end_y = self.height
         
         # Получаем срез карты
         grid_slice = self.grid[start_y:end_y, start_x:end_x].copy()

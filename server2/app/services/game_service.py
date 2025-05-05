@@ -14,8 +14,8 @@ class GameService:
     def __init__(self):
         # Game settings
         self.cell_size: int = 40
-        self.width: int = 15
-        self.height: int = 13
+        self.width: int = 55
+        self.height: int = 53
         
         # Game state
         self.players: Dict[str, Player] = {}  # Dictionary of player_id -> Player
@@ -570,7 +570,7 @@ class GameService:
             })
 
         # Получаем данные карты с помощью обновленного метода get_map
-        map_data: Dict[str, Any] = self.map.get_map()
+        map_data: Dict[str, Any] = self.map.get_map(player_x=player.x, player_y=player.y)
         map_data['cellSize'] = self.cell_size
 
         return {
