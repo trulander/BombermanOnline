@@ -554,9 +554,9 @@ class Game:
             'players': player_states,
             'enemies': enemy_states,
             'bombs': bomb_states,
-            'power_ups': power_up_states,
+            'powerUps': power_up_states,
             'map': map_data,
             'score': self.score,
             'level': self.level,
-            'game_over': self.game_over
+            'gameOver': self.game_over
         } 

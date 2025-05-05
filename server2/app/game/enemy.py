@@ -5,8 +5,8 @@ class Enemy:
         self.id: int = None
         self.x: float = x
         self.y: float = y
-        self.width: int = size
-        self.height: int = size
+        self.width: int = size * 0.8
+        self.height: int = size * 0.8
         self.speed: float = speed
         
         # Movement
