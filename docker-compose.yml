@@ -1,19 +1,6 @@
 version: '3'
 
 services:
-  backend:
-    build:
-      context: ./
-      dockerfile: ./server/Dockerfile
-    ports:
-      - "5000:5000"
-    volumes:
-      - ./server:/app/server
-    environment:
-      - FLASK_ENV=development
-      - FLASK_APP=app.py
-      - PYTHONUNBUFFERED=1
-
   backend-fastapi:
     build:
       context: ./

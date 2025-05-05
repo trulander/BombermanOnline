@@ -569,12 +569,9 @@ class GameService:
                 'type': power_up.type.value
             })
 
-        map_data: Dict[str, Any] = {
-            'width': self.width,
-            'height': self.height,
-            'cellSize': self.cell_size,
-            'grid': self.map.grid
-        }
+        # Получаем данные карты с помощью обновленного метода get_map
+        map_data: Dict[str, Any] = self.map.get_map()
+        map_data['cellSize'] = self.cell_size
 
         return {
             'players': players_data,

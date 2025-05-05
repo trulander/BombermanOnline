@@ -10,12 +10,6 @@
 
 ## Технический стек
 
-### Бэкенд v1 (Flask):
-- Python 3.12
-- Flask
-- Flask-SocketIO
-- Eventlet
-
 ### Бэкенд v2 (FastAPI):
 - Python 3.12
 - FastAPI
