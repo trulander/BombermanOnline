@@ -79,14 +79,9 @@ export class Renderer {
             gameState.map
         );
         
-        // Устанавливаем целевое смещение карты
-        this.targetMapOffset.x = viewOffset.x;
-        this.targetMapOffset.y = viewOffset.y;
-        
-        // Плавно перемещаем текущее смещение к целевому
-        const lerpFactor = Math.min(1, deltaTime * 5); // Скорость плавного перехода
-        this.currentMapOffset.x += (this.targetMapOffset.x - this.currentMapOffset.x) * lerpFactor;
-        this.currentMapOffset.y += (this.targetMapOffset.y - this.currentMapOffset.y) * lerpFactor;
+        // Устанавливаем текущее смещение карты без интерполяции
+        this.currentMapOffset.x = viewOffset.x;
+        this.currentMapOffset.y = viewOffset.y;
         
         // Определяем размер видимой области для отображения
         this.viewWidth = (this.viewRadius * 2 + 1) * this.cellSize;
@@ -102,14 +97,14 @@ export class Renderer {
         // Очищаем canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Вычисляем разницу между целевым и текущим смещением для корректировки координат
-        const offsetDiffX = this.targetMapOffset.x - this.currentMapOffset.x;
-        const offsetDiffY = this.targetMapOffset.y - this.currentMapOffset.y;
+        // Теперь offsetDiff всегда нулевой, так как нет интерполяции
+        const offsetDiffX = 0;
+        const offsetDiffY = 0;
         
         // Рендерим фон (сетка) для всей видимой области
         this.renderBackground();
         
-        // Рендерим игровые объекты с учетом плавного смещения
+        // Рендерим игровые объекты
         this.renderMapSection(gameState, this.currentMapOffset.x, this.currentMapOffset.y, offsetDiffX, offsetDiffY);
         this.renderPowerUps(gameState, offsetDiffX, offsetDiffY);
         this.renderBombs(gameState, offsetDiffX, offsetDiffY);
@@ -161,18 +156,13 @@ export class Renderer {
         const viewCenterX = this.viewWidth / 2;
         const viewCenterY = this.viewHeight / 2;
         
-        // Для первого вызова используем поцизию игрока, центрированную на экране
+        // Для первого вызова используем позицию игрока, центрированную на экране
         if (this.currentMapOffset.x === 0 && this.currentMapOffset.y === 0) {
             // Вычисляем начальное смещение, чтобы центрировать игрока
             const initialX = Math.max(0, playerX - viewCenterX);
             const initialY = Math.max(0, playerY - viewCenterY);
             
             console.log('Инициализация начального смещения:', { x: initialX, y: initialY });
-            
-            // Сразу устанавливаем текущее смещение
-            this.currentMapOffset.x = initialX;
-            this.currentMapOffset.y = initialY;
-            
             return { x: initialX, y: initialY };
         }
         
@@ -184,24 +174,24 @@ export class Renderer {
         const deltaX = playerViewX - viewCenterX;
         const deltaY = playerViewY - viewCenterY;
         
-        // Новое смещение карты - двигаем только если игрок вышел из мёртвой зоны
+        // Новое смещение карты - прямая позиция без плавных переходов
         let newOffsetX = this.currentMapOffset.x;
         let newOffsetY = this.currentMapOffset.y;
         
         // Проверяем, вышел ли игрок за пределы мёртвой зоны по X
         if (Math.abs(deltaX) > this.deadZoneSize.width / 2) {
-            // Определяем, насколько игрок вышел за пределы мёртвой зоны
-            const exceedX = Math.abs(deltaX) - this.deadZoneSize.width / 2;
-            // Смещаем карту в том же направлении, что и движение игрока
-            newOffsetX += exceedX * Math.sign(deltaX);
+            // На сколько игрок вышел за пределы мёртвой зоны
+            const exceedX = deltaX - (Math.sign(deltaX) * this.deadZoneSize.width / 2);
+            // Мгновенно перемещаем карту вслед за игроком
+            newOffsetX += exceedX;
         }
         
         // Проверяем, вышел ли игрок за пределы мёртвой зоны по Y
         if (Math.abs(deltaY) > this.deadZoneSize.height / 2) {
-            // Определяем, насколько игрок вышел за пределы мёртвой зоны
-            const exceedY = Math.abs(deltaY) - this.deadZoneSize.height / 2;
-            // Смещаем карту в том же направлении, что и движение игрока
-            newOffsetY += exceedY * Math.sign(deltaY);
+            // На сколько игрок вышел за пределы мёртвой зоны
+            const exceedY = deltaY - (Math.sign(deltaY) * this.deadZoneSize.height / 2);
+            // Мгновенно перемещаем карту вслед за игроком
+            newOffsetY += exceedY;
         }
         
         // Проверка и ограничение границ карты
