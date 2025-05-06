@@ -17,9 +17,10 @@ export interface GameState {
         y: number;
         width: number;
         height: number;
-        type: string; // Add enemy type
-        lives: number; // Add enemy lives
+        type: string;
+        lives: number;
         destroyed: boolean;
+        invulnerable: boolean;
     }[];
     bombs: {
         x: number;
@@ -44,7 +45,12 @@ export interface GameState {
         width: number;
         height: number;
         cellSize: number;
-        grid: number[][];
+        grid?: number[][]; // Полная карта при первой загрузке
+        changedCells?: { // Изменения в карте при обновлениях
+            x: number;
+            y: number;
+            type: number;
+        }[];
     };
     score: number;
     level: number;

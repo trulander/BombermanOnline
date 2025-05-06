@@ -2,7 +2,7 @@ import random
 
 from enum import IntEnum
 import numpy as np
-from typing import Tuple
+
 
 class CellType(IntEnum):
     """Типы ячеек на карте"""
@@ -16,6 +16,8 @@ class Map:
         self.height: int = height
         # Initialize grid with empty cells using numpy array
         self.grid: np.ndarray = np.zeros((height, width), dtype=np.int8)
+        # Для отслеживания изменений на карте
+        self.changed_cells: list[dict[str, int]] = []
     
     def generate_map(self) -> None:
         """Генерирует новую карту со стенами и разрушаемыми блоками"""
@@ -33,7 +35,7 @@ class Map:
         
         # Размещаем разрушаемые блоки случайным образом
         empty_mask = (self.grid == CellType.EMPTY)
-        random_blocks = np.random.random(self.grid.shape) < 0.4
+        random_blocks = np.random.random(self.grid.shape) < 0.1
         blocks_mask = empty_mask & random_blocks
         
         # Исключаем стартовые зоны игроков
@@ -41,6 +43,9 @@ class Map:
             for x in range(self.width):
                 if blocks_mask[y, x] and not self.is_player_start_area(x, y):
                     self.grid[y, x] = CellType.BREAKABLE_BLOCK
+        
+        # Сбрасываем список изменений при генерации новой карты
+        self.changed_cells = []
     
     def is_player_start_area(self, x: int, y: int) -> bool:
         """Check if position is in a player starting area (corners)"""
@@ -80,7 +85,7 @@ class Map:
         return cell_type in (CellType.SOLID_WALL, CellType.BREAKABLE_BLOCK)
     
     def destroy_block(self, x: int, y: int) -> None:
-        """Разрушает разрушаемый блок"""
+        """Разрушает разрушаемый блок и отслеживает изменения"""
         # Проверка границ
         if x < 0 or x >= self.width or y < 0 or y >= self.height:
             return
@@ -88,68 +93,32 @@ class Map:
         # Разрушаем только разрушаемые блоки
         if self.grid[y, x] == CellType.BREAKABLE_BLOCK:
             self.grid[y, x] = CellType.EMPTY
+            # Отслеживаем изменения
+            self.changed_cells.append(
+                {
+                    'x': x,
+                    'y': y,
+                    'type': int(CellType.EMPTY)
+                }
+            )
             
-    def get_map(self, player_x: float | None = None, player_y: float | None = None) -> dict:
-        """Получает часть карты в указанных границах, центрированную относительно позиции игрока
-        
-        Args:
-            player_x: X-координата игрока
-            player_y: Y-координата игрока
-            
+    def get_map(self) -> dict:
+        """Получает данные карты
+
         Returns:
             Словарь с данными карты, содержащий:
-            - grid: массив numpy с частью карты в указанных границах
-            - start: кортеж (x, y) начальной точки
-            - end: кортеж (x, y) конечной точки
-            - width: ширина видимой области
-            - height: высота видимой области
-            - view_offset: смещение видимой области относительно начала карты
+            - grid: массив numpy с полной картой
         """
-        # Если координаты игрока не переданы, возвращаем всю карту
-        if player_x is None or player_y is None:
-            return {
-                'grid': self.grid.tolist(),
-                'start': (0, 0),
-                'end': (self.width, self.height),
-                'width': self.width,
-                'height': self.height,
-                'view_offset': {'x': 0, 'y': 0}
-            }
-            
-        # Преобразуем координаты игрока в координаты сетки
-        cell_size = 40  # размер ячейки
-        grid_x = int(player_x / cell_size)
-        grid_y = int(player_y / cell_size)
-        
-        # Определяем размер видимой области (по 7 клеток в каждую сторону от игрока)
-        view_radius = 7
-        view_width = view_radius * 2 + 1
-        view_height = view_radius * 2 + 1
-        
-        # Вычисляем начальные координаты видимой области
-        start_x = max(0, min(self.width - view_width, grid_x - view_radius))
-        start_y = max(0, min(self.height - view_height, grid_y - view_radius))
-        
-        # Вычисляем конечные координаты видимой области
-        end_x = min(self.width, start_x + view_width)
-        end_y = min(self.height, start_y + view_height)
-        
-        # Получаем срез карты
-        grid_slice = self.grid[start_y:end_y, start_x:end_x].copy()
-        
-        # Вычисляем смещение видимой области относительно начала карты в пикселях
-        view_offset_x = start_x * cell_size
-        view_offset_y = start_y * cell_size
-        
-        # Формируем словарь с данными
         return {
-            'grid': grid_slice.tolist(),
-            'start': (start_x, start_y),
-            'end': (end_x, end_y),
-            'width': end_x - start_x,
-            'height': end_y - start_y,
-            'view_offset': {
-                'x': view_offset_x,
-                'y': view_offset_y
-            }
+            'grid': self.grid.tolist()
         }
+        
+    def clear_changes(self) -> None:
+        """Очищает список отслеживаемых изменений"""
+        self.changed_cells = []
+        
+    def get_changes(self) -> list[dict[str, int]]:
+        """Возвращает список изменённых ячеек и очищает его"""
+        changes = self.changed_cells.copy()
+        self.clear_changes()
+        return changes

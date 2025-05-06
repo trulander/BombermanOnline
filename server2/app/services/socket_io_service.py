@@ -35,6 +35,7 @@ class SocketIOService:
         self.sio.on("join_game", self.handle_join_game)
         self.sio.on("input", self.handle_input)
         self.sio.on("place_bomb", self.handle_place_bomb)
+        self.sio.on("get_game_state", self.handle_get_game_state)
     
     async def start_game_loop(self) -> None:
         """Запуск игрового цикла"""
@@ -89,7 +90,10 @@ class SocketIOService:
         if success:
             await self.sio.enter_room(sid, game_id)
             self.session_game_map[sid] = game_id
+            
+            # Получаем начальное состояние игры с данными для текущего игрока
             game_state = self.games[game_id].get_state()
+            
             return {
                 'success': True,
                 'player_id': sid,
@@ -97,6 +101,25 @@ class SocketIOService:
             }
         else:
             return {'success': False, 'message': 'Game is full'}
+    
+    async def handle_get_game_state(self, sid: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Получение текущего состояния игры"""
+        game_id = data.get('game_id')
+        
+        if game_id in self.games:
+            # Получаем состояние игры (только с изменениями карты)
+            game_state = self.games[game_id].get_state()
+            
+            # Дополнительно получаем полную карту
+            full_map = self.games[game_id].map.get_map()
+            
+            return {
+                'success': True, 
+                'game_state': game_state,
+                'full_map': full_map  # Всегда отправляем полную карту в отдельном поле
+            }
+        
+        return {'success': False, 'message': 'Game not found'}
     
     async def handle_input(self, sid: str, data: Dict[str, Any]) -> None:
         """Обработка ввода игрока"""
@@ -121,5 +144,6 @@ class SocketIOService:
             if player:
                 success = game.place_bomb(player)
                 if success:
-                    updated_state = game.get_state()
-                    await self.sio.emit('game_update', updated_state, room=game_id)
+                    # Обновляем состояние игры для всех игроков
+                    game_state = game.get_state()
+                    await self.sio.emit('game_update', game_state, room=game_id)

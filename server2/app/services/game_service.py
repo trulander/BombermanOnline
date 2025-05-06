@@ -1,7 +1,7 @@
 import time
 import random
 import math
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Optional, Any, Set
 
 from app.entities.map import Map
 from app.entities.player import Player
@@ -511,24 +511,20 @@ class GameService:
     
     def get_state(self) -> Dict[str, Any]:
         """Get the full game state to send to clients"""
-        # Получаем первого игрока для центрирования карты
-        main_player = next(iter(self.players.values())) if self.players else None
-        main_player_x = main_player.x if main_player else None
-        main_player_y = main_player.y if main_player else None
+        # Подготавливаем данные карты - только изменения
+        map_data = {
+            'width': self.map.width,
+            'height': self.map.height,
+            'changedCells': self.map.get_changes(),
+            'cellSize': self.cell_size
+        }
         
-        # Получаем карту и смещение видимой области
-        map_data = self.map.get_map(player_x=main_player_x, player_y=main_player_y)
-        map_data['cellSize'] = self.cell_size
-        view_offset_x = map_data['view_offset']['x']
-        view_offset_y = map_data['view_offset']['y']
-        
-        # Подготавливаем данные игроков с учетом смещения
+        # Подготавливаем данные игроков
         players_data: Dict[str, Dict[str, Any]] = {}
         for player_id, player in self.players.items():
             players_data[player_id] = {
-                'id': player.id,
-                'x': player.x - view_offset_x,
-                'y': player.y - view_offset_y,
+                'x': player.x,
+                'y': player.y,
                 'width': player.width,
                 'height': player.height,
                 'lives': player.lives,
@@ -538,12 +534,12 @@ class GameService:
                 'color': player.color
             }
 
-        # Подготавливаем данные врагов с учетом смещения
+        # Подготавливаем данные врагов
         enemies_data: List[Dict[str, Any]] = []
         for enemy in self.enemies:
             enemies_data.append({
-                'x': enemy.x - view_offset_x,
-                'y': enemy.y - view_offset_y,
+                'x': enemy.x,
+                'y': enemy.y,
                 'width': enemy.width,
                 'height': enemy.height,
                 'type': enemy.type.value,
@@ -552,19 +548,19 @@ class GameService:
                 'destroyed': enemy.destroyed
             })
 
-        # Подготавливаем данные бомб с учетом смещения
+        # Подготавливаем данные бомб
         bombs_data: List[Dict[str, Any]] = []
         for bomb in self.bombs:
             explosion_cells: List[Dict[str, float]] = []
             if bomb.exploded:
                 for x, y in bomb.explosion_cells:
                     explosion_cells.append({
-                        'x': (x * self.cell_size) - view_offset_x,
-                        'y': (y * self.cell_size) - view_offset_y
+                        'x': (x * self.cell_size),
+                        'y': (y * self.cell_size)
                     })
             bombs_data.append({
-                'x': bomb.x - view_offset_x,
-                'y': bomb.y - view_offset_y,
+                'x': bomb.x,
+                'y': bomb.y,
                 'width': bomb.width,
                 'height': bomb.height,
                 'exploded': bomb.exploded,
@@ -572,11 +568,11 @@ class GameService:
                 'ownerId': bomb.owner_id
             })
 
-        # Подготавливаем данные усилений с учетом смещения
+        # Подготавливаем данные усилений
         power_ups_data = [
             {
-                'x': power_up.x - view_offset_x,
-                'y': power_up.y - view_offset_y,
+                'x': power_up.x,
+                'y': power_up.y,
                 'width': power_up.width,
                 'height': power_up.height,
                 'type': power_up.type.value
