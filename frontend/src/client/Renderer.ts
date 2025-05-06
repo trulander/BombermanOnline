@@ -547,42 +547,9 @@ export class Renderer {
             let renderX: number;
             let renderY: number;
             
-            if (playerId === currentPlayerId) {
-                // Для текущего игрока вычисляем позицию внутри "мёртвой зоны"
-                const viewCenterX = this.viewWidth / 2;
-                const viewCenterY = this.viewHeight / 2;
-                
-                // Позиция игрока относительно текущего смещения карты
-                const playerRelX = player.x - this.currentMapOffset.x;
-                const playerRelY = player.y - this.currentMapOffset.y;
-                
-                // Смещение от центра
-                const deltaX = playerRelX - viewCenterX;
-                const deltaY = playerRelY - viewCenterY;
-                
-                // Если игрок внутри мёртвой зоны, используем его реальную позицию
-                if (Math.abs(deltaX) <= this.deadZoneSize.width / 2 && 
-                    Math.abs(deltaY) <= this.deadZoneSize.height / 2) {
-                    renderX = playerRelX + offsetDiffX;
-                    renderY = playerRelY + offsetDiffY;
-                } else {
-                    // Если игрок вышел за мёртвую зону, ограничиваем его движение
-                    // Центр + смещение в зависимости от направления
-                    const signX = Math.sign(deltaX);
-                    const signY = Math.sign(deltaY);
-                    
-                    // Ограничиваем максимальное смещение от центра размером мёртвой зоны
-                    const clampedDeltaX = signX * Math.min(Math.abs(deltaX), this.deadZoneSize.width / 2);
-                    const clampedDeltaY = signY * Math.min(Math.abs(deltaY), this.deadZoneSize.height / 2);
-                    
-                    renderX = viewCenterX + clampedDeltaX + offsetDiffX;
-                    renderY = viewCenterY + clampedDeltaY + offsetDiffY;
-                }
-            } else {
-                // Для других игроков вычисляем относительные координаты
-                renderX = this.getRelativeX(player.x) + offsetDiffX;
-                renderY = this.getRelativeY(player.y) + offsetDiffY;
-            }
+            // Для всех игроков используем их реальные координаты относительно смещения карты
+            renderX = this.getRelativeX(player.x) + offsetDiffX;
+            renderY = this.getRelativeY(player.y) + offsetDiffY;
 
             // Draw player
             const width = player.width;
