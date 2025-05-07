@@ -15,7 +15,7 @@ export class Renderer {
     private viewHeight: number = 0;
     
     // Размер видимой области в клетках (для определения зоны видимости)
-    private viewRadius: number = 7;
+    private viewRadius: number = 6;
     
     // Размер "мёртвой зоны" - области, в которой игрок может двигаться без смещения карты
     private deadZoneSize = {
@@ -24,7 +24,7 @@ export class Renderer {
     };
     
     // Флаг для отладки
-    private debugMode: boolean = true;
+    private debugMode: boolean = false;
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -38,7 +38,7 @@ export class Renderer {
 
     public render(gameState: GameState, currentPlayerId: string | null): void {
         const currentTime = performance.now();
-        const deltaTime = (currentTime - this.previousFrameTime) / 1000;
+        const deltaTime = (currentTime - this.previousFrameTime) / 2;
         this.previousFrameTime = currentTime;
         
         // Проверяем наличие необходимых данных
@@ -57,8 +57,8 @@ export class Renderer {
         // Получаем текущего игрока
         const currentPlayer = gameState.players[currentPlayerId];
         
-        // Устанавливаем размер ячейки
-        this.cellSize = gameState.map.cellSize || 40;
+        // // Устанавливаем размер ячейки
+        // this.cellSize = gameState.map.cellSize || 40;
         
         // Логируем данные для отладки
         if (this.debugMode) {
@@ -79,9 +79,33 @@ export class Renderer {
             gameState.map
         );
         
-        // Устанавливаем текущее смещение карты без интерполяции
-        this.currentMapOffset.x = viewOffset.x;
-        this.currentMapOffset.y = viewOffset.y;
+        // Устанавливаем целевое смещение карты
+        this.targetMapOffset.x = viewOffset.x;
+        this.targetMapOffset.y = viewOffset.y;
+        
+        // Плавно перемещаем текущее смещение к целевому
+        // Уменьшаем скорость интерполяции для плавности движения
+        const lerpFactor = Math.min(1, deltaTime * 3.5); // Уменьшено с 5 до 3.5
+        
+        // Добавляем более плавную интерполяцию с уменьшением скорости при приближении к цели
+        const distanceX = this.targetMapOffset.x - this.currentMapOffset.x;
+        const distanceY = this.targetMapOffset.y - this.currentMapOffset.y;
+        const distance = Math.sqrt(distanceX * distanceX + distanceY * distanceY);
+        
+        // Если расстояние до цели очень маленькое, замедляем движение еще больше
+        let adaptiveLerpFactor = lerpFactor;
+        if (distance < 10) {
+            adaptiveLerpFactor = lerpFactor * (distance / 10); // Плавно уменьшаем скорость
+        }
+        
+        // Если расстояние совсем малое, просто устанавливаем точное значение
+        if (distance < 0.1) {
+            this.currentMapOffset.x = this.targetMapOffset.x;
+            this.currentMapOffset.y = this.targetMapOffset.y;
+        } else {
+            this.currentMapOffset.x += distanceX * adaptiveLerpFactor;
+            this.currentMapOffset.y += distanceY * adaptiveLerpFactor;
+        }
         
         // Определяем размер видимой области для отображения
         this.viewWidth = (this.viewRadius * 2 + 1) * this.cellSize;
@@ -97,14 +121,14 @@ export class Renderer {
         // Очищаем canvas
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-        // Теперь offsetDiff всегда нулевой, так как нет интерполяции
-        const offsetDiffX = 0;
-        const offsetDiffY = 0;
+        // Вычисляем разницу между целевым и текущим смещением для корректировки координат
+        const offsetDiffX = this.targetMapOffset.x - this.currentMapOffset.x;
+        const offsetDiffY = this.targetMapOffset.y - this.currentMapOffset.y;
         
         // Рендерим фон (сетка) для всей видимой области
         this.renderBackground();
         
-        // Рендерим игровые объекты
+        // Рендерим игровые объекты с учетом плавного смещения
         this.renderMapSection(gameState, this.currentMapOffset.x, this.currentMapOffset.y, offsetDiffX, offsetDiffY);
         this.renderPowerUps(gameState, offsetDiffX, offsetDiffY);
         this.renderBombs(gameState, offsetDiffX, offsetDiffY);
@@ -156,13 +180,18 @@ export class Renderer {
         const viewCenterX = this.viewWidth / 2;
         const viewCenterY = this.viewHeight / 2;
         
-        // Для первого вызова используем позицию игрока, центрированную на экране
+        // Для первого вызова используем поцизию игрока, центрированную на экране
         if (this.currentMapOffset.x === 0 && this.currentMapOffset.y === 0) {
             // Вычисляем начальное смещение, чтобы центрировать игрока
             const initialX = Math.max(0, playerX - viewCenterX);
             const initialY = Math.max(0, playerY - viewCenterY);
             
             console.log('Инициализация начального смещения:', { x: initialX, y: initialY });
+            
+            // Сразу устанавливаем текущее смещение
+            this.currentMapOffset.x = initialX;
+            this.currentMapOffset.y = initialY;
+            
             return { x: initialX, y: initialY };
         }
         
@@ -174,24 +203,28 @@ export class Renderer {
         const deltaX = playerViewX - viewCenterX;
         const deltaY = playerViewY - viewCenterY;
         
-        // Новое смещение карты - прямая позиция без плавных переходов
+        // Новое смещение карты - двигаем только если игрок вышел из мёртвой зоны
         let newOffsetX = this.currentMapOffset.x;
         let newOffsetY = this.currentMapOffset.y;
         
         // Проверяем, вышел ли игрок за пределы мёртвой зоны по X
         if (Math.abs(deltaX) > this.deadZoneSize.width / 2) {
-            // На сколько игрок вышел за пределы мёртвой зоны
-            const exceedX = deltaX - (Math.sign(deltaX) * this.deadZoneSize.width / 2);
-            // Мгновенно перемещаем карту вслед за игроком
-            newOffsetX += exceedX;
+            // Определяем, насколько игрок вышел за пределы мёртвой зоны
+            const exceedX = Math.abs(deltaX) - this.deadZoneSize.width / 2;
+            // Добавляем плавное увеличение смещения
+            const factorX = Math.min(1, exceedX / 30); // Постепенно увеличиваем до 1
+            // Смещаем карту в том же направлении, что и движение игрока
+            newOffsetX += exceedX * Math.sign(deltaX) * factorX;
         }
         
         // Проверяем, вышел ли игрок за пределы мёртвой зоны по Y
         if (Math.abs(deltaY) > this.deadZoneSize.height / 2) {
-            // На сколько игрок вышел за пределы мёртвой зоны
-            const exceedY = deltaY - (Math.sign(deltaY) * this.deadZoneSize.height / 2);
-            // Мгновенно перемещаем карту вслед за игроком
-            newOffsetY += exceedY;
+            // Определяем, насколько игрок вышел за пределы мёртвой зоны
+            const exceedY = Math.abs(deltaY) - this.deadZoneSize.height / 2;
+            // Добавляем плавное увеличение смещения
+            const factorY = Math.min(1, exceedY / 30); // Постепенно увеличиваем до 1
+            // Смещаем карту в том же направлении, что и движение игрока
+            newOffsetY += exceedY * Math.sign(deltaY) * factorY;
         }
         
         // Проверка и ограничение границ карты
@@ -446,6 +479,8 @@ export class Renderer {
             const renderX = this.getRelativeX(enemy.x) + offsetDiffX;
             const renderY = this.getRelativeY(enemy.y) + offsetDiffY;
             
+            const x = enemy.x;
+            const y = enemy.y;
             const width = enemy.width;
             const height = enemy.height;
             const centerX = renderX + width / 2;
@@ -519,6 +554,17 @@ export class Renderer {
                     break;
             }
             
+            // Display lives above the enemy (consistent for all types)
+            this.ctx.fillStyle = "#FFF";
+            this.ctx.strokeStyle = "#000"; // Black outline for visibility
+            this.ctx.lineWidth = 1;
+            this.ctx.font = `bold ${height / 3}px Arial`;
+            this.ctx.textAlign = "center";
+            this.ctx.textBaseline = "bottom";
+            const livesText = enemy.lives.toString();
+            this.ctx.strokeText(livesText, centerX, centerY - height + 5);
+            this.ctx.fillText(livesText, centerX, centerY - height + 5);
+
             // Show damage effect if invulnerable
             if (enemy.invulnerable) {
                 this.ctx.fillStyle = "rgba(255, 255, 255, 0.5)";

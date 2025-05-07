@@ -14,8 +14,8 @@ class GameService:
     def __init__(self):
         # Game settings
         self.cell_size: int = 40
-        self.width: int = 55
-        self.height: int = 53
+        self.width: int = 23
+        self.height: int = 23
         
         # Game state
         self.players: Dict[str, Player] = {}  # Dictionary of player_id -> Player
