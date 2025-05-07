@@ -1,69 +1,75 @@
 # Bomberman Online
 
-Многопользовательская игра Bomberman с серверной логикой на Python и отрисовкой на Canvas/TypeScript.
+Многопользовательская игра Bomberman, работающая на микросервисной архитектуре.
 
 ## Архитектура
 
-- **Бэкенд v1 (Python/Flask/SocketIO)**: Обрабатывает всю игровую логику, физику, коллизии
-- **Бэкенд v2 (Python/FastAPI/SocketIO)**: Новая версия, реализующая ту же функциональность на FastAPI
-- **Фронтенд (TypeScript/Canvas)**: Отрисовка игры и обработка пользовательского ввода
+Проект разделен на следующие микросервисы:
 
-## Технический стек
+1. **webapi-service** - REST API и Socket.IO интерфейс для клиентов
+2. **game-service** - Игровая логика и механика 
+3. **web-frontend** - Клиентский интерфейс на TypeScript
 
-### Бэкенд v2 (FastAPI):
-- Python 3.12
-- FastAPI
-- Socket.IO (python-socketio)
-- Uvicorn
+Для коммуникации между сервисами используется NATS.
 
-### Фронтенд:
-- TypeScript
-- HTML5 Canvas
-- Socket.IO Client
+## Технологии
 
-## Запуск
+- **Backend**: Python 3.12, FastAPI, Socket.IO, NATS
+- **Frontend**: TypeScript, HTML5 Canvas
+- **Database**: PostgreSQL, Redis
+- **Infrastructure**: Docker, Docker Compose
+
+## Запуск проекта
 
 ### С использованием Docker
 
-Самый простой способ запустить игру:
+1. Клонируйте репозиторий:
+   ```bash
+   git clone https://github.com/your-repo/BombermanOnline.git
+   cd BombermanOnline
+   ```
 
-```bash
-docker-compose up
-```
+2. Создайте файлы .env на основе .env-example:
+   ```bash
+   cp services/webapi-service/.env-example services/webapi-service/.env
+   cp services/game-service/.env-example services/game-service/.env
+   ```
 
-После запуска:
-- Бэкенд v1 (Flask) будет доступен на http://localhost:5000
-- Бэкенд v2 (FastAPI) будет доступен на http://localhost:5001
-- Фронтенд будет доступен на http://localhost:3000
+3. Запустите сервисы:
+   ```bash
+   docker-compose up
+   ```
 
-### Ручной запуск
+4. Игра будет доступна по адресу: http://localhost:3000
 
-#### Установка зависимостей
-```bash
-# Установка uv если его нет
-pip install uv
+### Локальная разработка
 
-# Установка зависимостей проекта
-uv pip install -e .
-```
+1. Установите Python 3.12 и Node.js
 
-#### Запуск бэкенда v1 (Flask)
-```bash
-cd server
-python app.py
-```
+2. Установите зависимости Python:
+   ```bash
+   pip install uv
+   uv pip install -e .
+   ```
 
-#### Запуск бэкенда v2 (FastAPI)
-```bash
-cd server2
-uvicorn main:app --host 0.0.0.0 --port 5001 --reload
-```
+3. Установите зависимости Node.js:
+   ```bash
+   cd frontend
+   npm install
+   ```
 
-#### Запуск фронтенда
-```bash
-npm install
-npm start
-```
+4. Запустите сервисы в отдельных терминалах:
+   ```bash
+   # WebAPI сервис
+   uvicorn services.webapi-service.app.main:app --host 0.0.0.0 --port 5001 --reload
+   
+   # Game сервис
+   uvicorn services.game-service.app.main:app --host 0.0.0.0 --port 5002 --reload
+   
+   # Frontend
+   cd frontend
+   npm run dev
+   ```
 
 ## Управление
 
@@ -77,41 +83,37 @@ npm start
 1. Первый игрок создает игру и получает ID игры
 2. Другие игроки присоединяются, вводя этот ID
 
-## Различия между версиями бэкенда
+## Структура проекта
 
-Основные различия между версиями бэкенда:
-
-1. **API и маршрутизация**:
-   - В1 (Flask): Использует Flask и Flask-SocketIO
-   - В2 (FastAPI): Использует FastAPI и более современный асинхронный подход с python-socketio
-
-2. **Производительность**:
-   - FastAPI-версия использует асинхронный код, что может обеспечить лучшую масштабируемость при большом количестве одновременных соединений
-
-3. **Документация API**:
-   - FastAPI имеет встроенную автоматическую документацию (Swagger)
-
-Игровая логика идентична в обеих версиях, что позволяет использовать один и тот же фронтенд для подключения к любой из версий сервера.
+```
+BombermanOnline/
+├── services/
+│   ├── webapi-service/   # REST API и Socket.IO сервис
+│   ├── game-service/     # Игровая логика
+│   └── web-frontend/     # Клиентский интерфейс
+├── docker-compose.yml    # Конфигурация Docker Compose
+└── pyproject.toml        # Зависимости Python
+```
 
 ## Диаграмма архитектуры
 
 ```mermaid
 graph TD
-    A[Клиент] -->|Socket.IO| B[Бэкенд v1 - Flask]
-    A -->|Socket.IO| C[Бэкенд v2 - FastAPI]
+    A[Клиент] -->|Socket.IO| B[webapi-service]
+    B -->|NATS| C[game-service]
     
-    subgraph Бэкенд v1
-        B --> D[Игровая логика]
-        D --> E[Обработка игровых событий]
-        E --> F[Отправка состояния]
+    subgraph WebAPI Service
+        B --> D[REST API]
+        D --> E[Socket.IO]
+        E --> F[NATS Client]
     end
     
-    subgraph Бэкенд v2
-        C --> G[Та же игровая логика]
-        G --> H[Асинхронная обработка событий]
-        H --> I[Отправка состояния]
+    subgraph Game Service
+        C --> G[Game Logic]
+        G --> H[NATS Server]
     end
     
+    F -->|Request/Response| H
+    H -->|Publish/Subscribe| F
     F -->|Socket.IO| A
-    I -->|Socket.IO| A
 ```

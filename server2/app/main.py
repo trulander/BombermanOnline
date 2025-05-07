@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.routes.api import router
+from .routes.api import router
 from config import settings
 
 from services.socket_io_service import SocketIOService

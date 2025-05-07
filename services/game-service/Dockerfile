@@ -1,0 +1,19 @@
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Устанавливаем uv
+RUN pip install --no-cache-dir uv
+
+## Установка зависимостей
+COPY pyproject.toml ./
+
+# Устанавливаем зависимости через uv (с флагом --system)
+RUN uv pip install --no-cache-dir --system -e .
+
+## Сделаем приложение доступным для запуска как дев-сервер
+#VOLUME ["/app"]
+
+# Запускаем приложение
+#CMD ["uvicorn", "game-service.app.main:app", "--host", "0.0.0.0", "--port", "5002"]
+CMD ["uv", "run", "uvicorn", "game-service.app.main:app", "--host", "0.0.0.0", "--port", "5002"]

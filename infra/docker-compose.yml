@@ -1,0 +1,80 @@
+version: "3.9"
+name: bombermanonline-infra
+services:
+  webapi-service:
+    build:
+      context: ../services/webapi-service
+      dockerfile: Dockerfile
+    command: uv run uvicorn webapi-service.app.main:app --host 0.0.0.0 --port 5001
+    volumes:
+      - ../services/webapi-service:/app/webapi-service
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_HOST=redis
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - postgres
+      - redis
+      - nats
+    ports:
+      - "5001:5001"
+
+  game-service:
+    build:
+      context: ../services/game-service
+      dockerfile: Dockerfile
+#    command: uv run --host 0.0.0.0 --port 8001
+    volumes:
+      - ../services/game-service:/app/game-service
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_HOST=redis
+      - NATS_URL=nats://nats:4222
+    depends_on:
+      - redis
+      - nats
+    ports:
+      - "5002:5002"
+
+  web-frontend:
+    build:
+      context: ../services/web-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../services/web-frontend/src:/app/src
+    environment:
+      - NODE_ENV=development
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-bomberman}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-bomberman}
+      - POSTGRES_DB=${POSTGRES_DB:-bomberman}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+  redis:
+    image: redis:7.2
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  nats:
+    image: nats:2.10
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+  nats_data: 
