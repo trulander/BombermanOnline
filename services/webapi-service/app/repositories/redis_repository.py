@@ -68,4 +68,5 @@ class RedisRepository:
             True if key was deleted, False if it didn't exist
         """
         result = await self.redis.delete(key)
-        return result > 0 
+        return result > 0
+

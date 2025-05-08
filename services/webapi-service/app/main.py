@@ -2,9 +2,10 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+
 from .config import settings
 from .services.socketio_service import SocketIOService
-from .dependencies import nats_service
+from .dependencies import nats_service, game_service, redis_repository
 from .routes.root import root_router
 from .routes.api import api_router
 
@@ -16,7 +17,9 @@ app = FastAPI(
 )
 
 # Инициализация Socket.IO
-socketio_service = SocketIOService(nats_service)
+socketio_service = SocketIOService(
+    game_service=game_service
+)
 socket_app = socketio_service.get_app()
 
 # Настройка CORS

@@ -15,4 +15,4 @@ RUN uv pip install --no-cache-dir --system -e .
 #VOLUME ["/app"]
 
 ## Запуск сервера
-#CMD ["uvicorn", "webapi-service.app.main:app", "--host", "0.0.0.0", "--port", "5001"]
+CMD ["uv", "run", "uvicorn", "webapi-service.app.main:app", "--host", "0.0.0.0", "--port", "5001"]

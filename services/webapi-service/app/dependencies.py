@@ -4,6 +4,7 @@ from typing import AsyncGenerator
 from .services.game_service import GameService
 from .services.nats_service import NatsService
 from .repositories.redis_repository import RedisRepository
+# from .services.socketio_service import SocketIOService
 
 # Singleton instances
 redis_repository = RedisRepository()
