@@ -1,0 +1,65 @@
+http:
+  routers:
+    # WebAPI сервис
+    webapi:
+      rule: "PathPrefix(`/api`)"
+      entryPoints:
+        - web
+      service: webapi
+      middlewares:
+        - compress
+        - security-headers
+#        - strip-api-prefix
+
+    # WebAPI WebSocket
+    webapi-ws:
+      rule: "PathPrefix(`/socket.io`)"
+      entryPoints:
+        - web
+      service: webapi
+      middlewares:
+        - websocket
+
+    # Game сервис
+    game:
+      rule: "PathPrefix(`/games`)"
+      entryPoints:
+        - web
+      service: game
+      middlewares:
+        - compress
+        - security-headers
+
+    # Web Frontend
+    frontend:
+      rule: "PathPrefix(`/`)"
+      entryPoints:
+        - web
+      service: frontend
+      middlewares:
+        - compress
+        - security-headers
+
+    # Traefik Dashboard
+    dashboard:
+      rule: "Host(`traefik.localhost`)"
+      entryPoints:
+        - web
+      service: api@internal
+
+  services:
+    # Определение сервисов
+    webapi:
+      loadBalancer:
+        servers:
+          - url: "http://webapi-service:5001"
+
+    game:
+      loadBalancer:
+        servers:
+          - url: "http://game-service:5002"
+
+    frontend:
+      loadBalancer:
+        servers:
+          - url: "http://web-frontend:3000" 

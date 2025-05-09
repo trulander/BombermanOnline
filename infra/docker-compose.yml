@@ -18,6 +18,8 @@ services:
       - nats
     ports:
       - "5001:5001"
+    labels:
+      - "traefik.enable=true"
 
   game-service:
     build:
@@ -35,6 +37,8 @@ services:
       - nats
     ports:
       - "5002:5002"
+    labels:
+      - "traefik.enable=true"
 
   web-frontend:
     build:
@@ -46,6 +50,8 @@ services:
       - ../services/web-frontend/src:/app/src
     environment:
       - NODE_ENV=development
+    labels:
+      - "traefik.enable=true"
 
   postgres:
     image: postgres:15-alpine
@@ -81,6 +87,94 @@ services:
       - "8222:8222"
     volumes:
       - nats_data:/data
+
+  traefik:
+    image: traefik:v2.11
+    ports:
+      - "80:80"     # HTTP
+      - "8080:8080" # Веб-интерфейс Traefik Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+      - ./traefik/middlewares.yml:/etc/traefik/middlewares.yml
+      - ./traefik/routers.yml:/etc/traefik/routers.yml
+      - ./traefik/logs:/var/log/traefik
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    restart: unless-stopped
+    depends_on:
+      - webapi-service
+      - game-service
+      - web-frontend
+    labels:
+      - "traefik.enable=true"
+
+#  kong:
+#    image: kong:3.9.0-ubuntu
+#    environment:
+#      KONG_DATABASE: "postgres"                   # Включаем Postgres
+#      KONG_PG_HOST: postgres                     # Имя сервиса Postgres
+#      KONG_PG_USER: ${POSTGRES_USER:-bomberman}  # Пользователь Postgres
+#      KONG_PG_PASSWORD: ${POSTGRES_PASSWORD:-bomberman}  # Пароль Postgres
+#      KONG_PG_DATABASE: ${POSTGRES_DB:-kong}  # Имя базы
+##      KONG_DATABASE: "off"                        # DB-less режим
+#      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml # точка монтирования конфига
+#      KONG_PROXY_LISTEN: "0.0.0.0:8000"           # HTTP порт для клиентов
+#      KONG_ADMIN_LISTEN: "0.0.0.0:8001"           # порт для Admin API
+#      KONG_ADMIN_GUI_LISTEN: "0.0.0.0:8002"       # порт для Kong Manager GUI
+#      KONG_LOG_LEVEL: "info"                       # уровень логирования
+#    ports:
+#      - "8000:8000"
+#      - "8001:8001"
+#      - "8002:8002"
+#    volumes:
+#      - ./kong/kong.yml:/etc/kong/kong.yml
+#      - ./logs/kong:/var/log/kong  # Добавляем volume для логов
+#    depends_on:
+#      - postgres
+#      - webapi-service
+#      - game-service
+#
+#  kong-migrations:
+#    image: kong:3.9.0-ubuntu
+#    command: "kong migrations bootstrap -c /etc/kong/kong.yml"
+#    environment:
+#      KONG_DATABASE: "postgres"                   # Включаем Postgres
+#      KONG_PG_HOST: postgres                     # Имя сервиса Postgres
+#      KONG_PG_USER: ${POSTGRES_USER:-bomberman}  # Пользователь Postgres
+#      KONG_PG_PASSWORD: ${POSTGRES_PASSWORD:-bomberman}  # Пароль Postgres
+#      KONG_PG_DATABASE: ${POSTGRES_DB:-kong}  # Имя базы
+#      #      KONG_DATABASE: "off"                        # DB-less режим
+#      KONG_DECLARATIVE_CONFIG: /etc/kong/kong.yml # точка монтирования конфига
+#      KONG_PROXY_LISTEN: "0.0.0.0:8000"           # HTTP порт для клиентов
+#      KONG_ADMIN_LISTEN: "0.0.0.0:8001"           # порт для Admin API
+#      KONG_ADMIN_GUI_LISTEN: "0.0.0.0:8002"       # порт для Kong Manager GUI
+#      KONG_LOG_LEVEL: "info"
+#    volumes:
+#      - ./kong/kong.yml:/etc/kong/kong.yml
+#      - ./logs/kong:/var/log/kong  # Добавляем volume для логов
+#    depends_on:
+#      - postgres
+#
+#  kong-config:
+#    image: kong:3.9.0-ubuntu
+#    user: root  # Запускаем контейнер от имени root
+#    command: >
+#      /bin/sh -c "
+#        luarocks install kong-oidc-auth
+#      "
+#    environment:
+#      KONG_DATABASE: "postgres"
+#      KONG_PG_HOST: postgres
+#      KONG_PG_USER: ${POSTGRES_USER:-bomberman}
+#      KONG_PG_PASSWORD: ${POSTGRES_PASSWORD:-bomberman}
+#      KONG_PG_DATABASE: ${POSTGRES_DB:-bomberman}
+#    volumes:
+#      - ./kong/kong.yml:/etc/kong/kong.yml
+#    depends_on:
+#      - kong
+#      - kong-migrations
+
 
 volumes:
   postgres_data:

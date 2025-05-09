@@ -23,8 +23,9 @@ export class GameClient {
         this.canvas = canvas;
         
         // Initialize socket connection to Python backend
-        this.socket = io('http://localhost:5001', {
-            transports: ['websocket']
+        this.socket = io('http://localhost:80', {
+            transports: ['websocket'],
+            // path: '/api/socket.io'
         });
         
         this.inputHandler = new InputHandler();

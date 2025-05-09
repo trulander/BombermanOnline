@@ -12,6 +12,7 @@ from .routes.api import api_router
 # Инициализация FastAPI
 app = FastAPI(
     title=settings.APP_TITLE,
+    docs_url=settings.SWAGGER_URL,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     debug=settings.DEBUG,
 )

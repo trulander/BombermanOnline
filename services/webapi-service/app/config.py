@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     PORT: int = 5001
     DEBUG: bool = True
     RELOAD: bool = True
+    SWAGGER_URL: str = "/api/docs"
     
     # CORS settings
     CORS_ORIGINS: list[str] = ["*"]

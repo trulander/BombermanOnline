@@ -1,0 +1,29 @@
+http:
+  middlewares:
+    # Заголовки безопасности
+    security-headers:
+      headers:
+        frameDeny: true
+        sslRedirect: false
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: false
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+    
+    # Middleware для сжатия ответов
+    compress:
+      compress: {}
+    
+    # Middleware для удаления префикса /api
+    strip-api-prefix:
+      stripPrefix:
+        prefixes: 
+          - "/api"
+        
+    # Middleware для WebSocket соединений
+    websocket:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "ws" 
