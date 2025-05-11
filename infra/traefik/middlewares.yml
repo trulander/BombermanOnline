@@ -21,6 +21,12 @@ http:
       stripPrefix:
         prefixes: 
           - "/api"
+
+    # Middleware для удаления префикса /logs
+    strip-logs-prefix:
+      stripPrefix:
+        prefixes:
+          - "/logs"
         
     # Middleware для WebSocket соединений
     websocket:

@@ -18,6 +18,7 @@
 - **Frontend**: TypeScript, HTML5 Canvas
 - **Database**: PostgreSQL, Redis
 - **Infrastructure**: Docker, Docker Compose
+- **Monitoring**: Prometheus, Grafana, Loki, Fluent Bit
 
 ## Запуск проекта
 
@@ -41,6 +42,10 @@
    ```
 
 4. Игра будет доступна по адресу: http://localhost:3000
+5. Мониторинг доступен по следующим адресам:
+   - Grafana: http://grafana.localhost (логин/пароль: admin/admin)
+   - Prometheus: http://prometheus.localhost
+   - Traefik Dashboard: http://traefik.localhost
 
 ### Локальная разработка
 
@@ -83,6 +88,21 @@
 1. Первый игрок создает игру и получает ID игры
 2. Другие игроки присоединяются, вводя этот ID
 
+## Мониторинг и логирование
+
+Проект включает следующие компоненты мониторинга:
+
+1. **Prometheus** - сбор и хранение метрик
+2. **Grafana** - визуализация метрик и логов
+3. **Loki** - агрегация и хранение логов
+4. **Fluent Bit** - сбор и пересылка логов
+5. **Node Exporter** - сбор метрик хост-системы
+6. **cAdvisor** - сбор метрик контейнеров
+
+Все микросервисы настроены на отправку метрик в Prometheus и логов в формате JSON:
+- Backend сервисы выводят логи в JSON формате в stdout, который собирается Fluent Bit
+- Frontend отправляет логи через HTTP API на эндпоинт /logs, который проксируется на Fluent Bit
+
 ## Структура проекта
 
 ```
@@ -91,7 +111,13 @@ BombermanOnline/
 │   ├── webapi-service/   # REST API и Socket.IO сервис
 │   ├── game-service/     # Игровая логика
 │   └── web-frontend/     # Клиентский интерфейс
-├── docker-compose.yml    # Конфигурация Docker Compose
+├── infra/
+│   ├── docker-compose.yml    # Конфигурация Docker Compose
+│   ├── prometheus/           # Конфигурация Prometheus
+│   ├── grafana/              # Конфигурация Grafana
+│   ├── loki/                 # Конфигурация Loki
+│   ├── fluent-bit/           # Конфигурация Fluent Bit
+│   └── traefik/              # Конфигурация Traefik
 └── pyproject.toml        # Зависимости Python
 ```
 
@@ -116,4 +142,15 @@ graph TD
     F -->|Request/Response| H
     H -->|Publish/Subscribe| F
     F -->|Socket.IO| A
+    
+    subgraph Monitoring
+        P[Prometheus] --> G1[Grafana]
+        L[Loki] --> G1
+        B -->|Metrics| P
+        C -->|Metrics| P
+        A -->|HTTP Log API| FB[Fluent Bit]
+        B -->|JSON Logs| FB
+        C -->|JSON Logs| FB
+        FB --> L
+    end
 ```

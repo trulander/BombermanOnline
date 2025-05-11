@@ -1,13 +1,19 @@
 import uvicorn
+import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from starlette_exporter import PrometheusMiddleware, handle_metrics
 
 from .config import settings
+from .logging_config import configure_logging
 from .services.socketio_service import SocketIOService
 from .dependencies import nats_service, game_service, redis_repository
 from .routes.root import root_router
 from .routes.api import api_router
+
+# Настройка логирования
+configure_logging()
+logger = logging.getLogger(__name__)
 
 # Инициализация FastAPI
 app = FastAPI(
@@ -16,6 +22,15 @@ app = FastAPI(
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     debug=settings.DEBUG,
 )
+
+# Добавляем Prometheus метрики
+app.add_middleware(
+    PrometheusMiddleware,
+    app_name="webapi_service",
+    group_paths=True,
+    filter_unhandled_paths=False,
+)
+app.add_route("/metrics", handle_metrics)
 
 # Инициализация Socket.IO
 socketio_service = SocketIOService(
@@ -43,16 +58,19 @@ app.mount("/socket.io", socket_app)
 @app.on_event("startup")
 async def startup_event() -> None:
     """Действия при запуске приложения"""
+    logger.info("Starting WebAPI service")
     from .dependencies import redis_repository
     await redis_repository.connect()
     await nats_service.connect()
+    logger.info("WebAPI service started successfully")
 
 @app.on_event("shutdown")
 async def shutdown_event() -> None:
-    """Действия при завершении работы приложения"""
-    from .dependencies import redis_repository
+    """Действия при остановке приложения"""
+    logger.info("Shutting down WebAPI service")
     await redis_repository.disconnect()
     await nats_service.disconnect()
+    logger.info("WebAPI service stopped successfully")
 
 # Запуск приложения, если файл запущен напрямую
 if __name__ == "__main__":

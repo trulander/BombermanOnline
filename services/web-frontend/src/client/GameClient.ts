@@ -4,6 +4,14 @@ import { Renderer } from './Renderer';
 import { GameState } from '../types/GameState';
 import { Socket } from '../types/Socket';
 
+// Расширяем интерфейс Window для переменных окружения
+declare global {
+    interface Window {
+        SOCKET_URL: string;
+        SOCKET_PATH: string;
+    }
+}
+
 export class GameClient {
     private canvas: HTMLCanvasElement;
     private socket: Socket;
@@ -22,10 +30,14 @@ export class GameClient {
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         
+        // Получаем URL и путь из переменных окружения
+        const socketUrl = window.SOCKET_URL || 'http://localhost';
+        const socketPath = window.SOCKET_PATH || 'socket.io';
+        
         // Initialize socket connection to Python backend
-        this.socket = io('http://localhost:80', {
+        this.socket = io(socketUrl, {
             transports: ['websocket'],
-            // path: '/api/socket.io'
+            path: socketPath ? socketPath : undefined
         });
         
         this.inputHandler = new InputHandler();

@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     # Game service settings
     GAME_SERVICE_URL: str = "http://localhost:5002"
     
+    # Logging settings
+    LOG_LEVEL: str = "INFO"
+    LOG_FORMAT: str = "json"
+    
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
 settings = Settings() 
