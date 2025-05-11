@@ -1,4 +1,5 @@
 import log from 'loglevel';
+import { throttle } from 'lodash';
 
 export enum LogLevel {
     TRACE = 'trace',
@@ -54,6 +55,9 @@ class Logger {
     private flushTimer: number | null = null;
     private nodeEnv: string;
     
+    // Хэш-карта для хранения троттлированных функций логирования
+    private throttledLogs: Map<string, (message: any, data?: any) => void> = new Map();
+    
     constructor() {
         this.sessionId = generateUUID();
         // Используем глобально заданные константы
@@ -96,6 +100,48 @@ class Logger {
             environment: this.nodeEnv,
             endpoint: this.endpoint 
         });
+    }
+    
+    // Получение троттлированной функции логирования по ключу
+    private getThrottledLog(key: string, level: LogLevel, interval: number = 1000): (message: any, data?: any) => void {
+        const mapKey = `${level}:${key}:${interval}`;
+        if (!this.throttledLogs.has(mapKey)) {
+            this.throttledLogs.set(
+                mapKey, 
+                throttle((message: any, data?: any) => {
+                    switch(level) {
+                        case LogLevel.TRACE:
+                            this.trace(message, data);
+                            break;
+                        case LogLevel.DEBUG:
+                            this.debug(message, data);
+                            break;
+                        case LogLevel.INFO:
+                            this.info(message, data);
+                            break;
+                        case LogLevel.WARN:
+                            this.warn(message, data);
+                            break;
+                        case LogLevel.ERROR:
+                            this.error(message, data);
+                            break;
+                    }
+                }, interval)
+            );
+        }
+        return this.throttledLogs.get(mapKey)!;
+    }
+    
+    /**
+     * Логирование с ограничением частоты
+     * @param key - Уникальный ключ для группы логов
+     * @param level - Уровень логирования
+     * @param message - Сообщение лога
+     * @param data - Дополнительные данные
+     * @param interval - Интервал троттлинга в мс, по умолчанию 1000 (1 секунда)
+     */
+    public throttled(key: string, level: LogLevel, message: any, data?: any, interval: number = 1000): void {
+        this.getThrottledLog(key, level, interval)(message, data);
     }
     
     private interceptConsole() {
@@ -168,18 +214,16 @@ class Logger {
         this.logQueue = [];
         
         try {
-            // Отправляем каждый лог отдельно для совместимости с Fluent Bit HTTP Input
-            for (const logEntry of logsToSend) {
-                await fetch(this.endpoint, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({
-                        log: JSON.stringify(logEntry)
-                    })
-                });
-            }
+            // Отправляем логи пакетом вместо отправки каждого лога отдельно
+            await fetch(this.endpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    logs: logsToSend.map(entry => ({ log: JSON.stringify(entry) }))
+                })
+            });
         } catch (error) {
             // Если произошла ошибка при отправке, возвращаем логи в очередь
             console.error('Failed to send logs:', error);

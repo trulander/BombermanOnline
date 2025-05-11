@@ -1,4 +1,5 @@
 import { GameState } from '../types/GameState';
+import { throttle } from 'lodash';
 
 export class Renderer {
     private canvas: HTMLCanvasElement;
@@ -25,6 +26,23 @@ export class Renderer {
     
     // Флаг для отладки
     private debugMode: boolean = false;
+    
+    // Троттлированные функции логгирования для ограничения количества логов
+    private throttledLogNoMapGrid = throttle((gameState: GameState) => {
+        console.error('Отсутствует gameState.map.grid', gameState.map);
+    }, 1000);
+    
+    private throttledLogNoCurrentPlayer = throttle((currentPlayerId: string | null, players: any) => {
+        console.error('Отсутствует текущий игрок', currentPlayerId, players);
+    }, 1000);
+    
+    private throttledLogInsufficientData = throttle((map: any) => {
+        console.error('Недостаточно данных для расчета смещения вида', map);
+    }, 1000);
+    
+    private throttledLogUnknownCellType = throttle((cellType: number, x: number, y: number) => {
+        console.warn(`Неизвестный тип ячейки: ${cellType} на [${x},${y}]`);
+    }, 1000);
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -43,13 +61,13 @@ export class Renderer {
         
         // Проверяем наличие необходимых данных
         if (!gameState.map || !gameState.map.grid) {
-            console.error('Отсутствует gameState.map.grid', gameState.map);
+            this.throttledLogNoMapGrid(gameState);
             this.renderErrorMessage('Ошибка: данные карты отсутствуют');
             return;
         }
         
         if (!currentPlayerId || !gameState.players[currentPlayerId]) {
-            console.error('Отсутствует текущий игрок', currentPlayerId, gameState.players);
+            this.throttledLogNoCurrentPlayer(currentPlayerId, gameState.players);
             this.renderErrorMessage('Ошибка: данные игрока отсутствуют');
             return;
         }
@@ -172,7 +190,7 @@ export class Renderer {
     
     private calculateViewOffsetWithDeadZone(playerX: number, playerY: number, map: GameState['map']): { x: number, y: number } {
         if (!map || !map.width || !map.height || !map.grid) {
-            console.error('Недостаточно данных для расчета смещения вида', map);
+            this.throttledLogInsufficientData(map);
             return { x: 0, y: 0 };
         }
         
@@ -268,7 +286,7 @@ export class Renderer {
     private renderMapSection(gameState: GameState, offsetX: number, offsetY: number, offsetDiffX: number, offsetDiffY: number): void {
         const map = gameState.map;
         if (!map || !map.grid) {
-            console.error('Нет данных карты для рендеринга');
+            this.throttledLogNoMapGrid(gameState);
             return;
         }
         
@@ -301,7 +319,7 @@ export class Renderer {
                         break;
                     default:
                         this.ctx.fillStyle = "#FF00FF"; // Magenta для неизвестного типа
-                        console.warn(`Неизвестный тип ячейки: ${cellType} на [${x},${y}]`);
+                        this.throttledLogUnknownCellType(cellType, x, y);
                         break;
                 }
 
