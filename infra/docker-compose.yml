@@ -181,8 +181,12 @@ services:
       - loki_data:/loki
     ports:
       - "3100:3100"
-    command: -config.file=/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml -target=all -log.level=info
     restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - loki.internal
 
   fluent-bit:
     image: grafana/fluent-bit-plugin-loki:latest
@@ -197,10 +201,12 @@ services:
       - "2020:2020"
       - "8888:8888"
     environment:
-      - LOKI_URL=http://loki:3100/loki/api/v1/push
+      - LOKI_URL=http://loki.internal:3100/loki/api/v1/push
     depends_on:
       - loki
     restart: unless-stopped
+    networks:
+      - default
 
   grafana:
     image: grafana/grafana:10.4.0
@@ -214,6 +220,9 @@ services:
       - GF_SERVER_ROOT_URL=http://localhost:3001
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SERVER_HTTP_PORT=3001
+      - GF_DASHBOARDS_MIN_REFRESH_INTERVAL=5s
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     ports:
       - "3001:3001"
     depends_on:
