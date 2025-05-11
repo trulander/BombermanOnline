@@ -1,0 +1,25 @@
+_format_version: "2.1"
+services:
+  - name: webapi-service
+    url: http://webapi-service:5001
+    routes:
+      - name: webapi-http-route
+        paths:
+          - /api
+        protocols: ["http"]  # Ограничиваем этот маршрут только HTTP
+      - name: webapi-websocket-route
+        paths:
+          - /socket.io
+        protocols: ["http"]  # Указываем поддержку WebSocket
+  - name: game-service
+    url: http://game-service:5002
+    routes:
+      - name: game-route
+        paths:
+          - /games
+        protocols: ["http"]
+plugins:
+  - name: file-log
+    service: webapi-service
+    config:
+      path: /var/log/kong/webapi.log

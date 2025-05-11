@@ -89,7 +89,7 @@ services:
       - nats_data:/data
 
   traefik:
-    image: traefik:v2.11
+    image: traefik:3.4.0
     ports:
       - "80:80"     # HTTP
       - "8080:8080" # Веб-интерфейс Traefik Dashboard
