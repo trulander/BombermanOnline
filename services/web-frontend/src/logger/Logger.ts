@@ -1,5 +1,4 @@
 import log from 'loglevel';
-import { throttle } from 'lodash';
 
 export enum LogLevel {
     TRACE = 'trace',
@@ -18,6 +17,15 @@ const LogLevelMap: Record<string, keyof typeof log.levels> = {
     'error': 'ERROR'
 };
 
+// Карта значений числовых уровней для сравнения
+const LogLevelValue: Record<LogLevel, number> = {
+    [LogLevel.TRACE]: 0,
+    [LogLevel.DEBUG]: 1,
+    [LogLevel.INFO]: 2,
+    [LogLevel.WARN]: 3,
+    [LogLevel.ERROR]: 4
+};
+
 interface LogEntry {
     timestamp: string;
     level: string;
@@ -33,6 +41,7 @@ declare global {
         NODE_ENV: string;
         LOGS_ENDPOINT: string;
         SERVICE_NAME: string;
+        LOGS_BATCH_SIZE: string;
     }
 }
 
@@ -54,9 +63,7 @@ class Logger {
     private logQueue: LogEntry[] = [];
     private flushTimer: number | null = null;
     private nodeEnv: string;
-    
-    // Хэш-карта для хранения троттлированных функций логирования
-    private throttledLogs: Map<string, (message: any, data?: any) => void> = new Map();
+    private currentLogLevel: LogLevel;
     
     constructor() {
         this.sessionId = generateUUID();
@@ -64,14 +71,26 @@ class Logger {
         this.endpoint = window.LOGS_ENDPOINT || '/logs';
         this.serviceName = window.SERVICE_NAME || 'web-frontend';
         this.nodeEnv = window.NODE_ENV || 'development';
-        this.batchSize = 10; // Количество логов перед отправкой
+        
+        // Получаем размер пакета логов из переменной окружения или используем значение по умолчанию
+        const batchSizeStr = window.LOGS_BATCH_SIZE || '10';
+        this.batchSize = parseInt(batchSizeStr, 10);
+        if (isNaN(this.batchSize) || this.batchSize < 1) {
+            this.batchSize = 10; // Значение по умолчанию, если парсинг не удался
+        }
+        
         this.flushInterval = 5000; // Отправка каждые 5 секунд
         
         // Настраиваем loglevel в зависимости от окружения
-        const defaultLevel = this.nodeEnv === 'production' 
-            ? log.levels.INFO 
-            : log.levels.DEBUG;
-        log.setLevel(defaultLevel);
+        this.currentLogLevel = this.nodeEnv === 'production' 
+            ? LogLevel.INFO 
+            : LogLevel.DEBUG;
+            
+        // Устанавливаем уровень для библиотеки loglevel
+        const logLevelKey = LogLevelMap[this.currentLogLevel];
+        if (logLevelKey) {
+            log.setLevel(log.levels[logLevelKey]);
+        }
         
         // Перехватываем консоль
         this.interceptConsole();
@@ -86,62 +105,70 @@ class Logger {
                 filename: event.filename,
                 lineno: event.lineno,
                 colno: event.colno,
-                error: event.error?.stack || event.error?.toString()
+                error: event.error?.stack || event.error?.toString(),
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                url: window.location.href
             });
         });
         
         window.addEventListener('unhandledrejection', (event) => {
             this.error('Unhandled promise rejection', {
-                reason: event.reason?.stack || event.reason?.toString()
+                reason: event.reason?.stack || event.reason?.toString(),
+                timestamp: new Date().toISOString(),
+                userAgent: navigator.userAgent,
+                url: window.location.href
             });
         });
         
         this.info('Logger initialized', { 
             environment: this.nodeEnv,
-            endpoint: this.endpoint 
+            endpoint: this.endpoint,
+            batchSize: this.batchSize,
+            logLevel: this.currentLogLevel
         });
     }
     
-    // Получение троттлированной функции логирования по ключу
-    private getThrottledLog(key: string, level: LogLevel, interval: number = 1000): (message: any, data?: any) => void {
-        const mapKey = `${level}:${key}:${interval}`;
-        if (!this.throttledLogs.has(mapKey)) {
-            this.throttledLogs.set(
-                mapKey, 
-                throttle((message: any, data?: any) => {
-                    switch(level) {
-                        case LogLevel.TRACE:
-                            this.trace(message, data);
-                            break;
-                        case LogLevel.DEBUG:
-                            this.debug(message, data);
-                            break;
-                        case LogLevel.INFO:
-                            this.info(message, data);
-                            break;
-                        case LogLevel.WARN:
-                            this.warn(message, data);
-                            break;
-                        case LogLevel.ERROR:
-                            this.error(message, data);
-                            break;
-                    }
-                }, interval)
-            );
-        }
-        return this.throttledLogs.get(mapKey)!;
+    /**
+     * Проверяет, должен ли лог с указанным уровнем быть обработан
+     */
+    private shouldLog(level: LogLevel): boolean {
+        return LogLevelValue[level] >= LogLevelValue[this.currentLogLevel];
     }
     
     /**
-     * Логирование с ограничением частоты
-     * @param key - Уникальный ключ для группы логов
+     * Логирование без ограничения частоты (замена throttled)
+     * @param key - Уникальный ключ для группы логов (не используется, оставлен для совместимости)
      * @param level - Уровень логирования
      * @param message - Сообщение лога
      * @param data - Дополнительные данные
-     * @param interval - Интервал троттлинга в мс, по умолчанию 1000 (1 секунда)
+     */
+    public log(key: string, level: LogLevel, message: any, data?: any): void {
+        switch(level) {
+            case LogLevel.TRACE:
+                this.trace(message, data);
+                break;
+            case LogLevel.DEBUG:
+                this.debug(message, data);
+                break;
+            case LogLevel.INFO:
+                this.info(message, data);
+                break;
+            case LogLevel.WARN:
+                this.warn(message, data);
+                break;
+            case LogLevel.ERROR:
+                this.error(message, data);
+                break;
+        }
+    }
+    
+    /**
+     * Оставляем метод throttled для обратной совместимости,
+     * но внутри просто вызываем log без ограничения частоты
      */
     public throttled(key: string, level: LogLevel, message: any, data?: any, interval: number = 1000): void {
-        this.getThrottledLog(key, level, interval)(message, data);
+        this.log(key, level, message, data);
     }
     
     private interceptConsole() {
@@ -170,7 +197,28 @@ class Logger {
         
         console.error = (...args: any[]) => {
             originalConsole.error.apply(console, args);
-            this.error(args[0], args.slice(1));
+            // Используем индексную сигнатуру для допустимости дополнительных свойств
+            const errorDetails: { 
+                timestamp: string; 
+                args: any[]; 
+                [key: string]: any; 
+            } = {
+                timestamp: new Date().toISOString(),
+                args: args.slice(1)
+            };
+            
+            // Проверяем, есть ли в аргументах объект ошибки
+            const errorObjects = args.filter(arg => arg instanceof Error);
+            if (errorObjects.length > 0) {
+                // Добавляем информацию из ошибок
+                errorDetails.errors = errorObjects.map(error => ({
+                    message: error.message,
+                    name: error.name,
+                    stack: error.stack
+                }));
+            }
+            
+            this.error(args[0], errorDetails);
         };
         
         console.debug = (...args: any[]) => {
@@ -232,6 +280,8 @@ class Logger {
     }
     
     public setLevel(level: LogLevel) {
+        this.currentLogLevel = level;
+        
         if (typeof level === 'string') {
             const logLevelKey = LogLevelMap[level.toLowerCase()];
             if (logLevelKey) {
@@ -247,29 +297,51 @@ class Logger {
         }
     }
     
+    /**
+     * Возвращает текущий уровень логирования
+     */
+    public getCurrentLevel(): LogLevel {
+        return this.currentLogLevel;
+    }
+    
     public trace(message: any, data?: any) {
         log.trace(message);
-        this.addToQueue(this.createLogEntry('TRACE', message, data));
+        if (this.shouldLog(LogLevel.TRACE)) {
+            this.addToQueue(this.createLogEntry('TRACE', message, data));
+        }
     }
     
     public debug(message: any, data?: any) {
         log.debug(message);
-        this.addToQueue(this.createLogEntry('DEBUG', message, data));
+        if (this.shouldLog(LogLevel.DEBUG)) {
+            this.addToQueue(this.createLogEntry('DEBUG', message, data));
+        }
     }
     
     public info(message: any, data?: any) {
         log.info(message);
-        this.addToQueue(this.createLogEntry('INFO', message, data));
+        if (this.shouldLog(LogLevel.INFO)) {
+            this.addToQueue(this.createLogEntry('INFO', message, data));
+        }
     }
     
     public warn(message: any, data?: any) {
         log.warn(message);
-        this.addToQueue(this.createLogEntry('WANR', message, data));
+        if (this.shouldLog(LogLevel.WARN)) {
+            this.addToQueue(this.createLogEntry('WARN', message, data));
+        }
     }
     
     public error(message: any, data?: any) {
         log.error(message);
-        this.addToQueue(this.createLogEntry('ERROR', message, data));
+        if (this.shouldLog(LogLevel.ERROR)) {
+            const enhancedData = {
+                ...data,
+                timestamp: new Date().toISOString(),
+                url: window.location.href
+            };
+            this.addToQueue(this.createLogEntry('ERROR', message, enhancedData));
+        }
     }
     
     // Вызывается при закрытии страницы для отправки оставшихся логов

@@ -1,3 +1,15 @@
+// Расширяем глобальные типы
+declare global {
+    interface Window {
+        NODE_ENV: string;
+        LOGS_ENDPOINT: string;
+        SERVICE_NAME: string;
+        SOCKET_URL: string;
+        SOCKET_PATH: string;
+        LOGS_BATCH_SIZE: string;
+    }
+}
+
 // Определение интерфейса Socket для использования в проекте
 export interface Socket {
     emit(event: string, data?: any, callback?: (response: any) => void): void;

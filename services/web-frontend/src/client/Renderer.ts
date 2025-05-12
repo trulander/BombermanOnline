@@ -1,5 +1,5 @@
 import { GameState } from '../types/GameState';
-import { throttle } from 'lodash';
+import logger, { LogLevel } from '../logger/Logger';
 
 export class Renderer {
     private canvas: HTMLCanvasElement;
@@ -26,23 +26,6 @@ export class Renderer {
     
     // Флаг для отладки
     private debugMode: boolean = false;
-    
-    // Троттлированные функции логгирования для ограничения количества логов
-    private throttledLogNoMapGrid = throttle((gameState: GameState) => {
-        console.error('Отсутствует gameState.map.grid', gameState.map);
-    }, 1000);
-    
-    private throttledLogNoCurrentPlayer = throttle((currentPlayerId: string | null, players: any) => {
-        console.error('Отсутствует текущий игрок', currentPlayerId, players);
-    }, 1000);
-    
-    private throttledLogInsufficientData = throttle((map: any) => {
-        console.error('Недостаточно данных для расчета смещения вида', map);
-    }, 1000);
-    
-    private throttledLogUnknownCellType = throttle((cellType: number, x: number, y: number) => {
-        console.warn(`Неизвестный тип ячейки: ${cellType} на [${x},${y}]`);
-    }, 1000);
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
@@ -61,13 +44,20 @@ export class Renderer {
         
         // Проверяем наличие необходимых данных
         if (!gameState.map || !gameState.map.grid) {
-            this.throttledLogNoMapGrid(gameState);
+            logger.error('Отсутствует gameState.map.grid', {
+                gameState: gameState,
+                time: currentTime
+            });
             this.renderErrorMessage('Ошибка: данные карты отсутствуют');
             return;
         }
         
         if (!currentPlayerId || !gameState.players[currentPlayerId]) {
-            this.throttledLogNoCurrentPlayer(currentPlayerId, gameState.players);
+            logger.error('Отсутствует текущий игрок', {
+                currentPlayerId,
+                gameState: gameState,
+                time: currentTime
+            });
             this.renderErrorMessage('Ошибка: данные игрока отсутствуют');
             return;
         }
@@ -75,20 +65,18 @@ export class Renderer {
         // Получаем текущего игрока
         const currentPlayer = gameState.players[currentPlayerId];
         
-        // // Устанавливаем размер ячейки
-        // this.cellSize = gameState.map.cellSize || 40;
-        
-        // Логируем данные для отладки
-        if (this.debugMode) {
-            console.log('Рендер кадра:', {
-                cellSize: this.cellSize,
-                playerPos: { x: currentPlayer.x, y: currentPlayer.y },
-                gridSize: { 
-                    width: gameState.map.grid[0].length, 
-                    height: gameState.map.grid.length 
-                }
-            });
-        }
+        // // Логируем данные для отладки
+        // if (this.debugMode) {
+        //     logger.debug('Рендер кадра', {
+        //         cellSize: this.cellSize,
+        //         playerPos: { x: currentPlayer.x, y: currentPlayer.y },
+        //         gridSize: {
+        //             width: gameState.map.grid[0].length,
+        //             height: gameState.map.grid.length
+        //         },
+        //         time: currentTime
+        //     });
+        // }
         
         // Вычисляем смещение вида на основе положения игрока и мёртвой зоны
         const viewOffset = this.calculateViewOffsetWithDeadZone(
@@ -131,7 +119,12 @@ export class Renderer {
         
         // Убеждаемся, что размер canvas соответствует размеру видимой области
         if (this.canvas.width !== this.viewWidth || this.canvas.height !== this.viewHeight) {
-            console.log(`Изменение размера canvas с ${this.canvas.width}x${this.canvas.height} на ${this.viewWidth}x${this.viewHeight}`);
+            logger.debug(`Изменение размера canvas`, {
+                oldWidth: this.canvas.width,
+                oldHeight: this.canvas.height,
+                newWidth: this.viewWidth,
+                newHeight: this.viewHeight
+            });
             this.canvas.width = this.viewWidth;
             this.canvas.height = this.viewHeight;
         }
@@ -190,7 +183,11 @@ export class Renderer {
     
     private calculateViewOffsetWithDeadZone(playerX: number, playerY: number, map: GameState['map']): { x: number, y: number } {
         if (!map || !map.width || !map.height || !map.grid) {
-            this.throttledLogInsufficientData(map);
+            logger.error('Недостаточно данных для расчета смещения вида', {
+                map,
+                playerX,
+                playerY
+            });
             return { x: 0, y: 0 };
         }
         
@@ -204,7 +201,12 @@ export class Renderer {
             const initialX = Math.max(0, playerX - viewCenterX);
             const initialY = Math.max(0, playerY - viewCenterY);
             
-            console.log('Инициализация начального смещения:', { x: initialX, y: initialY });
+            logger.debug('Инициализация начального смещения', { 
+                x: initialX,
+                y: initialY,
+                playerX,
+                playerY
+            });
             
             // Сразу устанавливаем текущее смещение
             this.currentMapOffset.x = initialX;
@@ -286,7 +288,9 @@ export class Renderer {
     private renderMapSection(gameState: GameState, offsetX: number, offsetY: number, offsetDiffX: number, offsetDiffY: number): void {
         const map = gameState.map;
         if (!map || !map.grid) {
-            this.throttledLogNoMapGrid(gameState);
+            logger.error('Отсутствует gameState.map.grid при рендеринге карты', {
+                gameState
+            });
             return;
         }
         
@@ -319,7 +323,11 @@ export class Renderer {
                         break;
                     default:
                         this.ctx.fillStyle = "#FF00FF"; // Magenta для неизвестного типа
-                        this.throttledLogUnknownCellType(cellType, x, y);
+                        logger.warn(`Неизвестный тип ячейки`, {
+                            cellType,
+                            x,
+                            y
+                        });
                         break;
                 }
 
@@ -789,6 +797,12 @@ export class Renderer {
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         this.ctx.fillText(message, this.canvas.width / 2, this.canvas.height / 2);
+        
+        logger.error('Ошибка рендеринга', {
+            message,
+            canvasWidth: this.canvas.width,
+            canvasHeight: this.canvas.height
+        });
     }
 
     private updateUI(gameState: GameState): void {

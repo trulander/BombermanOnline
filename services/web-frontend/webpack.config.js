@@ -5,9 +5,11 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 const webpack = require('webpack');
 
 module.exports = (env, argv) => {
-  const isProduction = process.env.NODE_ENV === 'production';
-
+  const mode = argv.mode || process.env.NODE_ENV || 'development';
+  console.log(`Building in ${mode} mode`);
+  
   return {
+    mode,
     entry: './src/index.ts',
     module: {
       rules: [
@@ -44,22 +46,24 @@ module.exports = (env, argv) => {
         ],
       }),
       new webpack.DefinePlugin({
-        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'development'),
+        'process.env.NODE_ENV': JSON.stringify(mode),
         'process.env.LOGS_ENDPOINT': JSON.stringify(process.env.LOGS_ENDPOINT || '/logs'),
         'process.env.SERVICE_NAME': JSON.stringify(process.env.SERVICE_NAME || 'web-frontend'),
         'process.env.SOCKET_URL': JSON.stringify(process.env.SOCKET_URL || 'http://localhost'),
         'process.env.SOCKET_PATH': JSON.stringify(process.env.SOCKET_PATH || '/socket.io'),
+        'process.env.LOGS_BATCH_SIZE': JSON.stringify(process.env.LOGS_BATCH_SIZE || '10'),
       }),
       new webpack.ProvidePlugin({
         process: 'process/browser',
       }),
       new webpack.BannerPlugin({
         banner: `
-          window.NODE_ENV = "${process.env.NODE_ENV || 'development'}";
+          window.NODE_ENV = "${mode}";
           window.LOGS_ENDPOINT = "${process.env.LOGS_ENDPOINT || '/logs'}";
           window.SERVICE_NAME = "${process.env.SERVICE_NAME || 'web-frontend'}";
           window.SOCKET_URL = "${process.env.SOCKET_URL || 'http://localhost'}";
           window.SOCKET_PATH = "${process.env.SOCKET_PATH || '/socket.io'}";
+          window.LOGS_BATCH_SIZE = "${process.env.LOGS_BATCH_SIZE || '10'}";
         `,
         raw: true,
         entryOnly: true

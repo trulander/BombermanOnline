@@ -50,31 +50,48 @@ export class GameClient {
     private setupSocketEvents(): void {
         // Connection events
         this.socket.on('connect', () => {
-            console.log('Connected to server');
+            logger.info('Connected to server', {
+                socketUrl: window.SOCKET_URL,
+                socketPath: window.SOCKET_PATH
+            });
             this.isConnected = true;
             this.showMenu();
         });
 
         this.socket.on('disconnect', () => {
-            console.log('Disconnected from server');
+            logger.info('Disconnected from server', {
+                gameId: this.gameId,
+                playerId: this.playerId
+            });
             this.isConnected = false;
             this.showDisconnectedMessage();
         });
 
         // Game events
         this.socket.on('game_state', (gameState: GameState) => {
-            logger.throttled('game_state', LogLevel.INFO, 'Получено событие game_state', undefined, 5000);
+            logger.debug('Получено событие game_state', {
+                hasGrid: !!gameState.map?.grid,
+                playersCount: Object.keys(gameState.players).length,
+                mapChangesCount: gameState.map?.changedCells?.length || 0
+            });
             this.processGameStateUpdate(gameState);
         });
 
         // Добавляем обработчик для game_update, так как сервер использует это событие в game_loop
         this.socket.on('game_update', (gameState: GameState) => {
-            logger.throttled('game_update', LogLevel.INFO, 'Получено событие game_update', undefined, 5000);
+            logger.debug('Получено событие game_update', {
+                hasGrid: !!gameState.map?.grid,
+                playersCount: Object.keys(gameState.players).length,
+                mapChangesCount: gameState.map?.changedCells?.length || 0
+            });
             this.processGameStateUpdate(gameState);
         });
 
         this.socket.on('player_disconnected', (data: { player_id: string }) => {
-            console.log(`Player ${data.player_id} disconnected`);
+            logger.info(`Player ${data.player_id} disconnected`, {
+                gameId: this.gameId,
+                remainingPlayers: this.gameState ? Object.keys(this.gameState.players).filter(id => id !== data.player_id).length : 0
+            });
             
             // Update UI to show player disconnect if needed
             if (this.gameState && this.gameState.players[data.player_id]) {
@@ -84,6 +101,11 @@ export class GameClient {
         });
 
         this.socket.on('game_over', () => {
+            logger.info('Game over', {
+                gameId: this.gameId,
+                playerId: this.playerId,
+                score: this.gameState?.score || 0
+            });
             this.showGameOver();
         });
     }
@@ -91,17 +113,17 @@ export class GameClient {
     // Функция для обработки результата запроса состояния игры
     private handleGetGameStateResponse(response: any): void {
         if (response.success) {
-            logger.throttled('game_state_response', LogLevel.INFO, 'Получено состояние игры и полная карта', undefined, 3000);
+            logger.debug('Получено состояние игры и полная карта', {
+                hasFullMap: !!(response.full_map && response.full_map.grid),
+                hasGameState: !!response.game_state
+            });
             
             // Сохраняем полную карту в кеш
             if (response.full_map && response.full_map.grid) {
-                logger.throttled(
-                    'map_grid_received', 
-                    LogLevel.INFO, 
-                    `Получена полная карта: ${response.full_map.grid.length} x ${response.full_map.grid[0]?.length}`, 
-                    undefined, 
-                    3000
-                );
+                logger.debug('Получена полная карта', {
+                    width: response.full_map.grid[0]?.length,
+                    height: response.full_map.grid.length
+                });
                 this.cachedMapGrid = JSON.parse(JSON.stringify(response.full_map.grid));
             }
             
@@ -113,25 +135,31 @@ export class GameClient {
                 this.gameState.map.grid = this.cachedMapGrid;
             }
         } else {
-            console.error('Ошибка получения состояния игры:', response.message);
+            logger.error('Ошибка получения состояния игры', {
+                message: response.message,
+                gameId: this.gameId,
+                playerId: this.playerId,
+                responseData: response
+            });
         }
     }
 
     // Запрос полного состояния игры
     private requestGameState(): void {
         if (this.gameId && this.playerId) {
-            logger.throttled('request_game_state', LogLevel.INFO, 'Запрашиваем состояние игры', undefined, 3000);
+            logger.debug('Запрашиваем состояние игры', {
+                gameId: this.gameId,
+                playerId: this.playerId
+            });
             this.socket.emit('get_game_state', { 
                 game_id: this.gameId
             }, this.handleGetGameStateResponse.bind(this));
         } else {
-            logger.throttled(
-                'cannot_request_game_state', 
-                LogLevel.WARN, 
-                `Невозможно запросить состояние игры: gameId = ${this.gameId}, playerId = ${this.playerId}`, 
-                undefined, 
-                3000
-            );
+            logger.warn('Невозможно запросить состояние игры', {
+                gameId: this.gameId,
+                playerId: this.playerId,
+                isConnected: this.isConnected
+            });
         }
     }
 
@@ -139,16 +167,15 @@ export class GameClient {
     private processGameStateUpdate(gameState: GameState): void {
         this.lastUpdateTime = performance.now();
         
-        // Логирование информации об обновлении с ограничением частоты
+        // Логирование информации об обновлении
         const changesCount = gameState.map?.changedCells?.length || 0;
         if (changesCount > 0) {
-            logger.throttled(
-                'game_update_changes', 
-                LogLevel.INFO, 
-                `Получено обновление игры с ${changesCount} изменениями`, 
-                undefined, 
-                3000
-            );
+            logger.debug('Получено обновление игры с изменениями', {
+                changesCount,
+                playersCount: Object.keys(gameState.players).length,
+                bombsCount: gameState.bombs?.length || 0,
+                enemiesCount: gameState.enemies?.length || 0
+            });
         }
         
         // Применяем изменения к кешированной карте
@@ -156,13 +183,9 @@ export class GameClient {
             const changes = gameState.map.changedCells;
             
             if (changes.length > 0) {
-                logger.throttled(
-                    'applying_changes', 
-                    LogLevel.INFO, 
-                    `Применяем ${changes.length} изменений к кешированной карте`, 
-                    undefined, 
-                    5000
-                );
+                logger.debug('Применяем изменения к кешированной карте', {
+                    changesCount: changes.length
+                });
             }
             
             // Применяем изменения к кешированной карте
@@ -173,13 +196,13 @@ export class GameClient {
                     cell.x >= 0 && cell.x < this.cachedMapGrid[0].length) {
                     this.cachedMapGrid[cell.y][cell.x] = cell.type;
                 } else {
-                    logger.throttled(
-                        'invalid_cell_coords', 
-                        LogLevel.WARN, 
-                        `Неверные координаты ячейки: x=${cell.x}, y=${cell.y}`, 
-                        undefined, 
-                        3000
-                    );
+                    logger.warn('Неверные координаты ячейки', {
+                        x: cell.x,
+                        y: cell.y,
+                        type: cell.type,
+                        mapWidth: this.cachedMapGrid[0]?.length,
+                        mapHeight: this.cachedMapGrid.length
+                    });
                 }
             }
             
@@ -187,13 +210,11 @@ export class GameClient {
             gameState.map.grid = this.cachedMapGrid;
         } else if (gameState.map?.changedCells && !this.cachedMapGrid) {
             // Если нет кешированной карты, но есть изменения, запрашиваем полное состояние
-            logger.throttled(
-                'no_cached_map', 
-                LogLevel.WARN, 
-                'Получены изменения, но нет кешированной карты. Запрашиваем полное состояние.', 
-                undefined, 
-                3000
-            );
+            logger.warn('Получены изменения, но нет кешированной карты', {
+                changesCount: gameState.map.changedCells.length,
+                gameId: this.gameId,
+                playerId: this.playerId
+            });
             this.requestGameState();
             return;
         }
@@ -203,6 +224,10 @@ export class GameClient {
     }
 
     public start(): void {
+        logger.info('Запуск игрового клиента', {
+            canvasWidth: this.canvas.width,
+            canvasHeight: this.canvas.height
+        });
         this.showMenu();
         this.startGameLoop();
     }
@@ -227,13 +252,11 @@ export class GameClient {
         
         // Если прошло больше 3 секунд без обновлений и мы в игре, запрашиваем состояние
         if (this.gameId && this.playerId && this.lastUpdateTime > 0 && timeSinceLastUpdate > 3000) {
-            logger.throttled(
-                'no_updates', 
-                LogLevel.WARN, 
-                `Давно не было обновлений (${Math.round(timeSinceLastUpdate)}ms), запрашиваем состояние игры`, 
-                undefined, 
-                3000
-            );
+            logger.warn('Давно не было обновлений, запрашиваем состояние игры', {
+                timeSinceLastUpdate: Math.round(timeSinceLastUpdate),
+                gameId: this.gameId,
+                playerId: this.playerId
+            });
             // Запрашиваем новое состояние игры
             this.requestGameState();
             this.lastUpdateTime = currentTime; // Обновляем время, чтобы не спамить запросами
@@ -243,7 +266,11 @@ export class GameClient {
         if (this.gameState && this.playerId) {
             // Проверяем, есть ли данные карты
             if (!this.gameState.map || !this.gameState.map.grid) {
-                logger.throttled('no_map_data', LogLevel.WARN, 'Нет данных карты для рендеринга', undefined, 3000);
+                logger.warn('Нет данных карты для рендеринга', {
+                    hasMap: !!this.gameState.map,
+                    hasGrid: !!(this.gameState.map && this.gameState.map.grid),
+                    hasCachedGrid: !!this.cachedMapGrid
+                });
                 
                 // Если у нас есть кешированная карта, используем её
                 if (this.cachedMapGrid) {
@@ -257,7 +284,10 @@ export class GameClient {
                     } else {
                         this.gameState.map.grid = this.cachedMapGrid;
                     }
-                    logger.throttled('using_cached_map', LogLevel.INFO, 'Используем кешированную карту для рендеринга', undefined, 3000);
+                    logger.debug('Используем кешированную карту для рендеринга', {
+                        width: this.cachedMapGrid[0].length,
+                        height: this.cachedMapGrid.length
+                    });
                 } else {
                     // Запрашиваем полное состояние игры, если нет данных
                     this.requestGameState();
@@ -270,10 +300,10 @@ export class GameClient {
         } else {
             // Если у нас нет состояния игры или ID игрока, запрашиваем их
             if (!this.playerId) {
-                logger.throttled('no_player_id', LogLevel.WARN, 'Нет ID игрока для рендеринга', undefined, 3000);
+                logger.debug('Нет ID игрока для рендеринга');
             }
             if (!this.gameState) {
-                logger.throttled('no_game_state', LogLevel.WARN, 'Нет состояния игры для рендеринга', undefined, 3000);
+                logger.debug('Нет состояния игры для рендеринга');
                 if (this.gameId && this.playerId) {
                     this.requestGameState();
                 }
@@ -354,8 +384,10 @@ export class GameClient {
     }
 
     private createGame(): void {
+        logger.info('Создание новой игры');
         this.socket.emit('create_game', {}, (response: { game_id: string }) => {
             this.gameId = response.game_id;
+            logger.info('Игра успешно создана', {gameId: this.gameId});
             this.joinGame(this.gameId);
         });
     }
@@ -363,6 +395,7 @@ export class GameClient {
     private promptGameId(): void {
         const gameId = prompt('Enter Game ID:');
         if (gameId) {
+            logger.info('Попытка присоединиться к игре', {gameId});
             this.joinGame(gameId);
         } else {
             this.showMenu();
@@ -378,37 +411,51 @@ export class GameClient {
                 // Сбрасываем кэш карты при присоединении к новой игре
                 this.cachedMapGrid = null;
                 
-                console.log('Присоединение к игре успешно, ID игрока:', this.playerId);
+                logger.info('Присоединение к игре успешно', {
+                    gameId: this.gameId,
+                    playerId: this.playerId
+                });
                 
                 // Получаем начальное состояние игры
                 if (response.game_state && response.game_state.map && response.game_state.map.grid) {
-                    console.log('Начальное состояние получено с картой размером', 
-                        response.game_state.map.grid.length, 'x', 
-                        response.game_state.map.grid[0].length);
+                    logger.debug('Начальное состояние получено с картой', {
+                        width: response.game_state.map.grid[0].length,
+                        height: response.game_state.map.grid.length
+                    });
                     
                     // Сохраняем состояние и кэшируем карту
                     this.gameState = response.game_state;
                     this.cachedMapGrid = response.game_state.map.grid;
                 } else {
-                    console.warn('Получено неполное начальное состояние игры:', response.game_state);
+                    logger.warn('Получено неполное начальное состояние игры', {
+                        hasGameState: !!response.game_state,
+                        hasMap: !!(response.game_state && response.game_state.map),
+                        hasGrid: !!(response.game_state && response.game_state.map && response.game_state.map.grid)
+                    });
                     
                     // Явно запрашиваем полное состояние игры
                     this.socket.emit('get_game_state', { 
                         game_id: gameId,
                         player_id: response.player_id 
                     }, (stateResponse: any) => {
-                        console.log('Получен ответ на запрос состояния:', stateResponse.success);
+                        logger.debug('Получен ответ на запрос состояния', {
+                            success: stateResponse.success
+                        });
                         if (stateResponse.success) {
                             this.gameState = stateResponse.game_state;
                             
                             // Сохраняем полную карту
                             if (this.gameState && this.gameState.map && this.gameState.map.grid) {
-                                console.log('Карта из запроса состояния получена размером', 
-                                    this.gameState.map.grid.length, 'x', 
-                                    this.gameState.map.grid[0].length);
+                                logger.debug('Карта из запроса состояния получена', {
+                                    width: this.gameState.map.grid[0].length,
+                                    height: this.gameState.map.grid.length
+                                });
                                 this.cachedMapGrid = this.gameState.map.grid;
                             } else {
-                                console.error('Не удалось получить карту из запроса состояния');
+                                logger.error('Не удалось получить карту из запроса состояния', {
+                                    hasGameState: !!this.gameState,
+                                    hasMap: !!(this.gameState && this.gameState.map)
+                                });
                             }
                         }
                     });
@@ -421,6 +468,10 @@ export class GameClient {
                     gameIdElement.style.display = 'block';
                 }
             } else {
+                logger.error('Не удалось присоединиться к игре', {
+                    gameId,
+                    message: response.message
+                });
                 alert(`Failed to join game: ${response.message}`);
                 this.showMenu();
             }
@@ -461,6 +512,10 @@ export class GameClient {
         
         // Back to menu button
         this.drawButton(ctx, 'BACK TO MENU', this.canvas.width / 2, this.canvas.height / 2 + 70, 200, 50, () => {
+            logger.info('Возврат в главное меню после окончания игры', {
+                gameId: this.gameId,
+                score: this.gameState?.score || 0
+            });
             this.gameId = null;
             this.playerId = null;
             this.gameState = null;
@@ -469,6 +524,7 @@ export class GameClient {
     }
 
     public stop(): void {
+        logger.info('Остановка игрового клиента');
         cancelAnimationFrame(this.animationFrameId);
         this.socket.disconnect();
     }

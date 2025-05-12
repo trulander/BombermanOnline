@@ -61,12 +61,13 @@ services:
     volumes:
       - ../services/web-frontend/src:/app/src
     environment:
-      - NODE_ENV=development
+      - NODE_ENV=production
       - LOGS_ENDPOINT=/logs
       - SERVICE_NAME=web-frontend
       - SOCKET_URL=http://localhost
       - SOCKET_PATH=/socket.io
       - PORT=3000
+      - LOGS_BATCH_SIZE=10
     labels:
       - "traefik.enable=true"
 
