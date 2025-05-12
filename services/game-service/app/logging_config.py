@@ -15,7 +15,7 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         # Основные поля
         log_record["service"] = "game-service"
         log_record["service_type"] = "backend"
-        log_record["log_level"] = record.levelname
+        log_record["level"] = record.levelname
         log_record["logger"] = record.name
         log_record["message"] = record.getMessage()
         
@@ -25,9 +25,9 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         log_record["thread_id"] = record.thread
         log_record["thread_name"] = record.threadName
         
-        # Добавляем уникальный идентификатор для каждого лога
-        log_record["log_id"] = str(uuid.uuid4())
-        
+        # # Добавляем уникальный идентификатор для каждого лога
+        # log_record["log_id"] = str(uuid.uuid4())
+        #
         # Добавляем меток времени в секундах с начала эпохи
         log_record["timestamp_epoch"] = int(time.time())
         
@@ -42,10 +42,7 @@ def configure_logging():
     
     # Используем JSON или обычный формат логирования в зависимости от настроек
     if settings.LOG_FORMAT.lower() == "json":
-        formatter = CustomJsonFormatter(
-            "%(timestamp)s %(service)s %(log_level)s %(logger)s %(message)s",
-            timestamp=True
-        )
+        formatter = CustomJsonFormatter()
     else:
         formatter = logging.Formatter(
             "%(asctime)s | %(levelname)s | game-service | %(name)s | %(message)s"

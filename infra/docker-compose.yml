@@ -105,6 +105,15 @@ services:
     volumes:
       - nats_data:/data
 
+  prometheus-nats-exporter:
+    image: natsio/prometheus-nats-exporter:latest
+    command: "-varz -connz -subz -routez -gatewayz -healthz -accstatz -leafz -jsz=all http://nats:8222"
+    ports:
+      - "7777:7777"
+    depends_on:
+      - nats
+    restart: unless-stopped
+
   traefik:
     image: traefik:3.4.0
     ports:
@@ -193,6 +202,7 @@ services:
     volumes:
       - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
       - ./fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf
+      - ./fluent-bit/split_logs.lua:/fluent-bit/etc/split_logs.lua
       - /var/run/docker.sock:/var/run/docker.sock
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     ports:

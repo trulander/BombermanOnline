@@ -221,7 +221,7 @@ class Logger {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    logs: logsToSend.map(entry => ({ log: entry }))
+                    logs: logsToSend.map(entry => (entry))
                 })
             });
         } catch (error) {
@@ -249,27 +249,27 @@ class Logger {
     
     public trace(message: any, data?: any) {
         log.trace(message);
-        this.addToQueue(this.createLogEntry('trace', message, data));
+        this.addToQueue(this.createLogEntry('TRACE', message, data));
     }
     
     public debug(message: any, data?: any) {
         log.debug(message);
-        this.addToQueue(this.createLogEntry('debug', message, data));
+        this.addToQueue(this.createLogEntry('DEBUG', message, data));
     }
     
     public info(message: any, data?: any) {
         log.info(message);
-        this.addToQueue(this.createLogEntry('info', message, data));
+        this.addToQueue(this.createLogEntry('INFO', message, data));
     }
     
     public warn(message: any, data?: any) {
         log.warn(message);
-        this.addToQueue(this.createLogEntry('warn', message, data));
+        this.addToQueue(this.createLogEntry('WANR', message, data));
     }
     
     public error(message: any, data?: any) {
         log.error(message);
-        this.addToQueue(this.createLogEntry('error', message, data));
+        this.addToQueue(this.createLogEntry('ERROR', message, data));
     }
     
     // Вызывается при закрытии страницы для отправки оставшихся логов
