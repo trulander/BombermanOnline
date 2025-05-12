@@ -97,9 +97,9 @@ class MetricsSocketServer(socketio.AsyncServer):
         self.events_total.inc({'event_type': event_type, 'direction': 'incoming'})
         
         # Замерить размер данных
-        if len(args) > 1 and args[1] is not None:
+        if len(args) > 1:
             try:
-                data_size = len(json.dumps(args[1]).encode('utf-8'))
+                data_size = len(json.dumps(args).encode('utf-8'))
                 self.message_size_bytes.observe({'event_type': event_type, 'direction': 'incoming'}, data_size)
             except:
                 pass
