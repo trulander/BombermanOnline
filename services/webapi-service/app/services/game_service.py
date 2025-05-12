@@ -170,14 +170,14 @@ class GameService:
                 return {"success": False, "message": "Invalid player"}
 
             player_id = self.sid_user_id_to_player[sid_user_id]
-            logger.info(f"Player {player_id} is placing a bomb in game {game_id}")
+            logger.debug(f"Player {player_id} is placing a bomb in game {game_id}")
 
             result = await self.nats_service.place_bomb(game_id, player_id)
             
             if result.get('success'):
-                logger.info(f"Bomb placed successfully by player {player_id} in game {game_id}")
+                logger.debug(f"Bomb placed successfully by player {player_id} in game {game_id}")
             else:
-                logger.warning(f"Failed to place bomb for player {player_id} in game {game_id}: {result.get('message')}")
+                logger.debug(f"Failed to place bomb for player {player_id} in game {game_id}: {result.get('message')}")
                 
             return result
         except Exception as e:
@@ -197,7 +197,7 @@ class GameService:
             Dict[str, Any]: Результат отключения игрока
         """
         try:
-            logger.info(f"Disconnecting player with SID {sid_user_id}")
+            logger.debug(f"Disconnecting player with SID {sid_user_id}")
             result = {}
 
             # Если игрок был в игре, удаляем его из игры
@@ -238,7 +238,7 @@ class GameService:
 
                     # Если в игре не осталось игроков, удаляем игру
                     if not self.game_to_sids_user_id[game_id]:
-                        logger.info(f"No players left in game {game_id}, removing game from tracking")
+                        logger.debug(f"No players left in game {game_id}, removing game from tracking")
                         del self.game_to_sids_user_id[game_id]
 
             logger.info(f"Player successfully disconnected: SID={sid_user_id}, player_id={player_id}, game_id={game_id}")

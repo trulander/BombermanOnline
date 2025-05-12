@@ -101,11 +101,11 @@ class MetricsSocketServer(socketio.AsyncServer):
             
             # Обработка событий подключения/отключения
             if event == 'connect':
-                logger.info(f"Connection event for SID: {sid}")
+                logger.debug(f"Connection event for SID: {sid}")
                 self.active_connections.inc({})
                 self.connections_total.inc({})
             elif event == 'disconnect':
-                logger.info(f"Disconnect event for SID: {sid}")
+                logger.debug(f"Disconnect event for SID: {sid}")
                 self.active_connections.dec({})
                 self.disconnections_total.inc({})
             
@@ -144,7 +144,7 @@ class MetricsSocketServer(socketio.AsyncServer):
         """Увеличить счетчик активных игр"""
         try:
             self.active_games.inc({})
-            logger.info("Active games count increased")
+            logger.debug("Active games count increased")
         except Exception as e:
             logger.error(f"Error incrementing active games count: {e}", exc_info=True)
         
@@ -152,6 +152,6 @@ class MetricsSocketServer(socketio.AsyncServer):
         """Уменьшить счетчик активных игр"""
         try:
             self.active_games.dec({})
-            logger.info("Active games count decreased")
+            logger.debug("Active games count decreased")
         except Exception as e:
             logger.error(f"Error decrementing active games count: {e}", exc_info=True)

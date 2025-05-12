@@ -116,7 +116,7 @@ async def place_bomb(
         # В реальном приложении здесь нужно было бы получить player_id из JWT токена
         player_id = "player123"  # Заглушка, обычно получаем из токена
         
-        logger.info(f"Player {player_id} requesting to place bomb in game {request.game_id}")
+        logger.debug(f"Player {player_id} requesting to place bomb in game {request.game_id}")
         
         result = await game_service.place_bomb(
             game_id=request.game_id,
@@ -130,7 +130,7 @@ async def place_bomb(
                 detail=result.get("message", "Failed to place bomb")
             )
         
-        logger.info(f"Bomb placed successfully by player {player_id} in game {request.game_id}")
+        logger.debug(f"Bomb placed successfully by player {player_id} in game {request.game_id}")
         return result
     except HTTPException:
         # Re-raise HTTPException to maintain FastAPI's error handling
