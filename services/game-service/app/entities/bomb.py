@@ -1,4 +1,7 @@
 from .entity import Entity
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Bomb(Entity):
     def __init__(self, x: float, y: float, size: float, power: int, owner_id: str):
@@ -13,3 +16,5 @@ class Bomb(Entity):
         
         # Explosion cells will be populated when the bomb explodes
         self.explosion_cells: list[tuple[int, int]] = []
+        
+        logger.debug(f"Bomb created: position=({x}, {y}), power={power}, owner={owner_id}")

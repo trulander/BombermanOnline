@@ -1,6 +1,9 @@
 import random
 from enum import Enum
 from .entity import Entity
+import logging
+
+logger = logging.getLogger(__name__)
 
 class EnemyType(Enum):
     COIN = "coin"
@@ -45,9 +48,18 @@ class Enemy(Entity):
         # State
         self.destroyed: bool = False
         self.destroy_animation_timer: float = 0
+        
+        logger.debug(f"Enemy created: type={enemy_type.value}, position=({x}, {y}), speed={speed}, lives={self.lives}")
 
     def get_random_direction(self) -> tuple[float, float]:
         """Get a random normalized direction vector"""
-        # Choose one of four cardinal directions
-        choices = [(0, 1), (1, 0), (0, -1), (-1, 0)]
-        return random.choice(choices)
+        try:
+            # Choose one of four cardinal directions
+            choices = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+            direction = random.choice(choices)
+            logger.debug(f"Enemy new direction: {direction}")
+            return direction
+        except Exception as e:
+            logger.error(f"Error generating random direction: {e}", exc_info=True)
+            # Fallback to a default direction
+            return (0, 1)
