@@ -4,12 +4,12 @@ from typing import Dict, Any, List, Set
 import socketio
 from redis.asyncio import Redis
 
-
 from .game_service import GameService
 from socketio import AsyncRedisManager
-
-
 from ..config import settings
+
+# Импортировать наш новый класс
+from .metrics_socket_server import MetricsSocketServer
 
 
 class SocketIOService:
@@ -23,7 +23,8 @@ class SocketIOService:
         if settings.REDIS_PASSWORD:
             redis_url = f"redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:{settings.REDIS_PORT}"
         
-        self.sio = socketio.AsyncServer(
+        # Используем наш класс с метриками вместо стандартного AsyncServer
+        self.sio = MetricsSocketServer(
             async_mode='asgi',
             client_manager=AsyncRedisManager(redis_url),
             cors_allowed_origins='*'
@@ -44,31 +45,27 @@ class SocketIOService:
         self.sio.on("place_bomb", self.io_handle_place_bomb)
         self.sio.on("get_game_state", self.io_handle_get_game_state)
 
-
     async def io_handle_connect(self, sid: str, environ: Dict[str, Any]) -> None:
         """Handle client connection"""
         print(f"Client connected: {sid}")
 
-
     async def io_handle_disconnect(self, sid_user_id: str) -> None:
         """Handle client disconnection"""
         print(f"Client disconnected: {sid_user_id}")
-
         # Уведомляем game-service об отключении игрока
         await self.game_service.disconnect_player(sid_user_id=sid_user_id)
-        # await self.nats_service.disconnect_player(game_id, player_id)
-
-
 
     async def io_handle_create_game(self, sid: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a new game"""
         try:
             response = await self.game_service.create_game()
+            if response.get('success'):
+                # Инкрементируем счетчик игр
+                self.sio.increment_games()
             return response
         except Exception as e:
             print(f"Error creating game: {e}")
             return {"success": False, "message": str(e)}
-
 
     async def io_handle_join_game(self, sid: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Join an existing game"""
@@ -77,12 +74,7 @@ class SocketIOService:
             if not game_id:
                 return {"success": False, "message": "Missing game_id"}
 
-            # # Генерируем уникальный ID для игрока
-            # player_id = str(uuid.uuid4())
-
             response = await self.game_service.join_game(sid_user_id=sid, game_id=game_id)
-            # # Присоединяемся к игре через NATS
-            # response = await self.nats_service.join_game(game_id, player_id)
 
             if response.get('success'):
                 # Присоединяемся к комнате для этой игры
@@ -98,7 +90,6 @@ class SocketIOService:
             print(f"Error joining game: {e}")
             return {"success": False, "message": str(e)}
 
-
     async def io_handle_input(self, sid_user_id: str, data: Dict[str, Any]) -> None:
         """Handle player input"""
         try:
@@ -110,18 +101,17 @@ class SocketIOService:
         except Exception as e:
             print(f"Error handling input: {e}")
 
-
     async def io_handle_place_bomb(self, sid_user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle bomb placement"""
         try:
             game_id = data.get('game_id')
+            
             # Отправляем запрос на установку бомбы в game-service через NATS
             response = await self.game_service.place_bomb(game_id=game_id, sid_user_id=sid_user_id)
             return response
         except Exception as e:
             print(f"Error placing bomb: {e}")
             return {"success": False, "message": str(e)}
-
 
     async def io_handle_get_game_state(self, sid: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Get current game state"""
@@ -136,7 +126,6 @@ class SocketIOService:
         except Exception as e:
             print(f"Error getting game state: {e}")
             return {"success": False, "message": str(e)}
-    
 
     async def handle_game_update(self, room_sid: str, game_id: str, game_state: Dict[str, Any]) -> None:
         """Handle game state update from game service"""
@@ -149,6 +138,7 @@ class SocketIOService:
         """Handle game over notification from game service"""
         try:
             await self.sio.emit('game_over', {}, room=room_sid)
+            self.sio.decrement_games()
         except Exception as e:
             print(f"Error in handle_game_over: {e}")
     
@@ -158,7 +148,6 @@ class SocketIOService:
             await self.sio.emit('player_disconnected', data, room=room_sid)
         except Exception as e:
             print(f"Error in handle_player_disconnected: {e}")
-
 
     # Получаем Socket.IO приложение для подключения к FastAPI
     def get_app(self) -> Any:
