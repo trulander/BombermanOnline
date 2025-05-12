@@ -9,7 +9,6 @@ http:
       middlewares:
         - compress
         - security-headers
-#        - strip-api-prefix
 
     # WebAPI WebSocket
     webapi-ws:

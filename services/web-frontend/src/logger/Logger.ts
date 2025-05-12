@@ -221,7 +221,7 @@ class Logger {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    logs: logsToSend.map(entry => ({ log: JSON.stringify(entry) }))
+                    logs: logsToSend.map(entry => ({ log: entry }))
                 })
             });
         } catch (error) {

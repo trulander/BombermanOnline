@@ -894,7 +894,7 @@
             "uid": "P8E80F9AEF21F6940"
           },
           "editorMode": "builder",
-          "expr": "{job=~\".+\"}",
+          "expr": "{job=~\".+\"} | json",
           "queryType": "range",
           "refId": "A"
         }

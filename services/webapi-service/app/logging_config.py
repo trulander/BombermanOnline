@@ -1,6 +1,10 @@
 import logging
 import logging.config
 import sys
+import time
+import os
+import socket
+import uuid
 from pythonjsonlogger import jsonlogger
 
 from .config import settings
@@ -8,9 +12,28 @@ from .config import settings
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
     def add_fields(self, log_record, record, message_dict):
         super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
+        # Основные поля
         log_record["service"] = "webapi-service"
-        log_record["level"] = record.levelname
+        log_record["service_type"] = "backend"
+        log_record["log_level"] = record.levelname
         log_record["logger"] = record.name
+        log_record["message"] = record.getMessage()
+        
+        # Дополнительный контекст
+        log_record["host"] = socket.gethostname()
+        log_record["pid"] = os.getpid()
+        log_record["thread_id"] = record.thread
+        log_record["thread_name"] = record.threadName
+        
+        # Добавляем уникальный идентификатор для каждого лога
+        log_record["log_id"] = str(uuid.uuid4())
+        
+        # Добавляем меток времени в секундах с начала эпохи
+        log_record["timestamp_epoch"] = int(time.time())
+        
+        # Если есть исключение, добавляем его информацию
+        if record.exc_info:
+            log_record["exception"] = self.formatException(record.exc_info)
 
 def configure_logging():
     """Настройка JSON логирования"""
@@ -20,7 +43,7 @@ def configure_logging():
     # Используем JSON или обычный формат логирования в зависимости от настроек
     if settings.LOG_FORMAT.lower() == "json":
         formatter = CustomJsonFormatter(
-            "%(timestamp)s %(service)s %(level)s %(name)s %(message)s",
+            "%(timestamp)s %(service)s %(log_level)s %(logger)s %(message)s",
             timestamp=True
         )
     else:
