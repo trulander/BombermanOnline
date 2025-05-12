@@ -97,12 +97,17 @@ class MetricsSocketServer(socketio.AsyncServer):
         self.events_total.inc({'event_type': event_type, 'direction': 'incoming'})
         
         # Замерить размер данных
-        if len(args) > 1:
+        logger.info(f"args {args} kwargs {kwargs}")
+        if args or kwargs:
             try:
-                data_size = len(json.dumps(args).encode('utf-8'))
+                data_size = 0
+                if args:
+                    data_size += len(json.dumps(args).encode('utf-8'))
+                if kwargs:
+                    data_size += len(json.dumps(kwargs).encode('utf-8'))
                 self.message_size_bytes.observe({'event_type': event_type, 'direction': 'incoming'}, data_size)
-            except:
-                pass
+            except (TypeError, ValueError) as e:
+                logger.warning(f"Failed to calculate data size for event {event_type}: {e}")
         
         # Измерение времени выполнения обработчика
         start_time = time.time()
