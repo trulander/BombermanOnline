@@ -2,7 +2,8 @@ import uvicorn
 import logging
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from starlette_exporter import PrometheusMiddleware, handle_metrics
+from aioprometheus import MetricsMiddleware
+from aioprometheus.asgi.starlette import metrics
 
 from .config import settings
 from .logging_config import configure_logging
@@ -23,14 +24,12 @@ app = FastAPI(
     debug=settings.DEBUG,
 )
 
-# Добавляем Prometheus метрики
+# Добавляем Prometheus метрики с помощью aioprometheus
 app.add_middleware(
-    PrometheusMiddleware,
-    app_name="webapi_service",
-    group_paths=True,
-    filter_unhandled_paths=False,
+    MetricsMiddleware,
+    # app_name="webapi_service"
 )
-app.add_route("/metrics", handle_metrics)
+app.add_route("/metrics", metrics)
 
 # Инициализация Socket.IO
 socketio_service = SocketIOService(

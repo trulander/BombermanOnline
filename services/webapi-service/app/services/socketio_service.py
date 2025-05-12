@@ -1,5 +1,6 @@
 import asyncio
 import uuid
+import logging
 from typing import Dict, Any, List, Set
 import socketio
 from redis.asyncio import Redis
@@ -11,6 +12,7 @@ from ..config import settings
 # Импортировать наш новый класс
 from .metrics_socket_server import MetricsSocketServer
 
+logger = logging.getLogger(__name__)
 
 class SocketIOService:
     def __init__(
@@ -47,11 +49,13 @@ class SocketIOService:
 
     async def io_handle_connect(self, sid: str, environ: Dict[str, Any]) -> None:
         """Handle client connection"""
-        print(f"Client connected: {sid}")
+        logger.info(f"Client connected: {sid}")
 
     async def io_handle_disconnect(self, sid_user_id: str) -> None:
         """Handle client disconnection"""
-        print(f"Client disconnected: {sid_user_id}")
+        # Только логирование и уведомление game-service
+        logger.info(f"Handling application-level disconnect for: {sid_user_id}")
+        
         # Уведомляем game-service об отключении игрока
         await self.game_service.disconnect_player(sid_user_id=sid_user_id)
 
@@ -64,7 +68,7 @@ class SocketIOService:
                 self.sio.increment_games()
             return response
         except Exception as e:
-            print(f"Error creating game: {e}")
+            logger.error(f"Error creating game: {e}")
             return {"success": False, "message": str(e)}
 
     async def io_handle_join_game(self, sid: str, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -87,7 +91,7 @@ class SocketIOService:
 
             return response
         except Exception as e:
-            print(f"Error joining game: {e}")
+            logger.error(f"Error joining game: {e}")
             return {"success": False, "message": str(e)}
 
     async def io_handle_input(self, sid_user_id: str, data: Dict[str, Any]) -> None:
@@ -99,7 +103,7 @@ class SocketIOService:
             # Отправляем ввод игрока в game-service через NATS
             await self.game_service.send_input(game_id=game_id, sid_user_id=sid_user_id, inputs=inputs)
         except Exception as e:
-            print(f"Error handling input: {e}")
+            logger.error(f"Error handling input: {e}")
 
     async def io_handle_place_bomb(self, sid_user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle bomb placement"""
@@ -110,7 +114,7 @@ class SocketIOService:
             response = await self.game_service.place_bomb(game_id=game_id, sid_user_id=sid_user_id)
             return response
         except Exception as e:
-            print(f"Error placing bomb: {e}")
+            logger.error(f"Error placing bomb: {e}")
             return {"success": False, "message": str(e)}
 
     async def io_handle_get_game_state(self, sid: str, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -124,7 +128,7 @@ class SocketIOService:
             response = await self.game_service.get_game_state(game_id=game_id)
             return response
         except Exception as e:
-            print(f"Error getting game state: {e}")
+            logger.error(f"Error getting game state: {e}")
             return {"success": False, "message": str(e)}
 
     async def handle_game_update(self, room_sid: str, game_id: str, game_state: Dict[str, Any]) -> None:
@@ -132,7 +136,7 @@ class SocketIOService:
         try:
             await self.sio.emit('game_update', game_state, room=room_sid)
         except Exception as e:
-            print(f"Error in handle_game_update: {e}")
+            logger.error(f"Error in handle_game_update: {e}")
     
     async def handle_game_over(self, room_sid: str, game_id: str) -> None:
         """Handle game over notification from game service"""
@@ -140,14 +144,14 @@ class SocketIOService:
             await self.sio.emit('game_over', {}, room=room_sid)
             self.sio.decrement_games()
         except Exception as e:
-            print(f"Error in handle_game_over: {e}")
+            logger.error(f"Error in handle_game_over: {e}")
     
     async def handle_player_disconnected(self, room_sid: str, game_id: str, data: Dict[str, Any]) -> None:
         """Handle player disconnection notification from game service"""
         try:
             await self.sio.emit('player_disconnected', data, room=room_sid)
         except Exception as e:
-            print(f"Error in handle_player_disconnected: {e}")
+            logger.error(f"Error in handle_player_disconnected: {e}")
 
     # Получаем Socket.IO приложение для подключения к FastAPI
     def get_app(self) -> Any:
