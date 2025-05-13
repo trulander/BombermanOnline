@@ -7,9 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 from fastapi.responses import JSONResponse
 
+from .services.game_service import GameService
 from .config import settings
 from .logging_config import configure_logging
 from .services.nats_service import NatsService
+from .coordinators.game_coorditanor import GameCoordinator
 
 # Настройка логирования
 configure_logging()
@@ -41,6 +43,7 @@ try:
     
     # Инициализируем NATS сервис
     nats_service = NatsService()
+    game_coordinator = GameCoordinator(notification_service=nats_service)
     
     # Глобальный обработчик исключений
     @app.exception_handler(Exception)
@@ -56,8 +59,8 @@ try:
     async def startup_event() -> None:
         try:
             logger.info("Starting Game service")
-            await nats_service.connect()
-            asyncio.create_task(nats_service.start_game_loop())
+            await game_coordinator.initialize_handlers()
+            asyncio.create_task(game_coordinator.start_game_loop())
             logger.info("Game service started successfully")
         except Exception as e:
             logger.critical(f"Failed to start Game service: {e}", exc_info=True)

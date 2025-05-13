@@ -26,7 +26,7 @@ class Settings(BaseSettings):
     MAP_WIDTH: int = 15
     MAP_HEIGHT: int = 13
     MAX_PLAYERS: int = 4
-    GAME_UPDATE_RATE: float = 0.023  # ~30 FPS
+    GAME_UPDATE_FPS: float = 30
     
     # NATS settings
     NATS_URL: str = "nats://localhost:4222"
