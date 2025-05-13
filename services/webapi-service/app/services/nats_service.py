@@ -57,23 +57,25 @@ class NatsService:
     ) -> None:
         """Регистрация обработчика сокет-событий"""
         try:
-            if sid not in self.socket_event_handlers:
-                self.socket_event_handlers[sid] = {}
+            if f"game_{sid}" not in self.socket_event_handlers:
+                self.socket_event_handlers[f"game_{sid}"] = {}
             
-            self.socket_event_handlers[sid][event] = handler
-            logger.debug(f"Registered socket handler for SID {sid}, event {event}")
+            self.socket_event_handlers[f"game_{sid}"][event] = handler
+            logger.debug(f"Registered socket handler for SID game_{sid}, event {event}")
         except Exception as e:
-            logger.error(f"Error registering socket handler for SID {sid}, event {event}: {e}", exc_info=True)
+            logger.error(f"Error registering socket handler for SID game_{sid}, event {event}: {e}", exc_info=True)
     
-    def unregister_socket_handler(self, sid: str) -> None:
+    def unregister_socket_handler(self, game_id: str) -> None:
         """Удаление обработчиков сокет-событий"""
         try:
-            if sid in self.socket_event_handlers:
-                logger.debug(f"Unregistering socket handlers for SID {sid}")
-                del self.socket_event_handlers[sid]
+            logger.info(f"Unregistering socket handlers for SID game_{game_id}, handlers: {self.socket_event_handlers}")
+            if f"game_{game_id}" in self.socket_event_handlers:
+                del self.socket_event_handlers[f"game_{game_id}"]
+                logger.info(f"deleted socket handlers for SID game_{game_id}")
         except Exception as e:
-            logger.error(f"Error unregistering socket handlers for SID {sid}: {e}", exc_info=True)
-            
+            logger.error(f"Error unregistering socket handlers for SID game_{game_id}: {e}", exc_info=True)
+
+
     async def handle_game_update(self, msg: Msg) -> None:
         """Обработчик обновления игры"""
         try:
@@ -81,13 +83,11 @@ class NatsService:
             game_state = json.loads(msg.data.decode())
             
             # Отправляем обновление всем подключенным клиентам через сокеты
-            handlers_count = 0
-            for sid, handlers in self.socket_event_handlers.items():
-                if 'game_update' in handlers:
-                    await handlers['game_update'](sid, game_id, game_state)
-                    handlers_count += 1
-                    
-            logger.debug(f"Game update for game {game_id} forwarded to {handlers_count} handlers")
+            handler = self.socket_event_handlers.get(f"game_{game_id}", {}).get('game_update', None)
+            if handler:
+                await handler(game_id=game_id, game_state=game_state)
+
+            logger.debug(f"Game update for game {game_id} forwarded to {handler} handler")
         except Exception as e:
             logger.error(f"Error handling game update: {e}", exc_info=True)
     
@@ -98,13 +98,13 @@ class NatsService:
             logger.info(f"Game over event received for game {game_id}")
             
             # Отправляем уведомление всем подключенным клиентам через сокеты
-            handlers_count = 0
-            for sid, handlers in self.socket_event_handlers.items():
-                if 'game_over' in handlers:
-                    await handlers['game_over'](sid, game_id)
-                    handlers_count += 1
-                    
-            logger.info(f"Game over for game {game_id} forwarded to {handlers_count} handlers")
+            handler = self.socket_event_handlers.get(f"game_{game_id}", {}).get('game_over', None)
+            if handler:
+                await handler(game_id=game_id)
+
+            self.unregister_socket_handler(game_id=game_id)
+
+            logger.info(f"Game over for game {game_id} forwarded to {handler} handler")
         except Exception as e:
             logger.error(f"Error handling game over: {e}", exc_info=True)
     
@@ -116,15 +116,13 @@ class NatsService:
             player_id = data.get('player_id')
             
             logger.info(f"Player {player_id} disconnected from game {game_id}")
-            
-            # Отправляем уведомление всем подключенным клиентам через сокеты
-            handlers_count = 0
-            for sid, handlers in self.socket_event_handlers.items():
-                if 'player_disconnected' in handlers:
-                    await handlers['player_disconnected'](sid, game_id, {'player_id': player_id})
-                    handlers_count += 1
-                    
-            logger.debug(f"Player disconnected event for {player_id} in game {game_id} forwarded to {handlers_count} handlers")
+
+            # Отправляем уведомление всем подключенным клиентам в комнату через сокеты
+            handler = self.socket_event_handlers.get(f"game_{game_id}", {}).get('player_disconnected', None)
+            if handler:
+                await handler(game_id=game_id, player_id=player_id)
+
+            logger.debug(f"Player disconnected event for {player_id} in game {game_id} forwarded to {handler} handler")
         except Exception as e:
             logger.error(f"Error handling player disconnect: {e}", exc_info=True)
     

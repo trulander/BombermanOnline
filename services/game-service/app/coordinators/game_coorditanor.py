@@ -139,15 +139,15 @@ class GameCoordinator:
 
         if game_id and game_id in self.games and player_id:
             game = self.games[game_id]
-            game.remove_player(player_id)
+            status_removing = game.remove_player(player_id)
             logger.info(f"Player {player_id} disconnected from game {game_id}")
-
-            if len(game.players) == 0:
-                logger.info(f"No players left in game {game_id}, removing game")
-                del self.games[game_id]
-                return False, {}
-            else:
-                return True, {}
+            return status_removing, {"message": "Player disconnected"}
+            # if len(game.players) == 0:
+            #     logger.info(f"No players left in game {game_id}, removing game")
+            #     del self.games[game_id]
+            #     return False, {}
+            # else:
+            #     return True, {}
         else:
             if not game_id:
                 logger.warning("Missing game_id in disconnect request")

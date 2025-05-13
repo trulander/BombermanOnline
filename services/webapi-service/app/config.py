@@ -36,7 +36,7 @@ class Settings(BaseSettings):
     GAME_SERVICE_URL: str = "http://localhost:5002"
     
     # Logging settings
-    LOG_LEVEL: str = "DEBUG"
+    LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"
     TRACE_CALLER: bool = True
     

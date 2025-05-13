@@ -78,14 +78,16 @@ class GameService:
             logger.error(f"Error adding player {player.id}: {e}", exc_info=True)
             return False
     
-    def remove_player(self, player_id: str) -> None:
+    def remove_player(self, player_id: str) -> bool:
         """Remove a player from the game"""
         try:
             if player_id in self.players:
                 logger.info(f"Player {player_id} removed from game")
                 del self.players[player_id]
+                return True
             else:
                 logger.debug(f"Player {player_id} not found, cannot remove")
+                return False
         except Exception as e:
             logger.error(f"Error removing player {player_id}: {e}", exc_info=True)
     

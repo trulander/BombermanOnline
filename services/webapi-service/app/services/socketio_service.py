@@ -85,9 +85,9 @@ class SocketIOService:
                 await self.sio.enter_room(sid, f"game_{game_id}")
 
                 # Регистрируем обработчики событий обновления игры
-                await self.game_service.register_socket_handler(f"game_{game_id}", 'game_update', self.handle_game_update)
-                await self.game_service.register_socket_handler(f"game_{game_id}", 'game_over', self.handle_game_over)
-                await self.game_service.register_socket_handler(f"game_{game_id}", 'player_disconnected', self.handle_player_disconnected)
+                await self.game_service.register_socket_handler(sid=game_id, event='game_update', handler=self.handle_game_update)
+                await self.game_service.register_socket_handler(sid=game_id, event='game_over', handler=self.handle_game_over)
+                await self.game_service.register_socket_handler(sid=game_id, event='player_disconnected', handler=self.handle_player_disconnected)
 
             return response
         except Exception as e:
@@ -131,25 +131,27 @@ class SocketIOService:
             logger.error(f"Error getting game state: {e}", exc_info=True)
             return {"success": False, "message": str(e)}
 
-    async def handle_game_update(self, room_sid: str, game_id: str, game_state: Dict[str, Any]) -> None:
+    async def handle_game_update(self, game_id: str, game_state: Dict[str, Any]) -> None:
         """Handle game state update from game service"""
         try:
-            await self.sio.emit('game_update', game_state, room=room_sid)
+            await self.sio.emit(event='game_update', data=game_state, room=f"game_{game_id}")
         except Exception as e:
             logger.error(f"Error in handle_game_update: {e}", exc_info=True)
     
-    async def handle_game_over(self, room_sid: str, game_id: str) -> None:
+    async def handle_game_over(self, game_id: str) -> None:
         """Handle game over notification from game service"""
         try:
-            await self.sio.emit('game_over', {}, room=room_sid)
+            logger.info(f"Handling game_over event for {game_id}")
+            await self.sio.emit('game_over', {}, room=f"game_{game_id}")
             self.sio.decrement_games()
         except Exception as e:
             logger.error(f"Error in handle_game_over: {e}", exc_info=True)
     
-    async def handle_player_disconnected(self, room_sid: str, game_id: str, data: Dict[str, Any]) -> None:
+    async def handle_player_disconnected(self, game_id, player_id) -> None:
         """Handle player disconnection notification from game service"""
         try:
-            await self.sio.emit('player_disconnected', data, room=room_sid)
+            await self.sio.leave_room(sid=player_id, room=f"game_{game_id}")
+            await self.sio.emit(event='player_disconnected', data={}, room=f"game_{game_id}")
         except Exception as e:
             logger.error(f"Error in handle_player_disconnected: {e}", exc_info=True)
 

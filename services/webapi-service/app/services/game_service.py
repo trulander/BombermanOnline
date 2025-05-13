@@ -207,12 +207,12 @@ class GameService:
                 logger.info(f"Player {player_id} disconnecting from game {game_id}")
                 result = await self.nats_service.disconnect_player(game_id, player_id)
 
-                # Удаляем обработчики событий
-                try:
-                    logger.debug(f"Unregistering socket handlers for game {game_id}")
-                    self.nats_service.unregister_socket_handler(sid=f"game_{game_id}")
-                except Exception as e:
-                    logger.warning(f"Error unregistering socket handlers for game {game_id}: {e}")
+                # # Удаляем обработчики событий
+                # try:
+                #     logger.debug(f"Unregistering socket handlers for game {game_id}")
+                #     self.nats_service.unregister_socket_handler(sid=f"game_{game_id}")
+                # except Exception as e:
+                #     logger.warning(f"Error unregistering socket handlers for game {game_id}: {e}")
 
             # Удаляем привязки
             player_id = None
@@ -239,6 +239,13 @@ class GameService:
                     if not self.game_to_sids_user_id[game_id]:
                         logger.debug(f"No players left in game {game_id}, removing game from tracking")
                         del self.game_to_sids_user_id[game_id]
+
+                        # # Удаляем обработчики событий
+                        # try:
+                        #     logger.info(f"Unregistering socket handlers for game {game_id}")
+                        #     self.nats_service.unregister_socket_handler(game_id=game_id)
+                        # except Exception as e:
+                        #     logger.warning(f"Error unregistering socket handlers for game {game_id}: {e}")
 
             logger.info(f"Player successfully disconnected: SID={sid_user_id}, player_id={player_id}, game_id={game_id}")
             return result
