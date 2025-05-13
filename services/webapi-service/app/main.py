@@ -78,8 +78,8 @@ try:
             logger.info("Starting WebAPI service")
             await redis_repository.connect()
             logger.info("Connected to Redis successfully")
-            await nats_service.connect()
-            logger.info("Connected to NATS successfully")
+            # await nats_service.connect()
+            # logger.info("Connected to NATS successfully")
             logger.info("WebAPI service started successfully")
         except Exception as e:
             logger.critical(f"Failed to start WebAPI service: {e}", exc_info=True)

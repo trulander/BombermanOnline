@@ -26,7 +26,7 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
                 caller_chain.append(f"{frame_info.function}, {frame_info.lineno}, {frame_info.filename}")
         # Обратный порядок, чтобы сначала была первая вызывающая функция
         caller_chain.reverse()
-        return " -> ".join(caller_chain)
+        return {i:val for i, val in enumerate(caller_chain)}
 
     def add_fields(self, log_record, record, message_dict):
         super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)

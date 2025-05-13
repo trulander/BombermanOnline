@@ -27,12 +27,13 @@ class Settings(BaseSettings):
     MAP_HEIGHT: int = 13
     MAX_PLAYERS: int = 4
     GAME_UPDATE_FPS: float = 30
+    GAME_OVER_TIMEOUT: float = 5 #sec
     
     # NATS settings
     NATS_URL: str = "nats://localhost:4222"
 
     # Logging settings
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: str = "DEBUG"
     LOG_FORMAT: str = "json"
     TRACE_CALLER: bool = True
     

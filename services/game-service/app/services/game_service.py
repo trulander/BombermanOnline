@@ -5,6 +5,7 @@ import json
 import logging
 from typing import Dict, List, Tuple, Optional, Any, Set
 
+from ..config import settings
 from ..entities.map import Map, CellType
 from ..entities.player import Player
 from ..entities.enemy import Enemy, EnemyType  # Import EnemyType
@@ -31,6 +32,7 @@ class GameService:
             self.level: int = 1
             self.game_over: bool = False
             self.last_update_time: float = time.time()
+            self.timer_is_alive: float = time.time()
             
             # Initialize game
             self.map.generate_map()
@@ -648,10 +650,17 @@ class GameService:
         try:
             is_active = not self.game_over and len(self.players) > 0
             if not is_active:
-                if self.game_over:
-                    logger.info("Game is not active: game over flag is set")
+                #check if timeout inactive game is not over
+                if time.time() - self.timer_is_alive < settings.GAME_OVER_TIMEOUT:
+                    is_active = True
+                    logger.debug("Game inactive time is not expired yet.")
                 else:
-                    logger.info("Game is not active: no players remaining")
+                    if self.game_over:
+                        logger.info("Game is not active: game over flag is set")
+                    else:
+                        logger.info("Game is not active: no players remaining")
+            else:
+                self.timer_is_alive = time.time()
             return is_active
         except Exception as e:
             logger.error(f"Error checking if game is active: {e}", exc_info=True)

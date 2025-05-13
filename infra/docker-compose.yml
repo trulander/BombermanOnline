@@ -185,7 +185,7 @@ services:
     restart: unless-stopped
 
   loki:
-    image: grafana/loki:2.9.3
+    image: grafana/loki:3.5.0
     volumes:
       - ./loki/loki-config.yml:/etc/loki/local-config.yaml
       - loki_data:/loki
@@ -219,7 +219,7 @@ services:
       - default
 
   grafana:
-    image: grafana/grafana:10.4.0
+    image: grafana/grafana:12.0.0
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning

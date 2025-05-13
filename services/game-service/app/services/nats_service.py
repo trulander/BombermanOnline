@@ -39,14 +39,6 @@ class NatsService:
                 logger.info(f"Connecting to NATS server at {settings.NATS_URL}")
                 self._nc = await nats.connect(settings.NATS_URL)
 
-                # # Подписка на события
-                # await self._nc.subscribe("game.create", cb=self.handle_create_game)
-                # await self._nc.subscribe("game.join", cb=self.handle_join_game)
-                # await self._nc.subscribe("game.input", cb=self.handle_input)
-                # await self._nc.subscribe("game.place_bomb", cb=self.handle_place_bomb)
-                # await self._nc.subscribe("game.get_state", cb=self.handle_get_game_state)
-                # await self._nc.subscribe("game.disconnect", cb=self.handle_disconnect)
-
                 logger.info(f"Connected to NATS: {settings.NATS_URL}")
             return self._nc
         except Exception as e:
@@ -107,28 +99,6 @@ class NatsService:
     async def send_game_over(self, game_id):
         nc = await self.get_nc()
         await nc.publish(f"game.over.{game_id}", b"")
-
-
-    # def my_decorator(self, func):
-    #     async def wrapper(*args, **kwargs):
-    #         print("До вызова функции")
-    #         result = await func(*args, **kwargs)
-    #         print("После вызова функции")
-    #         return result
-    #
-    #     return wrapper
-
-    # def subscribe_to(self, subject: str):
-    #     def decorator(handler):
-    #         @wraps(handler)
-    #         async def wrapper(msg: Msg):
-    #             decoded_data = msg.data.decode()
-    #             return await handler(decoded_data)
-    #
-    #         self._subscriptions.append((subject, wrapper))
-    #         return wrapper
-    #
-    #     return decorator
 
 
     async def handle_create_game(self, data: dict, callback) -> dict:
@@ -192,7 +162,7 @@ class NatsService:
         return response
 
 
-    async def handle_player_disconnect(self, data: dict, callback) -> None:
+    async def handle_player_disconnect(self, data: dict, callback) -> dict:
         """Обработчик отключения игрока"""
 
         game_id = data.get("game_id")
@@ -206,3 +176,5 @@ class NatsService:
                 json.dumps({"player_id": player_id}).encode()
             )
             logger.info(f"Sent player_disconnected notification for player {player_id} in game {game_id}")
+            return {"success": True}
+        return {"success": False, **result}

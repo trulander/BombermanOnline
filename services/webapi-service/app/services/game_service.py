@@ -1,9 +1,6 @@
 import uuid
 import logging
 from typing import Dict, Any, Callable
-
-# from .socketio_service import SocketIOService
-# from ..repositories import RedisRepository
 from ..services.nats_service import NatsService
 
 logger = logging.getLogger(__name__)
@@ -48,7 +45,9 @@ class GameService:
         """
         try:
             logger.info("Creating new game")
-            result = await self.nats_service.create_game()
+            game_id = str(uuid.uuid4())
+            logger.info(f"Creating new game with ID: {game_id}")
+            result = await self.nats_service.create_game(game_id=game_id)
             if result.get('success'):
                 logger.info(f"Game created successfully with ID: {result.get('game_id')}")
             else:
