@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+
+{% block title %}Авторизация - Bomberman Online{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Авторизация</h1>
+    
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    
+    <form id="login-form">
+        <div class="form-group">
+            <label for="username">Имя пользователя или Email</label>
+            <input type="text" id="username" name="username" required>
+        </div>
+        <div class="form-group">
+            <label for="password">Пароль</label>
+            <input type="password" id="password" name="password" required>
+        </div>
+        <div class="form-group">
+            <input type="checkbox" id="remember_me" name="remember_me" value="true">
+            <label for="remember_me" style="display: inline;">Запомнить меня</label>
+        </div>
+        <button type="submit">Войти</button>
+    </form>
+    
+    <div class="links">
+        <a href="/ui/register">Регистрация</a>
+        <a href="/ui/reset-password">Забыли пароль?</a>
+    </div>
+    
+    <div class="oauth-container">
+        <p>Или войдите через:</p>
+        <a href="/api/v1/auth/oauth/google" class="oauth-button">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google">
+            Google
+        </a>
+    </div>
+</div>
+{% endblock %} 

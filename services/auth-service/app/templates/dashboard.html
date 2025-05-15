@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+
+{% block title %}Личный кабинет - Bomberman Online{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <div class="header">
+        <h1>Личный кабинет</h1>
+        <span class="role-badge role-{{ user.role }}">{{ user.role|upper }}</span>
+    </div>
+    
+    {% if message %}
+    <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
+    
+    <div class="user-info">
+        <p><span class="label">Имя пользователя:</span> {{ user.username }}</p>
+        <p><span class="label">Email:</span> {{ user.email }}</p>
+        <p><span class="label">Полное имя:</span> {{ user.full_name or 'Не указано' }}</p>
+        <p><span class="label">Email подтвержден:</span> {{ 'Да' if user.is_verified else 'Нет' }}</p>
+        <p><span class="label">Дата регистрации:</span> {{ user.created_at.strftime('%d.%m.%Y %H:%M') }}</p>
+    </div>
+    
+    <div class="actions">
+        <a href="/ui/profile/edit" class="btn">Редактировать профиль</a>
+        <a href="/ui/play" class="btn">Играть</a>
+        <a href="javascript:void(0)" id="logout-btn" class="btn btn-danger">Выйти</a>
+    </div>
+</div>
+{% endblock %} 

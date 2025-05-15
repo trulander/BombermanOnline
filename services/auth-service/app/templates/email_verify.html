@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+
+{% block title %}Подтверждение Email - Bomberman Online{% endblock %}
+
+{% block content %}
+<div class="container email-verify-container">
+    {% if success %}
+    <div class="email-verify-icon success-icon">✓</div>
+    <h1>Email успешно подтвержден!</h1>
+    <p>Ваш адрес электронной почты был успешно подтвержден. Теперь вы можете войти в систему.</p>
+    {% else %}
+    <div class="email-verify-icon error-icon">✗</div>
+    <h1>Ошибка подтверждения</h1>
+    <p>К сожалению, не удалось подтвердить ваш адрес электронной почты. Возможно, ссылка устарела или недействительна.</p>
+    {% endif %}
+    
+    <div class="links">
+        <a href="/ui/login" class="btn">Перейти к авторизации</a>
+    </div>
+</div>
+{% endblock %} 

@@ -55,15 +55,6 @@ class LoginForm(BaseModel):
     password: str = Field(..., description="Пароль")
     remember_me: bool = Field(False, description="Запомнить меня (увеличивает срок жизни refresh_token)")
 
-    @classmethod
-    def as_form(
-            cls,
-            username: str = Form(...),
-            password: str = Form(...),
-            remember_me: bool = Form(False),
-    ) -> "LoginForm":
-        return cls(username=username, password=password, remember_me=remember_me)
-
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(..., description="Refresh токен для обновления access токена")
 

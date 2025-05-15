@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response, Header, Query, Security
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response, Header, Query, Security, Cookie
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
@@ -7,9 +6,9 @@ import logging
 from datetime import datetime, UTC
 from jose import jwt, JWTError
 
-from ..dependencies import get_db, get_current_user, get_admin_user, security
+from ..dependencies import get_db, get_current_user, get_admin_user
 from ..models.user import User, UserCreate, UserResponse, UserUpdate, UserSearchResponse, UserRole
-from ..models.token import Token, RefreshTokenRequest, LoginForm, TokenPayload
+from ..models.token import Token, RefreshTokenRequest, LoginForm, TokenPayload, PasswordResetRequest, PasswordReset
 from ..services.user_service import UserService
 from ..services.token_service import TokenService
 from ..services.oauth_service import OAuthService
@@ -24,7 +23,7 @@ api_router = APIRouter()
 @api_router.post("/auth/login", response_model=Token)
 async def login(
 request: Request,
-    form_data: LoginForm = Depends(LoginForm.as_form),
+    form_data: LoginForm = Annotated[LoginForm, Body(...)],
 
     db: AsyncSession = Depends(get_db),
 ) -> Token:
@@ -94,27 +93,117 @@ async def refresh_token(
 
 @api_router.post("/auth/logout")
 async def logout(
-    request: Request,
-    response: Response,
-    token: str = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
+        request: Request,
+        response: Response,
+        token: str = Depends(get_current_user),
+        db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Выход из системы и отзыв токена"""
     token_service = TokenService(db)
-    
+
     # Отзываем токен
     success = await token_service.revoke_token(token)
-    
-    # Очищаем куки если они есть
-    response.delete_cookie(key="access_token")
-    response.delete_cookie(key="refresh_token")
-    
+
     if success:
         logger.info(f"User logged out successfully")
         return {"message": "Выход выполнен успешно"}
     else:
         logger.warning(f"Logout failed")
         return {"message": "Выход не выполнен"}
+
+# Новые маршруты для сброса пароля и подтверждения email
+@api_router.post("/auth/reset-password")
+async def reset_password(
+    reset_data: Annotated[PasswordResetRequest, Body(...)],
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Запрос на сброс пароля"""
+    user_service = UserService(db)
+
+    # Проверяем, существует ли пользователь с таким email
+    user = await user_service.get_by_email(reset_data.email)
+    if not user:
+        # В целях безопасности не сообщаем, что пользователь не найден
+        logger.warning(f"Password reset attempt for non-existent email: {reset_data.email}")
+        return {"message": "Если пользователь с таким email существует, на него отправлена инструкция по сбросу пароля"}
+
+    # Генерируем новый токен верификации
+    token = await user_service.regenerate_verification_token(user.id)
+    if not token:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось создать токен сброса пароля",
+        )
+
+    # В реальном приложении здесь будет отправка email с ссылкой для сброса пароля
+    # Например: f"{request.base_url}ui/confirm-reset-password?token={token}"
+
+    logger.info(f"Password reset token generated for user {user.id}")
+
+    # Возвращаем сообщение об успешной отправке
+    return {"message": "Инструкция по сбросу пароля отправлена на указанный email"}
+
+@api_router.post("/auth/confirm-reset-password")
+async def confirm_reset_password(
+    reset_data: Annotated[PasswordReset, Body(...)],
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Подтверждение сброса пароля"""
+    user_service = UserService(db)
+
+    # Находим пользователя по токену
+    result = await user_service.db.execute(
+        "SELECT id FROM users WHERE verification_token = :token",
+        {"token": reset_data.token}
+    )
+    user_id = result.scalar()
+
+    if not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Недействительный токен сброса пароля",
+        )
+
+    # Обновляем пароль
+    success = await user_service.update_password(user_id, reset_data.new_password)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Не удалось обновить пароль",
+        )
+
+    # Сбрасываем токен верификации
+    user = await user_service.get_by_id(user_id)
+    user.verification_token = None
+    await user_service.db.commit()
+
+    logger.info(f"Password reset completed for user {user_id}")
+
+    # Возвращаем сообщение об успешном сбросе пароля
+    return {"message": "Пароль успешно сброшен"}
+
+@api_router.get("/auth/verify-email")
+async def verify_email(
+    token: str,
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    """Подтверждение email пользователя"""
+    user_service = UserService(db)
+    
+    # Подтверждаем email
+    success = await user_service.verify_email(token)
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Недействительный токен подтверждения email",
+        )
+    
+    logger.info(f"Email verified with token {token}")
+    
+    # Возвращаем сообщение об успешном подтверждении
+    return {"success": True, "message": "Email успешно подтвержден"}
 
 # Маршруты для пользователей
 @api_router.post("/users", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -412,8 +501,8 @@ async def oauth_callback(
 @api_router.get("/auth/check")
 async def check_auth(
     request: Request,
-    authorization: str,
     redirect: bool = Query(False),
+    authorization: str = Header(None),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """Проверка JWT токена для использования в Traefik Forward Auth middleware"""

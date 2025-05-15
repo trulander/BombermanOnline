@@ -2,19 +2,27 @@ from fastapi import APIRouter, Response
 import logging
 
 from ..config import settings
+from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi import status
 
 logger = logging.getLogger(__name__)
 
 root_router = APIRouter()
 
-@root_router.get("/")
-async def root() -> dict:
-    """Корневой маршрут для проверки состояния сервиса"""
-    return {
-        "service": "auth-service",
-        "version": "1.0.0",
-        "status": "running"
-    }
+
+# Корневой маршрут
+@root_router.get("/", response_class=RedirectResponse, status_code=status.HTTP_302_FOUND)
+async def root():
+    return "/ui/login"
+
+# @root_router.get("/")
+# async def root() -> dict:
+#     """Корневой маршрут для проверки состояния сервиса"""
+#     return {
+#         "service": "auth-service",
+#         "version": "1.0.0",
+#         "status": "running"
+#     }
 
 @root_router.get("/health")
 async def health_check() -> dict:

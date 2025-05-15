@@ -1,0 +1,41 @@
+{% extends "layout.html" %}
+
+{% block title %}Редактирование профиля - Bomberman Online{% endblock %}
+
+{% block content %}
+<div class="dashboard-container">
+    <h1>Редактирование профиля</h1>
+    
+    {% if error %}
+    <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    
+    {% if success %}
+    <div class="alert alert-success">{{ success }}</div>
+    {% endif %}
+    
+    <div class="profile-form">
+        {% if user.profile_image %}
+        <div class="profile-image">
+            <img src="{{ user.profile_image }}" alt="{{ user.username }}">
+        </div>
+        {% endif %}
+        
+        <form id="profile-form">
+            <div class="form-group">
+                <label for="full_name">Полное имя</label>
+                <input type="text" id="full_name" name="full_name" value="{{ user.full_name or '' }}">
+            </div>
+            <div class="form-group">
+                <label for="profile_image">URL изображения профиля</label>
+                <input type="text" id="profile_image" name="profile_image" value="{{ user.profile_image or '' }}">
+            </div>
+            <button type="submit">Сохранить изменения</button>
+        </form>
+    </div>
+    
+    <div class="links" style="margin-top: 20px; text-align: center;">
+        <a href="/ui/dashboard">Вернуться в личный кабинет</a>
+    </div>
+</div>
+{% endblock %} 
