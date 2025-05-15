@@ -12,6 +12,7 @@ from .config import settings
 from .logging_config import configure_logging
 from .services.nats_service import NatsService
 from .coordinators.game_coorditanor import GameCoordinator
+from .auth import get_current_user, get_current_admin
 
 # Настройка логирования
 configure_logging()
@@ -44,6 +45,30 @@ try:
     # Инициализируем NATS сервис
     nats_service = NatsService()
     game_coordinator = GameCoordinator(notification_service=nats_service)
+    
+    # Добавляем middleware для авторизации
+    @app.middleware("http")
+    async def auth_middleware(request: Request, call_next):
+        # Извлекаем заголовки X-User-* из запроса (установленные Traefik после проверки токена)
+        user_id = request.headers.get("X-User-ID")
+        user_role = request.headers.get("X-User-Role")
+        user_email = request.headers.get("X-User-Email")
+        user_name = request.headers.get("X-User-Name")
+        
+        # Если заголовки присутствуют, добавляем информацию о пользователе в state запроса
+        if user_id and user_role:
+            request.state.user = {
+                "id": user_id,
+                "role": user_role,
+                "email": user_email,
+                "username": user_name
+            }
+            logger.info(f"User {user_name} ({user_role}) authenticated")
+        else:
+            request.state.user = None
+        
+        # Продолжаем обработку запроса
+        return await call_next(request)
     
     # Глобальный обработчик исключений
     @app.exception_handler(Exception)

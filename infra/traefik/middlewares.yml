@@ -32,4 +32,26 @@ http:
     websocket:
       headers:
         customRequestHeaders:
-          X-Forwarded-Proto: "ws" 
+          X-Forwarded-Proto: "ws"
+    
+    # Middleware для проверки JWT токена
+    auth-check:
+      forwardAuth:
+        address: "http://auth-service:5003/api/v1/auth/check"
+        authResponseHeaders:
+          - "X-User-ID"
+          - "X-User-Role"
+          - "X-User-Email"
+          - "X-User-Name"
+        trustForwardHeader: true
+    
+    # Middleware для редиректа неавторизованных пользователей
+    auth-redirect:
+      forwardAuth:
+        address: "http://auth-service:5003/api/v1/auth/check?redirect=true"
+        authResponseHeaders:
+          - "X-User-ID"
+          - "X-User-Role"
+          - "X-User-Email"
+          - "X-User-Name"
+        trustForwardHeader: true 

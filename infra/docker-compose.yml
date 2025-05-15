@@ -13,10 +13,12 @@ services:
       - PYTHONUNBUFFERED=1
       - REDIS_HOST=redis
       - NATS_URL=nats://nats:4222
+      - AUTH_SERVICE_URL=http://auth-service:5003
     depends_on:
       - postgres
       - redis
       - nats
+      - auth-service
     ports:
       - "5001:5001"
     labels:
@@ -39,9 +41,11 @@ services:
       - PYTHONUNBUFFERED=1
       - REDIS_HOST=redis
       - NATS_URL=nats://nats:4222
+      - AUTH_SERVICE_URL=http://auth-service:5003
     depends_on:
       - redis
       - nats
+      - auth-service
     ports:
       - "5002:5002"
     labels:
@@ -51,6 +55,35 @@ services:
       options:
         fluentd-address: localhost:24224
         tag: docker.game-service
+
+  auth-service:
+    build:
+      context: ../services/auth-service
+      dockerfile: Dockerfile
+    volumes:
+      - ../services/auth-service:/app/auth-service
+      - auth_logs:/var/log/auth-service
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_HOST=redis
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=bomberman
+      - POSTGRES_USER=bomberman
+      - POSTGRES_PASSWORD=bomberman
+      - SECRET_KEY=${AUTH_SECRET_KEY:-your_secret_key_here}
+    depends_on:
+      - postgres
+      - redis
+    ports:
+      - "5003:5003"
+    labels:
+      - "traefik.enable=true"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.auth-service
 
   web-frontend:
     build:
@@ -68,6 +101,7 @@ services:
       - SOCKET_PATH=/socket.io
       - PORT=3000
       - LOGS_BATCH_SIZE=10
+      - AUTH_URL=/auth
     labels:
       - "traefik.enable=true"
 
@@ -132,6 +166,7 @@ services:
     depends_on:
       - webapi-service
       - game-service
+      - auth-service
       - web-frontend
       - fluent-bit
     labels:
@@ -252,4 +287,5 @@ volumes:
   loki_data:
   grafana_data:
   webapi_logs:
-  game_logs: 
+  game_logs:
+  auth_logs: 

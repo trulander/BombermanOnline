@@ -1,6 +1,26 @@
 http:
   routers:
-    # WebAPI сервис
+    # Auth сервис - API
+    auth-api:
+      rule: "PathPrefix(`/api/v1/auth`) || PathPrefix(`/api/v1/users`)"
+      entryPoints:
+        - web
+      service: auth
+      middlewares:
+        - compress
+        - security-headers
+
+    # Auth сервис - веб-интерфейс
+    auth-ui:
+      rule: "PathPrefix(`/ui`) || PathPrefix(`/auth`)"
+      entryPoints:
+        - web
+      service: auth
+      middlewares:
+        - compress
+        - security-headers
+
+    # WebAPI сервис - с проверкой авторизации
     webapi:
       rule: "PathPrefix(`/api`)"
       entryPoints:
@@ -9,6 +29,7 @@ http:
       middlewares:
         - compress
         - security-headers
+        - auth-check
 
     # WebAPI WebSocket
     webapi-ws:
@@ -18,8 +39,9 @@ http:
       service: webapi
       middlewares:
         - websocket
+        - auth-check
 
-    # Game сервис
+    # Game сервис - с проверкой авторизации
     game:
       rule: "PathPrefix(`/games`)"
       entryPoints:
@@ -28,6 +50,7 @@ http:
       middlewares:
         - compress
         - security-headers
+        - auth-check
 
     # Logger API
     logger:
@@ -38,7 +61,7 @@ http:
       middlewares:
         - strip-logs-prefix
 
-    # Web Frontend
+    # Web Frontend - для авторизованных пользователей
     frontend:
       rule: "PathPrefix(`/`)"
       entryPoints:
@@ -47,6 +70,7 @@ http:
       middlewares:
         - compress
         - security-headers
+        - auth-redirect
 
     # Traefik Dashboard
     dashboard:
@@ -59,6 +83,11 @@ http:
 
   services:
     # Определение сервисов
+    auth:
+      loadBalancer:
+        servers:
+          - url: "http://auth-service:5003"
+
     webapi:
       loadBalancer:
         servers:

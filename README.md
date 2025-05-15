@@ -1,156 +1,129 @@
 # Bomberman Online
 
-Многопользовательская игра Bomberman, работающая на микросервисной архитектуре.
+Многопользовательская игра Bomberman с онлайн-режимом.
 
 ## Архитектура
 
-Проект разделен на следующие микросервисы:
+Проект состоит из следующих компонентов:
 
-1. **webapi-service** - REST API и Socket.IO интерфейс для клиентов
-2. **game-service** - Игровая логика и механика 
-3. **web-frontend** - Клиентский интерфейс на TypeScript
+1. **Web Frontend** - клиентское веб-приложение на TypeScript
+2. **WebAPI Service** - API сервис на FastAPI для обработки запросов от клиента
+3. **Game Service** - сервис для управления игровой логикой на FastAPI
+4. **Auth Service** - сервис авторизации и управления пользователями на FastAPI
+5. **Инфраструктурные компоненты**:
+   - PostgreSQL - база данных
+   - Redis - кэширование и хранение состояний
+   - NATS - очередь сообщений для коммуникации между сервисами
+   - Traefik - API Gateway и балансировщик нагрузки
+   - Prometheus, Grafana - мониторинг
+   - Loki, Fluent Bit - логирование
 
-Для коммуникации между сервисами используется NATS.
+## Сервисы
 
-## Технологии
+### Web Frontend
 
-- **Backend**: Python 3.12, FastAPI, Socket.IO, NATS
-- **Frontend**: TypeScript, HTML5 Canvas
-- **Database**: PostgreSQL, Redis
-- **Infrastructure**: Docker, Docker Compose
-- **Monitoring**: Prometheus, Grafana, Loki, Fluent Bit
+Frontend приложение, написанное на TypeScript с использованием:
+- Canvas API для отрисовки игрового поля
+- Socket.IO для коммуникации с сервером в реальном времени
+
+### WebAPI Service
+
+REST API сервис для обработки запросов от клиента:
+- Регистрация и получение игровых комнат
+- Управление игровыми сессиями
+- Обработка WebSocket соединений
+
+### Game Service
+
+Сервис для управления игровой логикой:
+- Создание и управление игровыми сессиями
+- Обработка игровых событий
+- Расчет игровой физики и логики
+
+### Auth Service
+
+Сервис авторизации и управления пользователями:
+- Регистрация и аутентификация пользователей
+- Управление JWT токенами
+- OAuth 2.0 авторизация через внешние провайдеры
+- Управление ролями пользователей
+- Защита API через Traefik Forward Auth
 
 ## Запуск проекта
 
-### С использованием Docker
+### Требования
 
-1. Клонируйте репозиторий:
-   ```bash
-   git clone https://github.com/your-repo/BombermanOnline.git
-   cd BombermanOnline
-   ```
+- Docker и Docker Compose
+- Make (опционально)
 
-2. Создайте файлы .env на основе .env-example:
-   ```bash
-   cp services/webapi-service/.env-example services/webapi-service/.env
-   cp services/game-service/.env-example services/game-service/.env
-   ```
+### Запуск
 
-3. Запустите сервисы:
-   ```bash
-   docker-compose up
-   ```
+```bash
+# Клонирование репозитория
+git clone https://github.com/yourusername/BombermanOnline.git
+cd BombermanOnline
 
-4. Игра будет доступна по адресу: http://localhost:3000
-5. Мониторинг доступен по следующим адресам:
-   - Grafana: http://grafana.localhost (логин/пароль: admin/admin)
-   - Prometheus: http://prometheus.localhost
-   - Traefik Dashboard: http://traefik.localhost
+# Запуск всех сервисов
+docker-compose -f infra/docker-compose.yml up -d
+```
 
-### Локальная разработка
+### Доступ к сервисам
 
-1. Установите Python 3.12 и Node.js
+После запуска сервисы доступны по следующим адресам:
 
-2. Установите зависимости Python:
-   ```bash
-   pip install uv
-   uv pip install -e .
-   ```
+- **Игра**: http://localhost/
+- **API**: http://localhost/api/
+- **Авторизация**: http://localhost/ui/login
+- **Документация API**: http://localhost/api/docs
+- **Grafana**: http://grafana.localhost/ (admin/admin)
+- **Prometheus**: http://prometheus.localhost/
+- **Traefik Dashboard**: http://traefik.localhost/
 
-3. Установите зависимости Node.js:
-   ```bash
-   cd frontend
-   npm install
-   ```
+## Разработка
 
-4. Запустите сервисы в отдельных терминалах:
-   ```bash
-   # WebAPI сервис
-   uvicorn services.webapi-service.app.main:app --host 0.0.0.0 --port 5001 --reload
-   
-   # Game сервис
-   uvicorn services.game-service.app.main:app --host 0.0.0.0 --port 5002 --reload
-   
-   # Frontend
-   cd frontend
-   npm run dev
-   ```
-
-## Управление
-
-- **Движение**: Стрелки или WASD
-- **Установка бомбы**: Пробел
-- **Перезапуск**: R (когда игра окончена)
-
-## Мультиплеер
-
-Игра поддерживает до 4-х игроков. Для подключения других игроков:
-1. Первый игрок создает игру и получает ID игры
-2. Другие игроки присоединяются, вводя этот ID
-
-## Мониторинг и логирование
-
-Проект включает следующие компоненты мониторинга:
-
-1. **Prometheus** - сбор и хранение метрик
-2. **Grafana** - визуализация метрик и логов
-3. **Loki** - агрегация и хранение логов
-4. **Fluent Bit** - сбор и пересылка логов
-5. **Node Exporter** - сбор метрик хост-системы
-6. **cAdvisor** - сбор метрик контейнеров
-
-Все микросервисы настроены на отправку метрик в Prometheus и логов в формате JSON:
-- Backend сервисы выводят логи в JSON формате в stdout, который собирается Fluent Bit
-- Frontend отправляет логи через HTTP API на эндпоинт /logs, который проксируется на Fluent Bit
-
-## Структура проекта
+### Структура проекта
 
 ```
 BombermanOnline/
-├── services/
-│   ├── webapi-service/   # REST API и Socket.IO сервис
-│   ├── game-service/     # Игровая логика
-│   └── web-frontend/     # Клиентский интерфейс
-├── infra/
-│   ├── docker-compose.yml    # Конфигурация Docker Compose
-│   ├── prometheus/           # Конфигурация Prometheus
-│   ├── grafana/              # Конфигурация Grafana
-│   ├── loki/                 # Конфигурация Loki
-│   ├── fluent-bit/           # Конфигурация Fluent Bit
-│   └── traefik/              # Конфигурация Traefik
-└── pyproject.toml        # Зависимости Python
+├── services/                  # Сервисы
+│   ├── web-frontend/          # Web Frontend
+│   ├── webapi-service/        # WebAPI Service
+│   ├── game-service/          # Game Service
+│   └── auth-service/          # Auth Service
+├── infra/                     # Инфраструктура
+│   ├── docker-compose.yml     # Docker Compose файл
+│   ├── traefik/               # Конфигурация Traefik
+│   ├── prometheus/            # Конфигурация Prometheus
+│   ├── grafana/               # Конфигурация Grafana
+│   ├── loki/                  # Конфигурация Loki
+│   └── fluent-bit/            # Конфигурация Fluent Bit
+└── README.md                  # Документация
 ```
 
-## Диаграмма архитектуры
+### Локальная разработка
 
-```mermaid
-graph TD
-    A[Клиент] -->|Socket.IO| B[webapi-service]
-    B -->|NATS| C[game-service]
-    
-    subgraph WebAPI Service
-        B --> D[REST API]
-        D --> E[Socket.IO]
-        E --> F[NATS Client]
-    end
-    
-    subgraph Game Service
-        C --> G[Game Logic]
-        G --> H[NATS Server]
-    end
-    
-    F -->|Request/Response| H
-    H -->|Publish/Subscribe| F
-    F -->|Socket.IO| A
-    
-    subgraph Monitoring
-        P[Prometheus] --> G1[Grafana]
-        L[Loki] --> G1
-        B -->|Metrics| P
-        C -->|Metrics| P
-        A -->|HTTP Log API| FB[Fluent Bit]
-        B -->|JSON Logs| FB
-        C -->|JSON Logs| FB
-        FB --> L
-    end
+Для локальной разработки можно использовать Docker Compose:
+
+```bash
+# Запуск всех сервисов
+docker-compose -f infra/docker-compose.yml up -d
+
+# Запуск отдельного сервиса
+docker-compose -f infra/docker-compose.yml up -d webapi-service
+
+# Остановка всех сервисов
+docker-compose -f infra/docker-compose.yml down
 ```
+
+## Роли пользователей
+
+В системе предусмотрены следующие роли пользователей:
+
+1. **user** - обычный пользователь, может играть в игры
+2. **admin** - администратор, имеет полный доступ ко всем функциям
+3. **moderator** - модератор, может управлять игровыми комнатами и пользователями
+4. **developer** - разработчик, имеет доступ к техническим функциям
+
+## Лицензия
+
+MIT
