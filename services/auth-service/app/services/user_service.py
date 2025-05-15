@@ -96,7 +96,7 @@ class UserService:
             
             # Создаем нового пользователя
             user = User(
-                email=user_data.email.lower(),
+                email=user_data.email,
                 username=user_data.username,
                 hashed_password=hashed_password,
                 full_name=user_data.full_name,

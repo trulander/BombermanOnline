@@ -68,7 +68,7 @@ services:
       - REDIS_HOST=redis
       - POSTGRES_HOST=postgres
       - POSTGRES_PORT=5432
-      - POSTGRES_DB=bomberman
+      - POSTGRES_DB=auth_service
       - POSTGRES_USER=bomberman
       - POSTGRES_PASSWORD=bomberman
       - SECRET_KEY=${AUTH_SECRET_KEY:-your_secret_key_here}

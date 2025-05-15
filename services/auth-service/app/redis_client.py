@@ -8,14 +8,15 @@ logger = logging.getLogger(__name__)
 
 class RedisClient:
     def __init__(self) -> None:
-        self.redis_url = f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}/{settings.REDIS_DB}"
         self.client = None
     
     async def connect(self) -> None:
         """Подключение к Redis"""
         try:
-            self.client = redis.from_url(
-                self.redis_url, 
+            self.client = redis.Redis = redis.Redis(
+                host=settings.REDIS_HOST,
+                port=settings.REDIS_PORT,
+                db=settings.REDIS_DB,
                 password=settings.REDIS_PASSWORD,
                 decode_responses=True
             )

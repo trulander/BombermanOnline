@@ -21,7 +21,7 @@ async def login_page(request: Request):
     """Страница авторизации"""
     # В реальном приложении здесь будет отображение страницы авторизации через шаблон
     # return templates.TemplateResponse("login.html", {"request": request})
-    
+    logger.info("Страница логина")
     # Временно возвращаем информацию о странице
     return {"message": "Страница авторизации"}
 
@@ -30,7 +30,7 @@ async def register_page(request: Request):
     """Страница регистрации"""
     # В реальном приложении здесь будет отображение страницы регистрации через шаблон
     # return templates.TemplateResponse("register.html", {"request": request})
-    
+
     # Временно возвращаем информацию о странице
     return {"message": "Страница регистрации"}
 

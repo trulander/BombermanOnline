@@ -29,7 +29,7 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         return {i:val for i, val in enumerate(caller_chain)}
 
     def add_fields(self, log_record, record, message_dict):
-        super(CustomJsonFormatter, self).add_fields(log_record, record, message_dict)
+        super().add_fields(log_record, record, message_dict)
         # Основные поля
         log_record["service"] = "webapi-service"
         log_record["service_type"] = "backend"
@@ -43,29 +43,25 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
         log_record["thread_id"] = record.thread
         log_record["thread_name"] = record.threadName
         
-        # # Добавляем уникальный идентификатор для каждого лога
-        # log_record["log_id"] = str(uuid.uuid4())
-        
         # Добавляем меток времени в секундах с начала эпохи
         log_record["timestamp_epoch"] = int(time.time())
         
-        # Если есть исключение, добавляем его информацию
-        if record.exc_info:
-            log_record["exception"] = self.formatException(record.exc_info)
-
-            # Извлекаем номер строки из стектрейса
-            tb_lines = traceback.format_exception(*record.exc_info)
-            tb_str = ''.join(tb_lines)
-            match = re.search(r'File ".*", line (\d+)', tb_str)
-            if match:
-                line_number = match.group(1)
-                log_record["line_number"] = int(line_number)
+        # # Если есть исключение, добавляем его информацию
+        # if record.exc_info:
+        #     log_record["exception"] = self.formatException(record.exc_info)
+        #
+        #     # Извлекаем номер строки из стектрейса
+        #     tb_lines = traceback.format_exception(*record.exc_info)
+        #     tb_str = ''.join(tb_lines)
+        #     match = re.search(r'File ".*", line (\d+)', tb_str)
+        #     if match:
+        #         line_number = match.group(1)
+        #         log_record["line_number"] = int(line_number)
 
         if settings.TRACE_CALLER:
             # Добавляем информацию о вызывающей функции
-            # caller_name, caller_line, caller_filename = self.get_caller_info()
-            # record.msg = f"{record.msg} (called by {caller_name} at line {caller_line} in {caller_filename})"
             log_record["called_by"] = self.get_caller_info()
+
 
 def configure_logging():
     """Настройка JSON логирования"""
@@ -86,10 +82,13 @@ def configure_logging():
         level=log_level,
         handlers=[log_handler],
     )
-    
-    # Отключаем лишние логи от библиотек
-    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
-    
+
     # Настройка корневого логгера
     root_logger = logging.getLogger()
-    root_logger.handlers = [log_handler] 
+    root_logger.handlers = [log_handler]
+
+    # Настраиваем стандартные библиотеки
+    logging.getLogger("uvicorn").setLevel(logging.WARNING)
+    logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
+    logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
+    logging.getLogger("fastapi").setLevel(logging.WARNING)

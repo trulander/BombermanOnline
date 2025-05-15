@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from config import settings
+from .config import settings
 from contextlib import asynccontextmanager
 import sqlalchemy.ext.asyncio as sa_asyncio
 import logging
@@ -40,7 +40,7 @@ class Database:
         try:
             async with self.engine.begin() as conn:
                 # Проверка соединения
-                await conn.execute(sa_asyncio.text("SELECT 1"))
+                # await conn.execute(sa_asyncio.text("SELECT 1"))
                 logger.info("Connected to PostgreSQL database")
                 
                 # В разработке можно создать таблицы автоматически

@@ -48,11 +48,17 @@ try:
     
     # Обработчик ошибок валидации
     @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
-        logger.warning(f"Validation error: {exc}")
+    async def validation_exception_handler(request: Request, exc):
+        logger.error(exc)
+        current_user = getattr(request.state, "user", None)
+
+        status_code = 400 if isinstance(exc, (RequestValidationError)) else 500
+        message = getattr(exc, "message", str(exc))
         return JSONResponse(
-            status_code=422,
-            content={"detail": exc.errors()},
+            status_code=getattr(exc, "status_code", status_code),
+            content={
+                "detail": message
+            }
         )
     
     # Настройка CORS

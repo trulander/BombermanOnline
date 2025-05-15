@@ -4,8 +4,9 @@ from sqlalchemy.dialects.postgresql import UUID
 import uuid
 from pydantic import BaseModel, Field
 from typing import Any, Optional
+from fastapi import Form
 
-from database import Base
+from ..database import Base
 
 # SQLAlchemy модель для токенов обновления
 class RefreshToken(Base):
@@ -14,9 +15,9 @@ class RefreshToken(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     token = Column(String(255), unique=True, nullable=False, index=True)
-    expires_at = Column(DateTime, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
     is_revoked = Column(Boolean, default=False, nullable=False)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
     ip_address = Column(String(45), nullable=True)
     user_agent = Column(String(255), nullable=True)
     
@@ -41,7 +42,7 @@ class Token(BaseModel):
 
 class TokenPayload(BaseModel):
     sub: str | None = None
-    exp: int | None = None
+    exp: float | None = None
     role: str | None = None
     username: str | None = None
     is_verified: bool | None = None
@@ -53,6 +54,15 @@ class LoginForm(BaseModel):
     username: str = Field(..., description="Имя пользователя или email")
     password: str = Field(..., description="Пароль")
     remember_me: bool = Field(False, description="Запомнить меня (увеличивает срок жизни refresh_token)")
+
+    @classmethod
+    def as_form(
+            cls,
+            username: str = Form(...),
+            password: str = Form(...),
+            remember_me: bool = Form(False),
+    ) -> "LoginForm":
+        return cls(username=username, password=password, remember_me=remember_me)
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str = Field(..., description="Refresh токен для обновления access токена")

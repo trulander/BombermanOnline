@@ -6,7 +6,7 @@ from enum import Enum as PyEnum
 from pydantic import BaseModel, EmailStr, Field, field_validator
 import re
 
-from database import Base
+from ..database import Base
 
 # Enum для ролей пользователей
 class UserRole(PyEnum):
@@ -30,9 +30,9 @@ class User(Base):
     is_verified = Column(Boolean, default=False, nullable=False)
     is_oauth_user = Column(Boolean, default=False, nullable=False)
     oauth_provider = Column(String(20), nullable=True)
-    created_at = Column(DateTime, default=lambda: datetime.now(UTC), nullable=False)
-    updated_at = Column(DateTime, default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False)
-    last_login_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(UTC), onupdate=lambda: datetime.now(UTC), nullable=False)
+    last_login_at = Column(DateTime(timezone=True), nullable=True)
     verification_token = Column(String(255), nullable=True)
     
     def __repr__(self) -> str:

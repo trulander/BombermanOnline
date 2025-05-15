@@ -7,12 +7,12 @@ from sqlalchemy import pool
 from alembic import context
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from config import settings
-from models import *
+from app.config import settings
+from app.models import *
 
 from dotenv import load_dotenv
 
-from database import Base
+from app.database import Base
 
 config = context.config
 

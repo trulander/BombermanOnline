@@ -1,5 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response, Header, Query
-from fastapi.security import OAuth2PasswordRequestForm
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response, Header, Query, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Annotated
@@ -7,7 +7,7 @@ import logging
 from datetime import datetime, UTC
 from jose import jwt, JWTError
 
-from ..dependencies import get_db, get_current_user, get_admin_user
+from ..dependencies import get_db, get_current_user, get_admin_user, security
 from ..models.user import User, UserCreate, UserResponse, UserUpdate, UserSearchResponse, UserRole
 from ..models.token import Token, RefreshTokenRequest, LoginForm, TokenPayload
 from ..services.user_service import UserService
@@ -23,8 +23,9 @@ api_router = APIRouter()
 # Маршруты для аутентификации
 @api_router.post("/auth/login", response_model=Token)
 async def login(
-    form_data: Annotated[LoginForm, Body(...)],
-    request: Request,
+request: Request,
+    form_data: LoginForm = Depends(LoginForm.as_form),
+
     db: AsyncSession = Depends(get_db),
 ) -> Token:
     """Аутентификация пользователя и получение токенов"""
@@ -95,7 +96,7 @@ async def refresh_token(
 async def logout(
     request: Request,
     response: Response,
-    token: str = Depends(get_current_user.dependencies[0]),
+    token: str = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
     """Выход из системы и отзыв токена"""
@@ -411,8 +412,8 @@ async def oauth_callback(
 @api_router.get("/auth/check")
 async def check_auth(
     request: Request,
+    authorization: str,
     redirect: bool = Query(False),
-    authorization: str = Header(None),
     db: AsyncSession = Depends(get_db),
 ) -> Response:
     """Проверка JWT токена для использования в Traefik Forward Auth middleware"""
@@ -505,5 +506,6 @@ async def check_auth(
             return RedirectResponse(url="/ui/login")
         else:
             return Response(
+                content={"error": str(e)},
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             ) 

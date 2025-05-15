@@ -38,7 +38,7 @@ class Settings(BaseSettings):
     # JWT settings
     SECRET_KEY: str = "your_secret_key_here"  # В реальном приложении нужно заменить на секретный ключ
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 3000
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     
     # OAuth2 settings
@@ -60,7 +60,7 @@ class Settings(BaseSettings):
     ROLES: list[str] = ["user", "admin", "moderator", "developer"]
     
     # Logging settings
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: str = "DEBUG"
     LOG_FORMAT: str = "json"
     TRACE_CALLER: bool = True
 

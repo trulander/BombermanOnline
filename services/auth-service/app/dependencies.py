@@ -1,5 +1,5 @@
 from fastapi import Depends, HTTPException, status, Security
-from fastapi.security import OAuth2PasswordBearer, SecurityScopes
+from fastapi.security import OAuth2PasswordBearer, SecurityScopes, HTTPBearer
 from jose import jwt, JWTError
 from typing import Annotated
 import logging
@@ -14,6 +14,8 @@ from .models.user import User, UserRole
 from .services.user_service import UserService
 
 logger = logging.getLogger(__name__)
+
+security = HTTPBearer()
 
 # Определяем OAuth2 схему
 oauth2_scheme = OAuth2PasswordBearer(
@@ -91,7 +93,8 @@ async def get_current_user(
             
             return user
             
-    except (JWTError, ValueError):
+    except (JWTError, ValueError) as e:
+        logger.critical({"error": e}, exc_info=True)
         raise credentials_exception
 
 # Зависимость для получения текущего пользователя с ролью admin
