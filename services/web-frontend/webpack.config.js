@@ -24,7 +24,7 @@ module.exports = (env, argv) => {
       hot: true,
       historyApiFallback: true,
       host: '0.0.0.0',
-      port: process.env.PORT || 8081
+      port: process.env.PORT || 3000
     },
     module: {
       rules: [
@@ -46,8 +46,8 @@ module.exports = (env, argv) => {
     resolve: {
       extensions: ['.tsx', '.ts', '.js'],
       fallback: {
-        path: false,
-        fs: false
+        process: require.resolve('process/browser'),
+        "path": require.resolve("path-browserify")
       }
     },
     plugins: [
@@ -70,6 +70,9 @@ module.exports = (env, argv) => {
       splitChunks: {
         chunks: 'all'
       }
-    }
+    },
+    performance: {
+      hints: false, // отключить эти предупреждения
+    },
   };
 }; 

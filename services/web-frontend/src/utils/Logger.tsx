@@ -58,9 +58,9 @@ class Logger {
     
     constructor() {
         this.sessionId = generateUUID();
-        this.endpoint = process.env.REACT_APP_LOGS_ENDPOINT;
-        this.serviceName = process.env.REACT_APP_SERVICE_NAME;
-        this.nodeEnv = process.env.NODE_ENV;
+        this.endpoint = process.env.REACT_APP_LOGS_ENDPOINT || '/logs';
+        this.serviceName = process.env.REACT_APP_SERVICE_NAME || 'web-frontend';
+        this.nodeEnv = process.env.NODE_ENV || 'production';
         
         // Получаем размер пакета логов из переменной окружения или используем значение по умолчанию
         const batchSizeStr = process.env.REACT_APP_LOGS_BATCH_SIZE || '10';
@@ -355,4 +355,4 @@ window.addEventListener('beforeunload', () => {
     logger.destroy();
 });
 
-export default logger; 
+export default logger;
