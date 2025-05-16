@@ -54,4 +54,10 @@ http:
           - "X-User-Role"
           - "X-User-Email"
           - "X-User-Name"
-        trustForwardHeader: true 
+        trustForwardHeader: true
+
+#
+#    my-traefik-plugin-AdminAPI_WebUI1:
+#      plugin:
+#        traefik-plugin-AdminAPI_WebUI1:
+#          root: /tmp/

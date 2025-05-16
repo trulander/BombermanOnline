@@ -19,4 +19,10 @@ log:
   level: INFO
 
 accessLog:
-  filePath: "/var/log/traefik/access.log" 
+  filePath: "/var/log/traefik/access.log"
+
+#experimental:
+#  plugins:
+#    traefik-plugin-AdminAPI_WebUI1:
+#      moduleName: "github.com/Miromani4/traefik-plugin-AdminAPI_WebUI"
+#      version: "v1.2.5"

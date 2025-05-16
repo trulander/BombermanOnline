@@ -1,9 +1,9 @@
-import { io } from 'socket.io-client';
-import { InputHandler } from '../input/InputHandler';
+import { io, Socket as IOSocket } from 'socket.io-client';
+import { InputHandler } from '../services/InputHandler';
 import { Renderer } from './Renderer';
 import { GameState } from '../types/GameState';
 import { Socket } from '../types/Socket';
-import logger, { LogLevel } from '../logger/Logger';
+import logger, { LogLevel } from '../utils/Logger';
 
 // Расширяем интерфейс Window для переменных окружения
 declare global {
@@ -15,7 +15,7 @@ declare global {
 
 export class GameClient {
     private canvas: HTMLCanvasElement;
-    private socket: Socket;
+    private socket: IOSocket;
     private inputHandler: InputHandler;
     private renderer: Renderer;
     private gameId: string | null = null;
@@ -32,9 +32,9 @@ export class GameClient {
         this.canvas = canvas;
         
         // Получаем URL и путь из переменных окружения
-        const socketUrl = window.SOCKET_URL || 'http://localhost';
-        const socketPath = window.SOCKET_PATH || 'socket.io';
-        
+        const socketUrl = process.env.REACT_APP_SOCKET_URL;
+        const socketPath = process.env.REACT_APP_SOCKET_PATH;
+
         // Initialize socket connection to Python backend
         this.socket = io(socketUrl, {
             transports: ['websocket'],
@@ -45,6 +45,13 @@ export class GameClient {
         this.renderer = new Renderer(canvas);
         
         this.setupSocketEvents();
+        
+        logger.info('GameClient initialized', {
+            socketUrl,
+            socketPath,
+            canvasWidth: canvas.width,
+            canvasHeight: canvas.height
+        });
     }
 
     private setupSocketEvents(): void {
@@ -77,7 +84,7 @@ export class GameClient {
             this.processGameStateUpdate(gameState);
         });
 
-        // Добавляем обработчик для game_update, так как сервер использует это событие в game_loop
+        // Добавляем обработчик для game_update
         this.socket.on('game_update', (gameState: GameState) => {
             logger.debug('Получено событие game_update', {
                 hasGrid: !!gameState.map?.grid,
@@ -125,6 +132,13 @@ export class GameClient {
                     height: response.full_map.grid.length
                 });
                 this.cachedMapGrid = JSON.parse(JSON.stringify(response.full_map.grid));
+            } else {
+                logger.error('Не удалось получить карту из запроса состояния', {
+                    message: response.message,
+                    gameId: this.gameId,
+                    playerId: this.playerId,
+                    responseData: response
+                });
             }
             
             // Сохраняем состояние игры
@@ -146,47 +160,23 @@ export class GameClient {
 
     // Запрос полного состояния игры
     private requestGameState(): void {
-        if (this.gameId && this.playerId) {
-            logger.debug('Запрашиваем состояние игры', {
-                gameId: this.gameId,
-                playerId: this.playerId
-            });
-            this.socket.emit('get_game_state', { 
-                game_id: this.gameId
-            }, this.handleGetGameStateResponse.bind(this));
-        } else {
-            logger.warn('Невозможно запросить состояние игры', {
-                gameId: this.gameId,
-                playerId: this.playerId,
-                isConnected: this.isConnected
-            });
-        }
+        logger.debug('Запрашиваем состояние игры', {
+            gameId: this.gameId,
+            playerId: this.playerId
+        });
+        this.socket.emit('get_game_state', {
+            game_id: this.gameId
+        }, this.handleGetGameStateResponse.bind(this));
+
     }
 
     // Обработка обновлений игры
     private processGameStateUpdate(gameState: GameState): void {
         this.lastUpdateTime = performance.now();
         
-        // Логирование информации об обновлении
-        const changesCount = gameState.map?.changedCells?.length || 0;
-        if (changesCount > 0) {
-            logger.debug('Получено обновление игры с изменениями', {
-                changesCount,
-                playersCount: Object.keys(gameState.players).length,
-                bombsCount: gameState.bombs?.length || 0,
-                enemiesCount: gameState.enemies?.length || 0
-            });
-        }
-        
         // Применяем изменения к кешированной карте
         if (gameState.map?.changedCells && this.cachedMapGrid) {
             const changes = gameState.map.changedCells;
-            
-            if (changes.length > 0) {
-                logger.debug('Применяем изменения к кешированной карте', {
-                    changesCount: changes.length
-                });
-            }
             
             // Применяем изменения к кешированной карте
             for (const cell of changes) {
@@ -240,9 +230,9 @@ export class GameClient {
             }
             
             this.update();
-            requestAnimationFrame(gameLoop);
+            this.animationFrameId = requestAnimationFrame(gameLoop);
         };
-        requestAnimationFrame(gameLoop);
+        this.animationFrameId = requestAnimationFrame(gameLoop);
     }
 
     private update(): void {
@@ -298,15 +288,9 @@ export class GameClient {
             // Передаем состояние игры и ID текущего игрока в рендерер
             this.renderer.render(this.gameState, this.playerId);
         } else {
-            // Если у нас нет состояния игры или ID игрока, запрашиваем их
-            if (!this.playerId) {
-                logger.debug('Нет ID игрока для рендеринга');
-            }
-            if (!this.gameState) {
-                logger.debug('Нет состояния игры для рендеринга');
-                if (this.gameId && this.playerId) {
-                    this.requestGameState();
-                }
+            // Если есть gameId, но нет gameState, запрашиваем состояние
+            if (this.gameId && this.playerId && !this.gameState) {
+                this.requestGameState();
             }
         }
     }
@@ -434,31 +418,7 @@ export class GameClient {
                     });
                     
                     // Явно запрашиваем полное состояние игры
-                    this.socket.emit('get_game_state', { 
-                        game_id: gameId,
-                        player_id: response.player_id 
-                    }, (stateResponse: any) => {
-                        logger.debug('Получен ответ на запрос состояния', {
-                            success: stateResponse.success
-                        });
-                        if (stateResponse.success) {
-                            this.gameState = stateResponse.game_state;
-                            
-                            // Сохраняем полную карту
-                            if (this.gameState && this.gameState.map && this.gameState.map.grid) {
-                                logger.debug('Карта из запроса состояния получена', {
-                                    width: this.gameState.map.grid[0].length,
-                                    height: this.gameState.map.grid.length
-                                });
-                                this.cachedMapGrid = this.gameState.map.grid;
-                            } else {
-                                logger.error('Не удалось получить карту из запроса состояния', {
-                                    hasGameState: !!this.gameState,
-                                    hasMap: !!(this.gameState && this.gameState.map)
-                                });
-                            }
-                        }
-                    });
+                    this.requestGameState();
                 }
                 
                 // Show game ID on screen for others to join
@@ -529,7 +489,7 @@ export class GameClient {
         this.socket.disconnect();
     }
 
-    // Добавляем метод для отправки входных данных на сервер
+    // Метод для отправки входных данных на сервер
     private sendInputs(): void {
         const inputs = this.inputHandler.getInput();
         
@@ -554,4 +514,4 @@ export class GameClient {
             this.inputHandler.resetBombInput();
         }
     }
-}
+} 

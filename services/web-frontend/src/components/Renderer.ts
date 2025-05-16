@@ -1,5 +1,5 @@
 import { GameState } from '../types/GameState';
-import logger, { LogLevel } from '../logger/Logger';
+import logger, { LogLevel } from '../utils/Logger';
 
 export class Renderer {
     private canvas: HTMLCanvasElement;
@@ -65,19 +65,19 @@ export class Renderer {
         // Получаем текущего игрока
         const currentPlayer = gameState.players[currentPlayerId];
         
-        // // Логируем данные для отладки
-        // if (this.debugMode) {
-        //     logger.debug('Рендер кадра', {
-        //         cellSize: this.cellSize,
-        //         playerPos: { x: currentPlayer.x, y: currentPlayer.y },
-        //         gridSize: {
-        //             width: gameState.map.grid[0].length,
-        //             height: gameState.map.grid.length
-        //         },
-        //         time: currentTime
-        //     });
-        // }
-        
+        // Логируем данные для отладки
+        if (this.debugMode) {
+            logger.debug('Рендер кадра', {
+                cellSize: this.cellSize,
+                playerPos: { x: currentPlayer.x, y: currentPlayer.y },
+                gridSize: {
+                    width: gameState.map.grid[0].length,
+                    height: gameState.map.grid.length
+                },
+                time: currentTime
+            });
+        }
+
         // Вычисляем смещение вида на основе положения игрока и мёртвой зоны
         const viewOffset = this.calculateViewOffsetWithDeadZone(
             currentPlayer.x, 
@@ -91,7 +91,7 @@ export class Renderer {
         
         // Плавно перемещаем текущее смещение к целевому
         // Уменьшаем скорость интерполяции для плавности движения
-        const lerpFactor = Math.min(1, deltaTime * 3.5); // Уменьшено с 5 до 3.5
+        const lerpFactor = Math.min(1, deltaTime * 3.5);
         
         // Добавляем более плавную интерполяцию с уменьшением скорости при приближении к цели
         const distanceX = this.targetMapOffset.x - this.currentMapOffset.x;
@@ -154,6 +154,8 @@ export class Renderer {
             this.renderDebugInfo(gameState, currentPlayerId, offsetDiffX, offsetDiffY);
         }
     }
+    
+    // Остальные методы рендеринга и вспомогательные функции (выборочно)
     
     private renderBackground(): void {
         // Рисуем простую сетку для фона
@@ -265,19 +267,19 @@ export class Renderer {
         if (!map || !map.width || !map.height) {
             return { x: 0, y: 0 };
         }
-        
+
         // Преобразуем координаты игрока в координаты сетки
         const gridX = Math.floor(playerX / this.cellSize);
         const gridY = Math.floor(playerY / this.cellSize);
-        
+
         // Определяем размер видимой области (по viewRadius клеток в каждую сторону от игрока)
         const viewWidth = this.viewRadius * 2 + 1;
         const viewHeight = this.viewRadius * 2 + 1;
-        
+
         // Вычисляем начальные координаты видимой области
         let startX = Math.max(0, Math.min(map.width - viewWidth, gridX - this.viewRadius));
         let startY = Math.max(0, Math.min(map.height - viewHeight, gridY - this.viewRadius));
-        
+
         // Вычисляем смещение видимой области относительно начала карты в пикселях
         return {
             x: startX * this.cellSize,
@@ -355,7 +357,7 @@ export class Renderer {
             }
         }
     }
-
+    
     private renderPowerUps(gameState: GameState, offsetDiffX: number, offsetDiffY: number): void {
         if (!gameState.powerUps) return;
 
@@ -432,7 +434,7 @@ export class Renderer {
         for (const bomb of gameState.bombs) {
             // Проверяем, находится ли бомба в видимой области
             if (!bomb.exploded && !this.isObjectVisible(bomb.x, bomb.y, bomb.width, bomb.height)) continue;
-            
+
             if (!bomb.exploded) {
                 // Bomb pulsating effect
                 const time = performance.now() / 1000;
@@ -467,10 +469,10 @@ export class Renderer {
                 for (const cell of bomb.explosionCells) {
                     // Проверяем, находится ли взрыв в видимой области
                     if (!this.isObjectVisible(cell.x, cell.y, this.cellSize, this.cellSize)) continue;
-                    
+
                     const renderX = this.getRelativeX(cell.x) + offsetDiffX;
                     const renderY = this.getRelativeY(cell.y) + offsetDiffY;
-                    
+
                     // Explosion gradient
                     const gradient = this.ctx.createRadialGradient(
                         renderX + this.cellSize / 2,
@@ -497,7 +499,7 @@ export class Renderer {
 
         for (const enemy of gameState.enemies) {
             if (enemy.destroyed) continue; // Don't render destroyed enemies
-            
+
             // Проверяем, находится ли враг в видимой области
             if (!this.isObjectVisible(enemy.x, enemy.y, enemy.width, enemy.height)) continue;
 
@@ -543,12 +545,12 @@ export class Renderer {
                 case "ghost":
                     // Semi-transparent ghost
                     this.ctx.fillStyle = "rgba(200, 200, 255, 0.8)";
-                    
+
                     // Ghost body (rounded top)
                     this.ctx.beginPath();
                     this.ctx.arc(renderX + width / 2, renderY + height / 3, width / 2, Math.PI, 0, true);
                     this.ctx.lineTo(renderX + width, renderY + height);
-                    
+
                     // Wavy bottom
                     const waveCount = 3;
                     const waveWidth = width / waveCount;
@@ -562,10 +564,10 @@ export class Renderer {
                             false
                         );
                     }
-                    
+
                     this.ctx.lineTo(renderX, renderY + height / 3);
                     this.ctx.fill();
-                    
+
                     // Eyes
                     this.ctx.fillStyle = "#000";
                     this.ctx.beginPath();
@@ -616,7 +618,7 @@ export class Renderer {
             // Draw player
             const width = player.width;
             const height = player.height;
-            
+
             // Draw player body
             this.ctx.fillStyle = player.color;
             this.ctx.beginPath();
@@ -697,7 +699,7 @@ export class Renderer {
             if (player.invulnerable) {
                 const time = performance.now() / 1000;
                 const alpha = 0.3 + Math.sin(time * 10) * 0.2;
-                
+
                 this.ctx.fillStyle = `rgba(255, 255, 255, ${alpha})`;
                 this.ctx.beginPath();
                 this.ctx.arc(
@@ -730,17 +732,17 @@ export class Renderer {
     private getRelativeX(worldX: number): number {
         return worldX - this.currentMapOffset.x;
     }
-    
+
     // Получить относительную координату Y для отображения на экране
     private getRelativeY(worldY: number): number {
         return worldY - this.currentMapOffset.y;
     }
-    
+
     // Проверить, находится ли объект в видимой области
     private isObjectVisible(x: number, y: number, width: number, height: number): boolean {
         const relX = this.getRelativeX(x);
         const relY = this.getRelativeY(y);
-        
+
         return (
             relX + width >= 0 &&
             relY + height >= 0 &&
@@ -748,35 +750,35 @@ export class Renderer {
             relY <= this.viewHeight
         );
     }
-    
+
     // Рендерим отладочную информацию
     private renderDebugInfo(gameState: GameState, currentPlayerId: string | null, offsetDiffX: number, offsetDiffY: number): void {
         if (!currentPlayerId || !gameState.players[currentPlayerId]) return;
-        
+
         const player = gameState.players[currentPlayerId];
-        
+
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         this.ctx.fillRect(10, 10, 300, 140);
-        
+
         this.ctx.fillStyle = 'white';
         this.ctx.font = '12px monospace';
         this.ctx.textAlign = 'left';
         this.ctx.textBaseline = 'top';
-        
+
         const gridX = Math.floor(player.x / this.cellSize);
         const gridY = Math.floor(player.y / this.cellSize);
-        
+
         this.ctx.fillText(`Игрок [${currentPlayerId}]:`, 20, 20);
         this.ctx.fillText(`Позиция: ${Math.round(player.x)}, ${Math.round(player.y)}`, 20, 40);
         this.ctx.fillText(`Ячейка: ${gridX}, ${gridY}`, 20, 60);
         this.ctx.fillText(`Смещение карты: ${Math.round(this.currentMapOffset.x)}, ${Math.round(this.currentMapOffset.y)}`, 20, 80);
         this.ctx.fillText(`Целевое смещение: ${Math.round(this.targetMapOffset.x)}, ${Math.round(this.targetMapOffset.y)}`, 20, 100);
         this.ctx.fillText(`Разница смещений: ${Math.round(offsetDiffX)}, ${Math.round(offsetDiffY)}`, 20, 120);
-        
+
         // Отображаем границы мёртвой зоны
         const viewCenterX = this.viewWidth / 2;
         const viewCenterY = this.viewHeight / 2;
-        
+
         this.ctx.strokeStyle = 'rgba(255, 255, 0, 0.3)';
         this.ctx.lineWidth = 2;
         this.ctx.strokeRect(
@@ -786,7 +788,7 @@ export class Renderer {
             this.deadZoneSize.height
         );
     }
-    
+
     // Рендерим сообщение об ошибке
     private renderErrorMessage(message: string): void {
         this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
@@ -797,7 +799,7 @@ export class Renderer {
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         this.ctx.fillText(message, this.canvas.width / 2, this.canvas.height / 2);
-        
+
         logger.error('Ошибка рендеринга', {
             message,
             canvasWidth: this.canvas.width,

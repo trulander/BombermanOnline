@@ -12,7 +12,13 @@ ENV NODE_ENV=production \
     SERVICE_NAME=web-frontend \
     SOCKET_URL=http://localhost \
     SOCKET_PATH=/socket.io \
-    LOGS_BATCH_SIZE=10
+    LOGS_BATCH_SIZE=10 \
+    REACT_APP_SOCKET_URL=http://localhost \
+    REACT_APP_SOCKET_PATH=/socket.io \
+    REACT_APP_LOGS_ENDPOINT=/logs \
+    REACT_APP_SERVICE_NAME=web-frontend \
+    REACT_APP_LOGS_BATCH_SIZE=10
+
 
 # Экспортируем порт 3000
 EXPOSE 3000

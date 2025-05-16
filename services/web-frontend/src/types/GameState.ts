@@ -55,4 +55,4 @@ export interface GameState {
     score: number;
     level: number;
     gameOver: boolean;
-}
+} 

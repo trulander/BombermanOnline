@@ -1,5 +1,6 @@
 import log from 'loglevel';
 
+
 export enum LogLevel {
     TRACE = 'trace',
     DEBUG = 'debug',
@@ -35,16 +36,6 @@ interface LogEntry {
     data?: any;
 }
 
-// Расширяем интерфейс Window для TypeScript
-declare global {
-    interface Window {
-        NODE_ENV: string;
-        LOGS_ENDPOINT: string;
-        SERVICE_NAME: string;
-        LOGS_BATCH_SIZE: string;
-    }
-}
-
 // Генерация простого UUID для сессии
 function generateUUID(): string {
     return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -67,13 +58,12 @@ class Logger {
     
     constructor() {
         this.sessionId = generateUUID();
-        // Используем глобально заданные константы
-        this.endpoint = window.LOGS_ENDPOINT || '/logs';
-        this.serviceName = window.SERVICE_NAME || 'web-frontend';
-        this.nodeEnv = window.NODE_ENV || 'development';
+        this.endpoint = process.env.REACT_APP_LOGS_ENDPOINT;
+        this.serviceName = process.env.REACT_APP_SERVICE_NAME;
+        this.nodeEnv = process.env.NODE_ENV;
         
         // Получаем размер пакета логов из переменной окружения или используем значение по умолчанию
-        const batchSizeStr = window.LOGS_BATCH_SIZE || '10';
+        const batchSizeStr = process.env.REACT_APP_LOGS_BATCH_SIZE || '10';
         this.batchSize = parseInt(batchSizeStr, 10);
         if (isNaN(this.batchSize) || this.batchSize < 1) {
             this.batchSize = 10; // Значение по умолчанию, если парсинг не удался
@@ -82,7 +72,7 @@ class Logger {
         this.flushInterval = 5000; // Отправка каждые 5 секунд
         
         // Настраиваем loglevel в зависимости от окружения
-        this.currentLogLevel = this.nodeEnv === 'production' 
+        this.currentLogLevel = this.nodeEnv === 'production'
             ? LogLevel.INFO 
             : LogLevel.DEBUG;
             

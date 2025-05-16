@@ -10,84 +10,66 @@ module.exports = (env, argv) => {
   
   return {
     mode,
-    entry: './src/index.ts',
+    entry: {
+      main: './src/index.tsx'
+    },
+    output: {
+      path: path.resolve(__dirname, 'dist'),
+      filename: '[name].[contenthash].js',
+      publicPath: '/'
+    },
+    devtool: mode === 'development' ? 'inline-source-map' : 'source-map',
+    devServer: {
+      static: './dist',
+      hot: true,
+      historyApiFallback: true,
+      host: '0.0.0.0',
+      port: process.env.PORT || 8081
+    },
     module: {
       rules: [
         {
           test: /\.tsx?$/,
           use: 'ts-loader',
-          exclude: /node_modules/,
+          exclude: /node_modules/
+        },
+        {
+          test: /\.css$/,
+          use: ['style-loader', 'css-loader']
         },
         {
           test: /\.(png|svg|jpg|jpeg|gif|mp3|wav)$/i,
-          type: 'asset/resource',
-        },
-      ],
+          type: 'asset/resource'
+        }
+      ]
     },
     resolve: {
       extensions: ['.tsx', '.ts', '.js'],
       fallback: {
-        process: require.resolve('process/browser'),
-        "path": require.resolve("path-browserify")
+        path: false,
+        fs: false
       }
-    },
-    output: {
-      filename: 'bundle.[contenthash].js',
-      path: path.resolve(__dirname, 'dist'),
     },
     plugins: [
       new CleanWebpackPlugin(),
       new HtmlWebpackPlugin({
-        template: 'src/index.html',
-      }),
-      new CopyWebpackPlugin({
-        patterns: [
-          { from: 'src/assets', to: 'assets', noErrorOnMissing: true }
-        ],
+        template: './public/index.html',
+        filename: 'index.html',
+        inject: 'body'
       }),
       new webpack.DefinePlugin({
         'process.env.NODE_ENV': JSON.stringify(mode),
-        'process.env.LOGS_ENDPOINT': JSON.stringify(process.env.LOGS_ENDPOINT || '/logs'),
-        'process.env.SERVICE_NAME': JSON.stringify(process.env.SERVICE_NAME || 'web-frontend'),
-        'process.env.SOCKET_URL': JSON.stringify(process.env.SOCKET_URL || 'http://localhost'),
-        'process.env.SOCKET_PATH': JSON.stringify(process.env.SOCKET_PATH || '/socket.io'),
-        'process.env.LOGS_BATCH_SIZE': JSON.stringify(process.env.LOGS_BATCH_SIZE || '10'),
-      }),
-      new webpack.ProvidePlugin({
-        process: 'process/browser',
-      }),
-      new webpack.BannerPlugin({
-        banner: `
-          window.NODE_ENV = "${mode}";
-          window.LOGS_ENDPOINT = "${process.env.LOGS_ENDPOINT || '/logs'}";
-          window.SERVICE_NAME = "${process.env.SERVICE_NAME || 'web-frontend'}";
-          window.SOCKET_URL = "${process.env.SOCKET_URL || 'http://localhost'}";
-          window.SOCKET_PATH = "${process.env.SOCKET_PATH || '/socket.io'}";
-          window.LOGS_BATCH_SIZE = "${process.env.LOGS_BATCH_SIZE || '10'}";
-        `,
-        raw: true,
-        entryOnly: true
-      }),
+        'process.env.REACT_APP_SOCKET_URL': JSON.stringify(process.env.REACT_APP_SOCKET_URL || 'http://localhost'),
+        'process.env.REACT_APP_SOCKET_PATH': JSON.stringify(process.env.REACT_APP_SOCKET_PATH || '/socket.io'),
+        'process.env.REACT_APP_LOGS_ENDPOINT': JSON.stringify(process.env.REACT_APP_LOGS_ENDPOINT || '/logs'),
+        'process.env.REACT_APP_SERVICE_NAME': JSON.stringify(process.env.REACT_APP_SERVICE_NAME || 'web-frontend'),
+        'process.env.REACT_APP_LOGS_BATCH_SIZE': JSON.stringify(process.env.REACT_APP_LOGS_BATCH_SIZE || '10')
+      })
     ],
-    devServer: {
-      static: {
-        directory: path.join(__dirname, 'dist'),
-      },
-      compress: true,
-      port: 3000,
-      proxy: {
-        '/logs': {
-          target: process.env.LOGS_ENDPOINT || 'http://localhost',
-          secure: false,
-          changeOrigin: true,
-        },
-        [process.env.SOCKET_PATH || '/socket.io']: { // Динамический ключ на основе SOCKET_PATH
-          target: process.env.SOCKET_URL || 'http://localhost',
-          secure: false,
-          changeOrigin: true,
-          ws: true,
-        },
+    optimization: {
+      splitChunks: {
+        chunks: 'all'
       }
-    },
+    }
   };
-};
+}; 

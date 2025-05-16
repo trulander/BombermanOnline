@@ -6,7 +6,7 @@ from pydantic import AnyHttpUrl, validator, PostgresDsn
 
 class Settings(BaseSettings):
     # FastAPI settings
-    API_V1_STR: str = "/api/v1"
+    API_V1_STR: str = "/auth/api/v1"
     APP_TITLE: str = "Bomberman Auth Service"
     HOST: str = "0.0.0.0"
     PORT: int = 5003
