@@ -5,11 +5,13 @@ import { Box, Typography } from '@mui/material';
 interface GameCanvasProps {
   socketUrl?: string;
   socketPath?: string;
+  onGameClientReady?: (gameClient: GameClient | null) => void;
 }
 
 const GameCanvas: React.FC<GameCanvasProps> = ({ 
   socketUrl = 'http://localhost', 
-  socketPath = '/socket.io' 
+  socketPath = '/socket.io',
+  onGameClientReady
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameClientRef = useRef<GameClient | null>(null);
@@ -21,6 +23,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         canvasRef.current
       );
       
+      // Уведомляем родительский компонент
+      onGameClientReady?.(gameClientRef.current);
+      
       // Запуск игры
       gameClientRef.current.start();
       
@@ -28,10 +33,11 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       return () => {
         if (gameClientRef.current) {
           gameClientRef.current.stop();
+          onGameClientReady?.(null);
         }
       };
     }
-  });
+  }, [onGameClientReady]);
   
   return (
     <Box sx={{ 

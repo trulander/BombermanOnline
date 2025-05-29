@@ -36,7 +36,7 @@ const ConfirmResetPassword: React.FC = () => {
         <Alert severity="error" sx={{ mb: 2 }}>
           Отсутствует токен сброса пароля
         </Alert>
-        <Link to="/auth/reset-password" style={{ textDecoration: 'none' }}>
+        <Link to="/account/reset-password" style={{ textDecoration: 'none' }}>
           <Typography variant="body2" color="primary">
             Вернуться на страницу сброса пароля
           </Typography>
@@ -56,7 +56,7 @@ const ConfirmResetPassword: React.FC = () => {
       if (success) {
         setSuccess('Пароль успешно изменен!');
         setTimeout(() => {
-          navigate('/auth/login');
+          navigate('/account/login');
         }, 3000);
       } else {
         setError('Не удалось изменить пароль. Возможно, ссылка устарела или недействительна.');
@@ -134,7 +134,7 @@ const ConfirmResetPassword: React.FC = () => {
             </Button>
             
             <Box sx={{ mt: 2, textAlign: 'center' }}>
-              <Link to="/auth/login" style={{ textDecoration: 'none' }}>
+              <Link to="/account/login" style={{ textDecoration: 'none' }}>
                 <Typography variant="body2" color="primary">
                   Вернуться на страницу входа
                 </Typography>

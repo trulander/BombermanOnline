@@ -4,6 +4,7 @@ import { Renderer } from './Renderer';
 import { GameState } from '../types/GameState';
 import { Socket } from '../types/Socket';
 import logger, { LogLevel } from '../utils/Logger';
+import { tokenService } from '../services/tokenService';
 
 // Расширяем интерфейс Window для переменных окружения
 declare global {
@@ -15,7 +16,7 @@ declare global {
 
 export class GameClient {
     private canvas: HTMLCanvasElement;
-    private socket: IOSocket;
+    private socket?: IOSocket;
     private inputHandler: InputHandler;
     private renderer: Renderer;
     private gameId: string | null = null;
@@ -28,17 +29,36 @@ export class GameClient {
     // Кеш полной карты для обновлений с изменениями
     private cachedMapGrid: number[][] | null = null;
 
+    // Колбек для уведомления о проблемах с авторизацией
+    private onAuthenticationFailed?: () => void;
+
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         
         // Получаем URL и путь из переменных окружения
         const socketUrl = process.env.REACT_APP_SOCKET_URL;
         const socketPath = process.env.REACT_APP_SOCKET_PATH;
+        
+        const accessToken = tokenService.getAccessToken();
+        const wsCookie = tokenService.getWebSocketAuthCookie();
+        
+        if (!accessToken || !wsCookie) {
+            logger.error('No auth tokens available for socket connection', {
+                hasAccessToken: !!accessToken,
+                hasWsCookie: !!wsCookie
+            });
+            // Не создаём socket соединение, если нет токенов
+            this.inputHandler = new InputHandler();
+            this.renderer = new Renderer(canvas);
+            return;
+        }
 
         // Initialize socket connection to Python backend
+        // Теперь НЕ передаем auth параметр, полагаемся на cookie
         this.socket = io(socketUrl, {
             transports: ['websocket'],
             path: socketPath ? socketPath : undefined
+            // auth параметр удален - используем cookie
         });
         
         this.inputHandler = new InputHandler();
@@ -49,12 +69,18 @@ export class GameClient {
         logger.info('GameClient initialized', {
             socketUrl,
             socketPath,
+            hasToken: !!accessToken,
+            hasWsCookie: !!wsCookie,
             canvasWidth: canvas.width,
             canvasHeight: canvas.height
         });
     }
 
     private setupSocketEvents(): void {
+        if (!this.socket) {
+            return;
+        }
+        
         // Connection events
         this.socket.on('connect', () => {
             logger.info('Connected to server', {
@@ -72,6 +98,29 @@ export class GameClient {
             });
             this.isConnected = false;
             this.showDisconnectedMessage();
+        });
+
+        // Обработка ошибок подключения
+        this.socket.on('connect_error', (error: any) => {
+            logger.error('Socket connection error', {
+                error: error.message,
+                description: error.description,
+                context: error.context
+            });
+            
+            // Если ошибка связана с авторизацией
+            if (error.message?.includes('Authentication') || error.message?.includes('Unauthorized')) {
+                this.handleAuthError();
+            } else {
+                this.isConnected = false;
+                this.showDisconnectedMessage();
+            }
+        });
+
+        // Обработка ошибок авторизации от сервера
+        this.socket.on('auth_error', (data: any) => {
+            logger.error('Authentication error from server', data);
+            this.handleAuthError();
         });
 
         // Game events
@@ -115,6 +164,52 @@ export class GameClient {
             });
             this.showGameOver();
         });
+    }
+
+    // Обработка ошибок авторизации
+    private handleAuthError(): void {
+        logger.error('Socket authentication failed', {
+            gameId: this.gameId,
+            playerId: this.playerId
+        });
+        
+        // Пытаемся обновить токен и переподключиться
+        this.refreshTokenAndReconnect();
+    }
+
+    // Обновление токена и переподключение
+    private async refreshTokenAndReconnect(): Promise<void> {
+        try {
+            const tokenData = await tokenService.refreshToken();
+            
+            if (tokenData && this.socket) {
+                logger.info('Token refreshed successfully, reconnecting socket', {
+                    hasCookie: !!tokenService.getWebSocketAuthCookie()
+                });
+                
+                // Cookie уже обновлена через tokenService.saveTokens()
+                // Просто переподключаемся - новая cookie будет отправлена автоматически
+                this.socket.disconnect();
+                this.socket.connect();
+            } else {
+                this.redirectToLogin();
+            }
+        } catch (error) {
+            logger.error('Error refreshing token', { error });
+            this.redirectToLogin();
+        }
+    }
+
+    // Перенаправление на страницу авторизации
+    private redirectToLogin(): void {
+        logger.info('Redirecting to login page due to authentication failure');
+        
+        // Очищаем токены через сервис
+        tokenService.clearTokens();
+        
+        // Уведомляем родительский компонент об ошибке авторизации
+        // Вместо прямого перенаправления
+        this.onAuthenticationFailed?.();
     }
 
     // Функция для обработки результата запроса состояния игры
@@ -164,7 +259,7 @@ export class GameClient {
             gameId: this.gameId,
             playerId: this.playerId
         });
-        this.socket.emit('get_game_state', {
+        this.socket?.emit('get_game_state', {
             game_id: this.gameId
         }, this.handleGetGameStateResponse.bind(this));
 
@@ -214,6 +309,11 @@ export class GameClient {
     }
 
     public start(): void {
+        if (!this.socket) {
+            logger.error('Cannot start game: socket not available');
+            return;
+        }
+        
         logger.info('Запуск игрового клиента', {
             canvasWidth: this.canvas.width,
             canvasHeight: this.canvas.height
@@ -369,7 +469,7 @@ export class GameClient {
 
     private createGame(): void {
         logger.info('Создание новой игры');
-        this.socket.emit('create_game', {}, (response: { game_id: string }) => {
+        this.socket?.emit('create_game', {}, (response: { game_id: string }) => {
             this.gameId = response.game_id;
             logger.info('Игра успешно создана', {gameId: this.gameId});
             this.joinGame(this.gameId);
@@ -387,7 +487,7 @@ export class GameClient {
     }
 
     private joinGame(gameId: string): void {
-        this.socket.emit('join_game', { game_id: gameId }, (response: any) => {
+        this.socket?.emit('join_game', { game_id: gameId }, (response: any) => {
             if (response.success) {
                 this.gameId = gameId;
                 this.playerId = response.player_id;
@@ -486,15 +586,21 @@ export class GameClient {
     public stop(): void {
         logger.info('Остановка игрового клиента');
         cancelAnimationFrame(this.animationFrameId);
-        this.socket.disconnect();
+        if (this.socket) {
+            this.socket.disconnect();
+        }
     }
 
     // Метод для отправки входных данных на сервер
     private sendInputs(): void {
+        if (!this.socket || !this.gameId) {
+            return;
+        }
+        
         const inputs = this.inputHandler.getInput();
         
         // Отправляем ввод игрока в соответствии с форматом, ожидаемым сервером
-        this.socket.emit('input', {
+        this.socket?.emit('input', {
             game_id: this.gameId,
             inputs: {
                 up: inputs.up,
@@ -506,12 +612,16 @@ export class GameClient {
         
         // Отправляем команду установки бомбы отдельно
         if (inputs.bomb) {
-            this.socket.emit('place_bomb', {
+            this.socket?.emit('place_bomb', {
                 game_id: this.gameId
             });
             
             // Сбрасываем ввод бомбы, чтобы предотвратить многократные установки от одного нажатия
             this.inputHandler.resetBombInput();
         }
+    }
+
+    public setAuthenticationFailedHandler(handler: () => void): void {
+        this.onAuthenticationFailed = handler;
     }
 } 

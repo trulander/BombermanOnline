@@ -32,12 +32,12 @@ const NotFound: React.FC = () => {
         
         <Button
           component={Link}
-          to={isAuthenticated ? "/auth/dashboard" : "/auth/login"}
+          to={isAuthenticated ? "/account/dashboard" : "/"}
           variant="contained"
           color="primary"
           sx={{ mt: 3 }}
         >
-          {isAuthenticated ? "Вернуться в личный кабинет" : "Вернуться на страницу входа"}
+          {isAuthenticated ? "Вернуться в личный кабинет" : "На главную"}
         </Button>
       </Box>
     </Container>

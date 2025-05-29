@@ -1,13 +1,27 @@
-import React from 'react';
-import { Box, Paper, Container, Button, Link } from '@mui/material';
+import React, { useRef, useEffect } from 'react';
+import { Box, Paper, Container, Button } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import GameCanvas from '../components/GameCanvas';
+import { GameClient } from '../components/GameClient';
 
 const Game: React.FC = () => {
   const navigate = useNavigate();
+  const gameClientRef = useRef<GameClient | null>(null);
   
   const handleBack = () => {
-    navigate('/auth/dashboard');
+    navigate('/account/dashboard');
+  };
+
+  const handleAuthenticationFailed = () => {
+    // Перенаправляем на страницу авторизации при ошибке авторизации
+    navigate('/account/login');
+  };
+
+  const setGameClientRef = (gameClient: GameClient | null) => {
+    gameClientRef.current = gameClient;
+    if (gameClient) {
+      gameClient.setAuthenticationFailedHandler(handleAuthenticationFailed);
+    }
   };
   
   return (
@@ -23,7 +37,7 @@ const Game: React.FC = () => {
           </Button>
         </Box>
         
-        <GameCanvas/>
+        <GameCanvas onGameClientReady={setGameClientRef} />
       </Paper>
     </Container>
   );

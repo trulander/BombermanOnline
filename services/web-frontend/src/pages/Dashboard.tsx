@@ -18,7 +18,7 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const handlePlayGame = () => {
-    navigate('/game');
+    navigate('/account/game');
   };
 
   return (
@@ -51,7 +51,7 @@ const Dashboard: React.FC = () => {
           <Box sx={{ mt: 2 }}>
             <Button 
               component={Link} 
-              to="/auth/profile" 
+              to="/account/profile" 
               variant="outlined" 
               startIcon={<Person />}
               sx={{ mr: 1 }}
@@ -100,7 +100,7 @@ const Dashboard: React.FC = () => {
               </Typography>
               <Button 
                 component="a" 
-                href="/stats" 
+                href="/account/stats" 
                 variant="outlined"
                 startIcon={<Settings />}
                 fullWidth

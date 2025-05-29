@@ -167,7 +167,7 @@ const Profile: React.FC = () => {
                   <Box sx={{ mt: 3, display: 'flex', justifyContent: 'space-between' }}>
                     <Button
                       variant="outlined"
-                      onClick={() => navigate('/auth/dashboard')}
+                      onClick={() => navigate('/account/dashboard')}
                     >
                       Назад
                     </Button>

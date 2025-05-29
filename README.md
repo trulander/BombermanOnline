@@ -23,8 +23,10 @@
 ### Web Frontend
 
 Frontend приложение, написанное на TypeScript с использованием:
+- React + Material-UI для пользовательского интерфейса
 - Canvas API для отрисовки игрового поля
-- Socket.IO для коммуникации с сервером в реальном времени
+- Socket.IO для коммуникации с сервером в реальном времени (с авторизацией через JWT токены)
+- Axios для HTTP запросов с автоматическим обновлением токенов
 
 ### WebAPI Service
 
@@ -49,6 +51,54 @@ REST API сервис для обработки запросов от клиен
 - Управление ролями пользователей
 - Защита API через Traefik Forward Auth
 
+## Маршрутизация
+
+### Пользовательские маршруты
+
+- **/** - главная страница с описанием игры
+- **/account/login** - страница входа в систему
+- **/account/register** - страница регистрации
+- **/account/reset-password** - сброс пароля
+- **/account/confirm-reset-password** - подтверждение сброса пароля
+- **/account/verify-email** - подтверждение email
+- **/account/dashboard** - личный кабинет пользователя
+- **/account/profile** - редактирование профиля
+- **/account/stats** - игровая статистика пользователя
+- **/account/game** - игровая страница
+
+### API маршруты
+
+- **/auth/api/v1/auth/** - эндпоинты авторизации
+- **/auth/api/v1/users/** - управление пользователями
+- **/auth/api/v1/games/** - игровые эндпоинты
+
+## Безопасность
+
+### Система авторизации
+- **JWT токены** для HTTP API и WebSocket соединений
+- **Refresh токены** для автоматического обновления сессий
+- **Ролевая модель** (администраторы, игроки)
+- **Cookie-based авторизация** для WebSocket соединений
+
+### WebSocket авторизация
+Приложение использует **HTTP cookies** для авторизации WebSocket соединений:
+- При логине создается cookie `ws_auth_token` с path `/socket.io/`
+- Cookie автоматически отправляется при WebSocket handshake
+- Безопасная передача токенов без использования query parameters
+- Подробности в [WEBSOCKET_AUTH_ARCHITECTURE.md](services/web-frontend/WEBSOCKET_AUTH_ARCHITECTURE.md)
+
+### Архитектура маршрутизации
+- **Защищенные маршруты** для авторизованных пользователей (`/account/*`)
+- **Публичные маршруты** для неавторизованных (`/login`, `/register`)
+- **Централизованный контроль доступа** через `ProtectedRoute` и `PublicRoute`
+- Подробности в [ROUTING_ARCHITECTURE.md](services/web-frontend/ROUTING_ARCHITECTURE.md)
+
+### Управление токенами
+- **Централизованный TokenService** для всех операций с токенами
+- **Отсутствие дублирования** логики между компонентами
+- **Автоматическое управление cookies** для WebSocket
+- Подробности в [TOKEN_MANAGEMENT_ARCHITECTURE.md](services/web-frontend/TOKEN_MANAGEMENT_ARCHITECTURE.md)
+
 ## Запуск проекта
 
 ### Требования
@@ -71,9 +121,9 @@ docker-compose -f infra/docker-compose.yml up -d
 
 После запуска сервисы доступны по следующим адресам:
 
-- **Игра**: http://localhost/
+- **Игра**: http://localhost/game
+- **Личный кабинет**: http://localhost/account/dashboard
 - **API**: http://localhost/api/
-- **Авторизация**: http://localhost/ui/login
 - **Документация API**: http://localhost/api/docs
 - **Grafana**: http://grafana.localhost/ (admin/admin)
 - **Prometheus**: http://prometheus.localhost/
@@ -87,6 +137,15 @@ docker-compose -f infra/docker-compose.yml up -d
 BombermanOnline/
 ├── services/                  # Сервисы
 │   ├── web-frontend/          # Web Frontend
+│   │   ├── src/
+│   │   │   ├── components/    # React компоненты
+│   │   │   ├── pages/         # Страницы приложения
+│   │   │   ├── context/       # React контексты
+│   │   │   ├── services/      # Сервисы (API, InputHandler)
+│   │   │   ├── types/         # TypeScript типы
+│   │   │   └── utils/         # Утилиты (Logger)
+│   │   ├── public/            # Статические файлы
+│   │   └── Dockerfile
 │   ├── webapi-service/        # WebAPI Service
 │   ├── game-service/          # Game Service
 │   └── auth-service/          # Auth Service
@@ -115,6 +174,37 @@ docker-compose -f infra/docker-compose.yml up -d webapi-service
 docker-compose -f infra/docker-compose.yml down
 ```
 
+### Разработка Frontend
+
+```bash
+cd services/web-frontend
+
+# Установка зависимостей
+npm install
+
+# Запуск в режиме разработки
+npm start
+
+# Сборка для продакшена
+npm run build
+```
+
+## Функциональность
+
+### Игровые возможности
+
+- Создание и присоединение к игровым комнатам
+- Многопользовательская игра в реальном времени
+- Система статистики игроков
+- Профили пользователей с настройками
+
+### Особенности реализации
+
+- Плавная камера с "мертвой зоной" для отслеживания игрока
+- Оптимизированная передача изменений карты вместо полного состояния
+- Автоматическое переподключение при проблемах с сетью
+- Система логирования с отправкой на сервер
+
 ## Роли пользователей
 
 В системе предусмотрены следующие роли пользователей:
@@ -123,6 +213,29 @@ docker-compose -f infra/docker-compose.yml down
 2. **admin** - администратор, имеет полный доступ ко всем функциям
 3. **moderator** - модератор, может управлять игровыми комнатами и пользователями
 4. **developer** - разработчик, имеет доступ к техническим функциям
+
+## Технологии
+
+### Frontend
+- React 18 + TypeScript
+- Material-UI для компонентов интерфейса
+- Socket.IO Client для реального времени
+- Canvas API для игровой графики
+- Axios для HTTP запросов
+- Formik + Yup для форм и валидации
+
+### Backend
+- FastAPI для API сервисов
+- Socket.IO для WebSocket соединений
+- PostgreSQL для основной базы данных
+- Redis для кэширования и состояний
+- NATS для межсервисной коммуникации
+
+### DevOps
+- Docker + Docker Compose
+- Traefik как API Gateway
+- Prometheus + Grafana для мониторинга
+- Loki + Fluent Bit для логирования
 
 ## Лицензия
 

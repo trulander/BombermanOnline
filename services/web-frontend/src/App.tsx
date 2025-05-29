@@ -1,9 +1,9 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
-import { useAuth } from './context/AuthContext';
 
 // Pages
+import Home from './pages/Home';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ResetPassword from './pages/ResetPassword';
@@ -11,26 +11,14 @@ import ConfirmResetPassword from './pages/ConfirmResetPassword';
 import VerifyEmail from './pages/VerifyEmail';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
+import Stats from './pages/Stats';
 import NotFound from './pages/NotFound';
 import Game from './pages/Game';
 
 // Layout components
 import Layout from './components/Layout';
-
-// Protected route component
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
-  
-  if (loading) {
-    return <div>Загрузка...</div>;
-  }
-  
-  if (!isAuthenticated) {
-    return <Navigate to="/auth/login" replace />;
-  }
-  
-  return <>{children}</>;
-};
+import ProtectedRoute from './components/ProtectedRoute';
+import PublicRoute from './components/PublicRoute';
 
 const theme = createTheme({
   palette: {
@@ -48,15 +36,36 @@ const App: React.FC = () => {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Routes>
-        <Route path="/auth" element={<Layout />}>
-          {/* Публичные маршруты */}
-          <Route path="login" element={<Login />} />
-          <Route path="register" element={<Register />} />
-          <Route path="reset-password" element={<ResetPassword />} />
-          <Route path="confirm-reset-password" element={<ConfirmResetPassword />} />
+        {/* Главная страница - доступна всем */}
+        <Route path="/" element={<Home />} />
+        
+        <Route path="/account" element={<Layout />}>
+          {/* Публичные маршруты - доступны только НЕ авторизованным */}
+          <Route path="login" element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          } />
+          <Route path="register" element={
+            <PublicRoute>
+              <Register />
+            </PublicRoute>
+          } />
+          <Route path="reset-password" element={
+            <PublicRoute>
+              <ResetPassword />
+            </PublicRoute>
+          } />
+          <Route path="confirm-reset-password" element={
+            <PublicRoute>
+              <ConfirmResetPassword />
+            </PublicRoute>
+          } />
+          
+          {/* Верификация email - доступна всем */}
           <Route path="verify-email" element={<VerifyEmail />} />
           
-          {/* Защищенные маршруты */}
+          {/* Защищенные маршруты - только для авторизованных */}
           <Route path="dashboard" element={
             <ProtectedRoute>
               <Dashboard />
@@ -67,17 +76,20 @@ const App: React.FC = () => {
               <Profile />
             </ProtectedRoute>
           } />
+          <Route path="stats" element={
+            <ProtectedRoute>
+              <Stats />
+            </ProtectedRoute>
+          } />
+          <Route path="game" element={
+            <ProtectedRoute>
+              <Game />
+            </ProtectedRoute>
+          } />
           
-          {/* Редирект с корневого маршрута на login */}
-          <Route index element={<Navigate to="/auth/login" replace />} />
+          {/* Редирект с корневого маршрута на login для неавторизованных */}
+          <Route index element={<Navigate to="/account/login" replace />} />
         </Route>
-        
-        {/* Игровой маршрут */}
-        <Route path="/game" element={
-          <ProtectedRoute>
-            <Game />
-          </ProtectedRoute>
-        } />
         
         {/* 404 страница */}
         <Route path="*" element={<NotFound />} />

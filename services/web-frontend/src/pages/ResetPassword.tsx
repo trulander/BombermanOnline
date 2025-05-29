@@ -98,7 +98,7 @@ const ResetPassword: React.FC = () => {
             </Button>
             
             <Box sx={{ mt: 2, textAlign: 'center' }}>
-              <Link to="/auth/login" style={{ textDecoration: 'none' }}>
+              <Link to="/account/login" style={{ textDecoration: 'none' }}>
                 <Typography variant="body2" color="primary">
                   Вернуться на страницу входа
                 </Typography>

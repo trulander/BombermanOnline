@@ -32,12 +32,12 @@ const Layout: React.FC = () => {
   const handleLogout = async () => {
     handleClose();
     await logout();
-    navigate('/auth/login');
+    navigate('/account/login');
   };
 
   const handleProfile = () => {
     handleClose();
-    navigate('/auth/profile');
+    navigate('/account/profile');
   };
 
   return (
@@ -45,7 +45,7 @@ const Layout: React.FC = () => {
       <AppBar position="static">
         <Toolbar>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
-            <Link to={isAuthenticated ? '/auth/dashboard' : '/auth/login'} style={{ color: 'white', textDecoration: 'none' }}>
+            <Link to={isAuthenticated ? '/account/dashboard' : '/'} style={{ color: 'white', textDecoration: 'none' }}>
               Bomberman Online
             </Link>
           </Typography>
@@ -87,10 +87,10 @@ const Layout: React.FC = () => {
             </div>
           ) : (
             <Box>
-              <Button color="inherit" component={Link} to="/auth/login">
+              <Button color="inherit" component={Link} to="/account/login">
                 Войти
               </Button>
-              <Button color="inherit" component={Link} to="/auth/register">
+              <Button color="inherit" component={Link} to="/account/register">
                 Регистрация
               </Button>
             </Box>

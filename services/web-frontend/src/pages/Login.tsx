@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   Box, 
   Button, 
@@ -11,7 +11,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import { useAuth } from '../context/AuthContext';
-import { Formik, Form, Field, ErrorMessage } from 'formik';
+import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
 
 const validationSchema = Yup.object().shape({
@@ -25,6 +25,7 @@ const validationSchema = Yup.object().shape({
 const Login: React.FC = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -36,7 +37,9 @@ const Login: React.FC = () => {
       const success = await login(values);
       
       if (success) {
-        navigate('/auth/dashboard');
+        // Перенаправляем на сохраненный путь или dashboard по умолчанию
+        const from = location.state?.from?.pathname || '/account/dashboard';
+        navigate(from, { replace: true });
       } else {
         setError('Не удалось авторизоваться. Пожалуйста, проверьте введенные данные.');
       }
@@ -108,13 +111,13 @@ const Login: React.FC = () => {
             </Button>
             
             <Box sx={{ mt: 2, display: 'flex', justifyContent: 'space-between' }}>
-              <Link to="/auth/reset-password" style={{ textDecoration: 'none' }}>
+              <Link to="/account/reset-password" style={{ textDecoration: 'none' }}>
                 <Typography variant="body2" color="primary">
                   Забыли пароль?
                 </Typography>
               </Link>
               
-              <Link to="/auth/register" style={{ textDecoration: 'none' }}>
+              <Link to="/account/register" style={{ textDecoration: 'none' }}>
                 <Typography variant="body2" color="primary">
                   Регистрация
                 </Typography>

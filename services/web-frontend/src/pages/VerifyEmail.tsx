@@ -70,7 +70,7 @@ const VerifyEmail: React.FC = () => {
       <Box sx={{ mt: 4 }}>
         <Button 
           component={Link} 
-          to="/auth/login" 
+          to="/account/login" 
           variant="contained" 
           color="primary"
           sx={{ mx: 1 }}

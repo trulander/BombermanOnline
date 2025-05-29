@@ -63,7 +63,7 @@ api.interceptors.response.use(
         localStorage.removeItem('token_time');
         
         // Перенаправляем на страницу авторизации
-        window.location.href = '/auth/login';
+        window.location.href = '/account/login';
         return Promise.reject(refreshError);
       }
     }

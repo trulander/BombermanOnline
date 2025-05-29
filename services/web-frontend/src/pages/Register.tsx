@@ -50,7 +50,7 @@ const Register: React.FC = () => {
       if (success) {
         setSuccess('Регистрация успешна! Проверьте вашу почту для подтверждения аккаунта.');
         setTimeout(() => {
-          navigate('/auth/login');
+          navigate('/account/login');
         }, 3000);
       } else {
         setError('Не удалось зарегистрироваться. Пожалуйста, проверьте введенные данные.');
@@ -158,7 +158,7 @@ const Register: React.FC = () => {
             </Button>
             
             <Box sx={{ mt: 2, textAlign: 'center' }}>
-              <Link to="/auth/login" style={{ textDecoration: 'none' }}>
+              <Link to="/account/login" style={{ textDecoration: 'none' }}>
                 <Typography variant="body2" color="primary">
                   Уже есть аккаунт? Войти
                 </Typography>
