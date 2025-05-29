@@ -1,11 +1,5 @@
 http:
   routers:
-#    my-webui-router:
-#      rule: host(`admin.localhost`)
-#      service: noop@internal # required
-#      middlewares:
-#        - my-traefik-plugin-AdminAPI_WebUI1
-
     # Auth сервис - API
     auth-api:
       rule: "PathPrefix(`/auth`)"
@@ -26,17 +20,18 @@ http:
       middlewares:
         - compress
         - security-headers
-#        - auth-check
+        - auth-check
 
     # WebAPI WebSocket
     webapi-ws:
-      rule: "PathPrefix(`/socket.io`)"
+      rule: "PathPrefix(`/webapi/socket.io`)"
       entryPoints:
         - web
       service: webapi
       middlewares:
         - websocket
-#        - auth-check
+        - strip-webapi-prefix
+        - auth-check
 
     # Game сервис - с проверкой авторизации
     game:
@@ -47,7 +42,7 @@ http:
       middlewares:
         - compress
         - security-headers
-#        - auth-check
+        - auth-check
 
     # Logger API
     logger:

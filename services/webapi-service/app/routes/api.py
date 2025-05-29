@@ -7,6 +7,6 @@ api_router = APIRouter()
 # Регистрация маршрутов API v1
 api_router.include_router(
     game_routes.router,
-    prefix="/v1/games",
+    prefix="/games",
     tags=["games"]
 ) 

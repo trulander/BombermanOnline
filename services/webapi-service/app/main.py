@@ -44,17 +44,7 @@ try:
             content={"detail": "Internal server error"},
         )
     
-    # Инициализация Socket.IO
-    try:
-        socketio_service = SocketIOService(
-            game_service=game_service
-        )
-        socket_app = socketio_service.get_app()
-        logger.info("SocketIO service initialized")
-    except Exception as e:
-        logger.error(f"Error initializing SocketIO service: {e}", exc_info=True)
-        raise
-    
+
     # Настройка CORS
     app.add_middleware(
         CORSMiddleware,
@@ -67,10 +57,21 @@ try:
     # Подключаем маршруты
     app.include_router(root_router)
     app.include_router(api_router, prefix=settings.API_V1_STR)
-    
-    # Монтируем Socket.IO
+
+    # Инициализация Socket.IO
+    try:
+        socketio_service = SocketIOService(
+            game_service=game_service
+        )
+        socket_app = socketio_service.get_app()
+        logger.info("SocketIO service initialized")
+    except Exception as e:
+        logger.error(f"Error initializing SocketIO service: {e}", exc_info=True)
+        raise
+
+    # Монтируем Socket.IO (на frontend мы работаем с /webapi/socket.io - маршрутизируется через api gateway)
     app.mount("/socket.io", socket_app)
-    
+
     # Добавляем middleware для авторизации
     @app.middleware("http")
     async def auth_middleware(request: Request, call_next):

@@ -22,6 +22,12 @@ http:
         prefixes: 
           - "/api"
 
+    # Middleware для удаления префикса /webapi
+    strip-webapi-prefix:
+      stripPrefix:
+        prefixes:
+          - "/webapi"
+
     # Middleware для удаления префикса /logs
     strip-logs-prefix:
       stripPrefix:
@@ -37,7 +43,7 @@ http:
     # Middleware для проверки JWT токена
     auth-check:
       forwardAuth:
-        address: "http://auth-service:5003/api/v1/auth/check"
+        address: "http://auth-service:5003/auth/api/v1/auth/check"
         authResponseHeaders:
           - "X-User-ID"
           - "X-User-Role"
@@ -48,16 +54,10 @@ http:
     # Middleware для редиректа неавторизованных пользователей
     auth-redirect:
       forwardAuth:
-        address: "http://auth-service:5003/api/v1/auth/check?redirect=true"
+        address: "http://localhost/auth/login"
         authResponseHeaders:
           - "X-User-ID"
           - "X-User-Role"
           - "X-User-Email"
           - "X-User-Name"
         trustForwardHeader: true
-
-#
-#    my-traefik-plugin-AdminAPI_WebUI1:
-#      plugin:
-#        traefik-plugin-AdminAPI_WebUI1:
-#          root: /tmp/

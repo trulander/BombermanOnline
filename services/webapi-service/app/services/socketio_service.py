@@ -29,9 +29,9 @@ class SocketIOService:
         self.sio = MetricsSocketServer(
             async_mode='asgi',
             client_manager=AsyncRedisManager(redis_url),
-            cors_allowed_origins='*'
+            cors_allowed_origins=settings.CORS_ORIGINS,
+            cors_credentials=settings.CORS_CREDENTIALS
         )
-
         self.game_service = game_service
 
         # Регистрируем обработчики событий
@@ -158,4 +158,4 @@ class SocketIOService:
     # Получаем Socket.IO приложение для подключения к FastAPI
     def get_app(self) -> Any:
         """Get Socket.IO application for ASGI integration"""
-        return socketio.ASGIApp(self.sio)
+        return socketio.ASGIApp(socketio_server=self.sio)

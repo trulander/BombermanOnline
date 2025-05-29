@@ -2,16 +2,16 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # FastAPI settings
-    API_V1_STR: str = "/api/v1"
+    API_V1_STR: str = "/webapi/api/v1"
     APP_TITLE: str = "Bomberman WebAPI Service"
     HOST: str = "0.0.0.0"
     PORT: int = 5001
     DEBUG: bool = True
     RELOAD: bool = True
-    SWAGGER_URL: str = "/api/docs"
+    SWAGGER_URL: str = "/webapi/docs"
     
     # CORS settings
-    CORS_ORIGINS: list[str] = ["*"]
+    CORS_ORIGINS: str = "*"
     CORS_CREDENTIALS: bool = True
     CORS_METHODS: list[str] = ["*"]
     CORS_HEADERS: list[str] = ["*"]
