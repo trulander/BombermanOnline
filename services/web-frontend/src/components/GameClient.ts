@@ -32,6 +32,16 @@ export class GameClient {
     // Колбек для уведомления о проблемах с авторизацией
     private onAuthenticationFailed?: () => void;
 
+    // Система управления кнопками
+    private buttons: Array<{
+        x: number;
+        y: number;
+        width: number;
+        height: number;
+        onClick: () => void;
+    }> = [];
+    private clickHandler?: (e: MouseEvent) => void;
+
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         
@@ -52,6 +62,9 @@ export class GameClient {
         this.inputHandler = new InputHandler();
         this.renderer = new Renderer(canvas);
         
+        // Создаем единый обработчик для кликов по canvas
+        this.setupCanvasClickHandler();
+        
         this.setupSocketEvents();
         
         logger.info('GameClient initialized', {
@@ -61,6 +74,35 @@ export class GameClient {
             canvasWidth: canvas.width,
             canvasHeight: canvas.height
         });
+    }
+
+    // Настройка единого обработчика кликов по canvas
+    private setupCanvasClickHandler(): void {
+        this.clickHandler = (e: MouseEvent) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Проверяем, попал ли клик в какую-то из активных кнопок
+            for (const button of this.buttons) {
+                if (
+                    mouseX >= button.x - button.width / 2 && 
+                    mouseX <= button.x + button.width / 2 && 
+                    mouseY >= button.y - button.height / 2 && 
+                    mouseY <= button.y + button.height / 2
+                ) {
+                    button.onClick();
+                    break; // Выходим после первого найденного совпадения
+                }
+            }
+        };
+        
+        this.canvas.addEventListener('click', this.clickHandler);
+    }
+
+    // Очистка активных кнопок
+    private clearButtons(): void {
+        this.buttons = [];
     }
 
     private setupSocketEvents(): void {
@@ -382,6 +424,9 @@ export class GameClient {
     }
 
     private showMenu(): void {
+        // Очищаем предыдущие кнопки
+        this.clearButtons();
+        
         // Clear canvas
         const ctx = this.canvas.getContext('2d')!;
         ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
@@ -436,21 +481,8 @@ export class GameClient {
         ctx.textBaseline = 'middle';
         ctx.fillText(text, x, y);
         
-        // Add click handler
-        this.canvas.addEventListener('click', (e) => {
-            const rect = this.canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
-            
-            if (
-                mouseX >= x - width / 2 && 
-                mouseX <= x + width / 2 && 
-                mouseY >= y - height / 2 && 
-                mouseY <= y + height / 2
-            ) {
-                onClick();
-            }
-        }, { once: true });
+        // Добавляем кнопку в массив активных кнопок
+        this.buttons.push({ x, y, width, height, onClick });
     }
 
     private createGame(): void {
@@ -477,6 +509,9 @@ export class GameClient {
             if (response.success) {
                 this.gameId = gameId;
                 this.playerId = response.player_id;
+                
+                // Очищаем кнопки меню, так как игра начинается
+                this.clearButtons();
                 
                 // Сбрасываем кэш карты при присоединении к новой игре
                 this.cachedMapGrid = null;
@@ -552,6 +587,9 @@ export class GameClient {
     }
 
     private showGameOver(): void {
+        // Очищаем предыдущие кнопки
+        this.clearButtons();
+        
         const ctx = this.canvas.getContext('2d')!;
         
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
@@ -589,6 +627,12 @@ export class GameClient {
     public stop(): void {
         logger.info('Остановка игрового клиента');
         cancelAnimationFrame(this.animationFrameId);
+        
+        // Очищаем обработчик событий
+        if (this.clickHandler) {
+            this.canvas.removeEventListener('click', this.clickHandler);
+        }
+        
         if (this.socket) {
             this.socket.disconnect();
         }
