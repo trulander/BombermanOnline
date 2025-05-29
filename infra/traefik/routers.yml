@@ -29,6 +29,7 @@ http:
         - web
       service: webapi
       middlewares:
+        - extract-cookie-ws_auth_token
         - websocket
         - strip-webapi-prefix
         - auth-check

@@ -40,18 +40,6 @@ export class GameClient {
         const socketPath = process.env.REACT_APP_SOCKET_PATH;
         
         const accessToken = tokenService.getAccessToken();
-        const wsCookie = tokenService.getWebSocketAuthCookie();
-        
-        if (!accessToken || !wsCookie) {
-            logger.error('No auth tokens available for socket connection', {
-                hasAccessToken: !!accessToken,
-                hasWsCookie: !!wsCookie
-            });
-            // Не создаём socket соединение, если нет токенов
-            this.inputHandler = new InputHandler();
-            this.renderer = new Renderer(canvas);
-            return;
-        }
 
         // Initialize socket connection to Python backend
         // Теперь НЕ передаем auth параметр, полагаемся на cookie
@@ -70,7 +58,6 @@ export class GameClient {
             socketUrl,
             socketPath,
             hasToken: !!accessToken,
-            hasWsCookie: !!wsCookie,
             canvasWidth: canvas.width,
             canvasHeight: canvas.height
         });
@@ -183,10 +170,6 @@ export class GameClient {
             const tokenData = await tokenService.refreshToken();
             
             if (tokenData && this.socket) {
-                logger.info('Token refreshed successfully, reconnecting socket', {
-                    hasCookie: !!tokenService.getWebSocketAuthCookie()
-                });
-                
                 // Cookie уже обновлена через tokenService.saveTokens()
                 // Просто переподключаемся - новая cookie будет отправлена автоматически
                 this.socket.disconnect();

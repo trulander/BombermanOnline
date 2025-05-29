@@ -61,3 +61,11 @@ http:
           - "X-User-Email"
           - "X-User-Name"
         trustForwardHeader: true
+
+    extract-cookie-ws_auth_token:
+      plugin:
+        extractCookie:
+          cookieName: ws_auth_token
+          headerNameForCookieValue: "Authorization"
+          cookieValuePrefix: 'Bearer '
+          logLevel: warn

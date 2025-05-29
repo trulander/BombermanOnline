@@ -38,9 +38,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       // Если есть токены но нет WebSocket cookie - восстанавливаем cookie
       const accessToken = tokenService.getAccessToken();
-      const wsCookie = tokenService.getWebSocketAuthCookie();
       
-      if (accessToken && !wsCookie) {
+      if (accessToken) {
         console.log('Restoring WebSocket cookie from existing tokens');
         // Восстанавливаем cookie из существующих токенов
         const tokenData = {

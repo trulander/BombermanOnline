@@ -20,3 +20,9 @@ log:
 
 accessLog:
   filePath: "/var/log/traefik/access.log"
+
+experimental:
+  plugins:
+    extractCookie:
+      moduleName: "github.com/v-electrolux/extractcookie"
+      version: "v1.0.1"

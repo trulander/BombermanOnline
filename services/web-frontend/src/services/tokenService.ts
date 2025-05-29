@@ -46,23 +46,17 @@ class TokenService {
     const isSecure = window.location.protocol === 'https:';
     const secureFlag = isSecure ? '; Secure' : '';
     
-    // Создаем две cookie:
-    // 1. Для WebSocket endpoint (будет отправляться только на /socket.io/)
-    const wsPathCookieValue = `ws_auth_token=${token}; path=/socket.io/; expires=${expires.toUTCString()}; SameSite=Lax${secureFlag}`;
-    document.cookie = wsPathCookieValue;
-    
-    // 2. Для чтения из JavaScript на других страницах (корневой path)
-    const rootPathCookieValue = `ws_auth_token=${token}; path=/; expires=${expires.toUTCString()}; SameSite=Lax${secureFlag}`;
-    document.cookie = rootPathCookieValue;
+    // Устанавливаем cookie только для WebSocket пути
+    // Path должен соответствовать пути WebSocket endpoint
+    const cookieValue = `ws_auth_token=${token}; path=${process.env.REACT_APP_SOCKET_PATH}/; expires=${expires.toUTCString()}; SameSite=Lax${secureFlag}`;
+    document.cookie = cookieValue;
     
     console.log('WebSocket auth cookie set', {
-      wsPath: '/socket.io/',
-      rootPath: '/',
+      path: process.env.REACT_APP_SOCKET_PATH + '/',
       expires: expires.toISOString(),
       hasToken: !!token,
       isSecure,
-      protocol: window.location.protocol,
-      currentPath: window.location.pathname
+      protocol: window.location.protocol
     });
   }
 
@@ -84,10 +78,9 @@ class TokenService {
     const isSecure = window.location.protocol === 'https:';
     const secureFlag = isSecure ? '; Secure' : '';
     
-    // Удаляем обе cookie (с разными path)
+    // Устанавливаем cookie с прошедшей датой для удаления
     document.cookie = `ws_auth_token=; path=/socket.io/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureFlag}`;
-    document.cookie = `ws_auth_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax${secureFlag}`;
-    console.log('WebSocket auth cookie cleared from both paths');
+    console.log('WebSocket auth cookie cleared');
   }
 
   // Проверка наличия токенов
@@ -146,35 +139,6 @@ class TokenService {
     // Добавляем 5 минут буфера
     const bufferTime = 5 * 60 * 1000;
     return now > (tokenTimestamp + (expiresInSeconds * 1000) - bufferTime);
-  }
-
-  // Получение WebSocket cookie (для отладки)
-  public getWebSocketAuthCookie(): string | null {
-    const allCookies = document.cookie;
-    console.log('All cookies:', allCookies);
-    
-    const cookies = allCookies.split(';');
-    console.log('Parsed cookies:', cookies);
-    
-    for (const cookie of cookies) {
-      const trimmedCookie = cookie.trim();
-      const equalsIndex = trimmedCookie.indexOf('=');
-      
-      if (equalsIndex === -1) continue;
-      
-      const name = trimmedCookie.substring(0, equalsIndex);
-      const value = trimmedCookie.substring(equalsIndex + 1);
-      
-      console.log(`Cookie: name="${name}", value="${value}"`);
-      
-      if (name === 'ws_auth_token') {
-        console.log('Found ws_auth_token:', value);
-        return value;
-      }
-    }
-    
-    console.log('ws_auth_token cookie not found');
-    return null;
   }
 }
 
