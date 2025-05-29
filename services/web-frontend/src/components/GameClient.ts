@@ -289,6 +289,9 @@ export class GameClient {
         
         // Сохраняем обновленное состояние
         this.gameState = gameState;
+        
+        // Обновляем информацию в header
+        this.updateGameInfo();
     }
 
     public start(): void {
@@ -483,6 +486,9 @@ export class GameClient {
                     playerId: this.playerId
                 });
                 
+                // Отправляем Game ID в header через DOM event
+                this.updateGameId(gameId);
+                
                 // Получаем начальное состояние игры
                 if (response.game_state && response.game_state.map && response.game_state.map.grid) {
                     logger.debug('Начальное состояние получено с картой', {
@@ -493,6 +499,9 @@ export class GameClient {
                     // Сохраняем состояние и кэшируем карту
                     this.gameState = response.game_state;
                     this.cachedMapGrid = response.game_state.map.grid;
+                    
+                    // Обновляем UI в header
+                    this.updateGameInfo();
                 } else {
                     logger.warn('Получено неполное начальное состояние игры', {
                         hasGameState: !!response.game_state,
@@ -503,13 +512,6 @@ export class GameClient {
                     // Явно запрашиваем полное состояние игры
                     this.requestGameState();
                 }
-                
-                // Show game ID on screen for others to join
-                const gameIdElement = document.getElementById('gameId');
-                if (gameIdElement) {
-                    gameIdElement.textContent = `Game ID: ${gameId}`;
-                    gameIdElement.style.display = 'block';
-                }
             } else {
                 logger.error('Не удалось присоединиться к игре', {
                     gameId,
@@ -519,6 +521,18 @@ export class GameClient {
                 this.showMenu();
             }
         });
+    }
+
+    // Добавляем методы для обновления информации в header
+    private updateGameId(gameId: string): void {
+        window.dispatchEvent(new CustomEvent('gameIdUpdate', { detail: gameId }));
+    }
+
+    private updateGameInfo(): void {
+        if (this.gameState) {
+            window.dispatchEvent(new CustomEvent('levelUpdate', { detail: this.gameState.level }));
+            window.dispatchEvent(new CustomEvent('scoreUpdate', { detail: this.gameState.score }));
+        }
     }
 
     private showDisconnectedMessage(): void {
@@ -562,6 +576,12 @@ export class GameClient {
             this.gameId = null;
             this.playerId = null;
             this.gameState = null;
+            
+            // Очищаем информацию в header
+            this.updateGameId('');
+            window.dispatchEvent(new CustomEvent('levelUpdate', { detail: 1 }));
+            window.dispatchEvent(new CustomEvent('scoreUpdate', { detail: 0 }));
+            
             this.showMenu();
         });
     }

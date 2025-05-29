@@ -99,8 +99,8 @@ const Dashboard: React.FC = () => {
                 Просмотрите свою игровую статистику, достижения и историю игр.
               </Typography>
               <Button 
-                component="a" 
-                href="/account/stats" 
+                component={Link} 
+                to="/account/stats" 
                 variant="outlined"
                 startIcon={<Settings />}
                 fullWidth

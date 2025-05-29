@@ -146,9 +146,6 @@ export class Renderer {
         this.renderEnemies(gameState, offsetDiffX, offsetDiffY);
         this.renderPlayers(gameState, currentPlayerId, offsetDiffX, offsetDiffY);
 
-        // Обновляем UI
-        this.updateUI(gameState);
-        
         // Рендерим отладочную информацию
         if (this.debugMode) {
             this.renderDebugInfo(gameState, currentPlayerId, offsetDiffX, offsetDiffY);
@@ -805,19 +802,6 @@ export class Renderer {
             canvasWidth: this.canvas.width,
             canvasHeight: this.canvas.height
         });
-    }
-
-    private updateUI(gameState: GameState): void {
-        // Update score and level display
-        const scoreElement = document.getElementById('score');
-        if (scoreElement) {
-            scoreElement.textContent = `Score: ${gameState.score}`;
-        }
-        
-        const levelElement = document.getElementById('level');
-        if (levelElement) {
-            levelElement.textContent = `Level: ${gameState.level}`;
-        }
     }
 
     private darkenColor(color: string, factor: number): string {

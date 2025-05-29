@@ -39,6 +39,13 @@ const App: React.FC = () => {
         {/* Главная страница - доступна всем */}
         <Route path="/" element={<Home />} />
         
+        {/* Игровая страница - отдельно от основного Layout */}
+        <Route path="/account/game" element={
+          <ProtectedRoute>
+            <Game />
+          </ProtectedRoute>
+        } />
+        
         <Route path="/account" element={<Layout />}>
           {/* Публичные маршруты - доступны только НЕ авторизованным */}
           <Route path="login" element={
@@ -79,11 +86,6 @@ const App: React.FC = () => {
           <Route path="stats" element={
             <ProtectedRoute>
               <Stats />
-            </ProtectedRoute>
-          } />
-          <Route path="game" element={
-            <ProtectedRoute>
-              <Game />
             </ProtectedRoute>
           } />
           
