@@ -24,7 +24,7 @@ try:
     app = FastAPI(
         title=settings.APP_TITLE,
         docs_url=settings.SWAGGER_URL,
-        openapi_url=f"{settings.API_V1_STR}/openapi.json",
+        openapi_url=f"{settings.SWAGGER_URL}/openapi.json",
         debug=settings.DEBUG,
     )
     
