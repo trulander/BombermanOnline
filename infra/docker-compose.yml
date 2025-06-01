@@ -42,6 +42,11 @@ services:
       - REDIS_HOST=redis
       - NATS_URL=nats://nats:4222
       - AUTH_SERVICE_URL=http://auth-service:5003
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=game_service
+      - POSTGRES_USER=bomberman
+      - POSTGRES_PASSWORD=bomberman
     depends_on:
       - redis
       - nats

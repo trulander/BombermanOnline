@@ -1,24 +1,37 @@
-from fastapi import Depends, HTTPException, status, Request
+from fastapi import Request, HTTPException, status
+from typing import Dict, Optional
 import logging
 
 logger = logging.getLogger(__name__)
 
-async def get_current_user(request: Request):
-    """Получает текущего пользователя из state запроса"""
-    if not hasattr(request.state, "user") or not request.state.user:
+
+async def get_current_user(request: Request) -> Dict[str, str]:
+    """Получить текущего пользователя из состояния запроса"""
+    user = getattr(request.state, 'user', None)
+    if not user:
+        logger.warning("Unauthenticated request attempt")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Не авторизован",
+            detail="Authentication required",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    return request.state.user
+    return user
 
-async def get_current_admin(request: Request):
-    """Получает текущего администратора из state запроса"""
+
+async def get_current_admin(request: Request) -> Dict[str, str]:
+    """Получить текущего администратора из состояния запроса"""
     user = await get_current_user(request)
-    if user["role"] != "admin":
+    
+    if user.get("role") != "admin":
+        logger.warning(f"User {user.get('id')} attempted admin action without permissions")
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Недостаточно прав",
+            detail="Administrator permissions required"
         )
-    return user 
+    
+    return user
+
+
+def get_optional_user(request: Request) -> Optional[Dict[str, str]]:
+    """Получить пользователя если он аутентифицирован, иначе None"""
+    return getattr(request.state, 'user', None) 

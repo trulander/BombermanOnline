@@ -2,6 +2,7 @@ import asyncio
 import logging
 import uvicorn
 import traceback
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette_exporter import PrometheusMiddleware, handle_metrics
@@ -13,15 +14,64 @@ from .logging_config import configure_logging
 from .services.nats_service import NatsService
 from .coordinators.game_coorditanor import GameCoordinator
 from .auth import get_current_user, get_current_admin
+from .routes.map_routes import router as map_router
+from .repositories.map_repository import MapRepository
 
 # Настройка логирования
 configure_logging()
 logger = logging.getLogger(__name__)
 
+# Глобальные переменные для сервисов
+nats_service = NatsService()
+map_repository = MapRepository()
+game_coordinator = GameCoordinator(
+    notification_service=nats_service
+)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    try:
+        logger.info("Starting Game service")
+        
+        # Инициализируем подключения к базам данных
+        await map_repository.connect()
+        
+        # Инициализируем обработчики NATS
+        await game_coordinator.initialize_handlers()
+        
+        # Запускаем игровой цикл
+        asyncio.create_task(game_coordinator.start_game_loop())
+        
+        logger.info("Game service started successfully")
+    except Exception as e:
+        logger.critical(f"Failed to start Game service: {e}", exc_info=True)
+        raise
+    
+    yield
+    
+    # Shutdown
+    try:
+        logger.info("Shutting down Game service")
+        
+        # Закрываем NATS соединение
+        await nats_service.disconnect()
+        
+        # Закрываем подключения к базам данных
+        await map_repository.disconnect()
+        
+        logger.info("Game service stopped successfully")
+    except Exception as e:
+        logger.error(f"Error during Game service shutdown: {e}", exc_info=True)
+
+
 try:
     app = FastAPI(
         title=settings.APP_TITLE,
+        docs_url=settings.SWAGGER_URL,
+        openapi_url=f"{settings.API_V1_STR}/openapi.json",
         debug=settings.DEBUG,
+        lifespan=lifespan
     )
     
     # Добавляем Prometheus метрики
@@ -42,9 +92,8 @@ try:
         allow_headers=settings.CORS_HEADERS,
     )
     
-    # Инициализируем NATS сервис
-    nats_service = NatsService()
-    game_coordinator = GameCoordinator(notification_service=nats_service)
+    # Подключаем роуты
+    app.include_router(map_router, prefix=settings.API_V1_STR)
     
     # Добавляем middleware для авторизации
     @app.middleware("http")
@@ -79,34 +128,11 @@ try:
             content={"detail": "Internal server error"},
         )
     
-    # Запускаем подключение к NATS и игровой цикл при старте приложения
-    @app.on_event("startup")
-    async def startup_event() -> None:
-        try:
-            logger.info("Starting Game service")
-            await game_coordinator.initialize_handlers()
-            asyncio.create_task(game_coordinator.start_game_loop())
-            logger.info("Game service started successfully")
-        except Exception as e:
-            logger.critical(f"Failed to start Game service: {e}", exc_info=True)
-            # В продакшене здесь можно было бы добавить metrics.inc({'event': 'startup_failure'})
-            # и возможно system exit(1)
-    
-    # Закрываем соединение с NATS при завершении работы
-    @app.on_event("shutdown")
-    async def shutdown_event() -> None:
-        try:
-            logger.info("Shutting down Game service")
-            await nats_service.disconnect()
-            logger.info("Game service stopped successfully")
-        except Exception as e:
-            logger.error(f"Error during Game service shutdown: {e}", exc_info=True)
-    
     # Простой эндпоинт для проверки статуса сервиса
     @app.get("/health")
     async def health_check() -> dict:
         try:
-            # В реальном приложении здесь можно было бы проверить подключение к NATS
+            # В реальном приложении здесь можно было бы проверить подключение к NATS и базам данных
             # и вернуть соответствующий статус
             return {"status": "ok", "service": "game-service"}
         except Exception as e:

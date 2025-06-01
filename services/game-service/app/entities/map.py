@@ -1,18 +1,14 @@
-import random
 import logging
-from enum import IntEnum
+from typing import List, Dict
 import numpy as np
-
+from .cell_type import CellType
 
 logger = logging.getLogger(__name__)
 
-class CellType(IntEnum):
-    """Типы ячеек на карте"""
-    EMPTY = 0
-    SOLID_WALL = 1
-    BREAKABLE_BLOCK = 2
 
 class Map:
+    """Упрощенный класс карты без логики генерации"""
+    
     def __init__(self, width: int, height: int):
         try:
             self.width: int = width
@@ -20,67 +16,27 @@ class Map:
             # Initialize grid with empty cells using numpy array
             self.grid: np.ndarray = np.zeros((height, width), dtype=np.int8)
             # Для отслеживания изменений на карте
-            self.changed_cells: list[dict[str, int]] = []
+            self.changed_cells: List[Dict[str, int]] = []
             
             logger.info(f"Map initialized with dimensions {width}x{height}")
         except Exception as e:
             logger.error(f"Error initializing map: {e}", exc_info=True)
             raise
     
-    def generate_map(self) -> None:
-        """Генерирует новую карту со стенами и разрушаемыми блоками"""
+    def load_from_template(self, grid_data: List[List[int]]) -> None:
+        """Загрузить карту из шаблона"""
         try:
-            # Сброс сетки
-            self.grid.fill(CellType.EMPTY)
+            if len(grid_data) != self.height or len(grid_data[0]) != self.width:
+                raise ValueError(f"Grid data dimensions {len(grid_data)}x{len(grid_data[0])} don't match map dimensions {self.height}x{self.width}")
             
-            # Размещаем твердые стены по границам и в шахматном порядке
-            self.grid[0, :] = CellType.SOLID_WALL  # Верхняя граница
-            self.grid[-1, :] = CellType.SOLID_WALL  # Нижняя граница
-            self.grid[:, 0] = CellType.SOLID_WALL  # Левая граница
-            self.grid[:, -1] = CellType.SOLID_WALL  # Правая граница
-            
-            # Шахматный узор для внутренних стен
-            self.grid[::2, ::2] = CellType.SOLID_WALL
-            
-            # Размещаем разрушаемые блоки случайным образом
-            empty_mask = (self.grid == CellType.EMPTY)
-            random_blocks = np.random.random(self.grid.shape) < 0.1
-            blocks_mask = empty_mask & random_blocks
-            
-            # Исключаем стартовые зоны игроков
-            breakable_blocks_count = 0
-            for y in range(self.height):
-                for x in range(self.width):
-                    if blocks_mask[y, x] and not self.is_player_start_area(x, y):
-                        self.grid[y, x] = CellType.BREAKABLE_BLOCK
-                        breakable_blocks_count += 1
-            
-            # Сбрасываем список изменений при генерации новой карты
+            # Конвертируем в numpy array
+            self.grid = np.array(grid_data, dtype=np.int8)
             self.changed_cells = []
             
-            logger.info(f"Map generated with {breakable_blocks_count} breakable blocks")
+            logger.info(f"Map loaded from template: {self.width}x{self.height}")
         except Exception as e:
-            logger.error(f"Error generating map: {e}", exc_info=True)
-    
-    def is_player_start_area(self, x: int, y: int) -> bool:
-        """Check if position is in a player starting area (corners)"""
-        try:
-            # Top-left
-            if x <= 2 and y <= 2:
-                return True
-            # Top-right
-            if x >= self.width - 3 and y <= 2:
-                return True
-            # Bottom-left
-            if x <= 2 and y >= self.height - 3:
-                return True
-            # Bottom-right
-            if x >= self.width - 3 and y >= self.height - 3:
-                return True
-            return False
-        except Exception as e:
-            logger.error(f"Error checking player start area at ({x}, {y}): {e}", exc_info=True)
-            return True  # Safely assume it's a player area in case of error
+            logger.error(f"Error loading map from template: {e}", exc_info=True)
+            raise
     
     def get_cell_type(self, x: int, y: int) -> CellType:
         """Получает тип ячейки по указанным координатам"""
@@ -93,6 +49,29 @@ class Map:
         except Exception as e:
             logger.error(f"Error getting cell type at ({x}, {y}): {e}", exc_info=True)
             return CellType.SOLID_WALL  # В случае ошибки считаем стеной для безопасности
+    
+    def set_cell_type(self, x: int, y: int, cell_type: CellType) -> None:
+        """Устанавливает тип ячейки по указанным координатам"""
+        try:
+            # Проверка границ
+            if x < 0 or x >= self.width or y < 0 or y >= self.height:
+                logger.debug(f"Attempted to set cell type outside map boundaries at ({x}, {y})")
+                return
+            
+            old_type = self.grid[y, x]
+            self.grid[y, x] = int(cell_type)
+            
+            # Отслеживаем изменения если тип действительно изменился
+            if old_type != int(cell_type):
+                self.changed_cells.append({
+                    'x': x,
+                    'y': y,
+                    'type': int(cell_type)
+                })
+                logger.debug(f"Cell type changed at ({x}, {y}): {CellType(old_type).name} -> {cell_type.name}")
+            
+        except Exception as e:
+            logger.error(f"Error setting cell type at ({x}, {y}): {e}", exc_info=True)
     
     def is_wall(self, x: int, y: int) -> bool:
         """Проверяет, является ли ячейка твердой стеной"""
@@ -107,44 +86,53 @@ class Map:
         cell_type = self.get_cell_type(x, y)
         return cell_type in (CellType.SOLID_WALL, CellType.BREAKABLE_BLOCK)
     
-    def destroy_block(self, x: int, y: int) -> None:
+    def is_empty(self, x: int, y: int) -> bool:
+        """Проверяет, является ли ячейка пустой"""
+        return self.get_cell_type(x, y) == CellType.EMPTY
+    
+    def is_player_spawn(self, x: int, y: int) -> bool:
+        """Проверяет, является ли ячейка точкой спавна игрока"""
+        return self.get_cell_type(x, y) == CellType.PLAYER_SPAWN
+    
+    def is_enemy_spawn(self, x: int, y: int) -> bool:
+        """Проверяет, является ли ячейка точкой спавна врага"""
+        return self.get_cell_type(x, y) == CellType.ENEMY_SPAWN
+    
+    def destroy_block(self, x: int, y: int) -> bool:
         """Разрушает разрушаемый блок и отслеживает изменения"""
         try:
             # Проверка границ
             if x < 0 or x >= self.width or y < 0 or y >= self.height:
                 logger.debug(f"Attempted to destroy block outside map boundaries at ({x}, {y})")
-                return
+                return False
             
             # Разрушаем только разрушаемые блоки
             if self.grid[y, x] == CellType.BREAKABLE_BLOCK:
-                self.grid[y, x] = CellType.EMPTY
-                # Отслеживаем изменения
-                self.changed_cells.append(
-                    {
-                        'x': x,
-                        'y': y,
-                        'type': int(CellType.EMPTY)
-                    }
-                )
+                self.set_cell_type(x, y, CellType.EMPTY)
                 logger.debug(f"Block destroyed at ({x}, {y})")
+                return True
+            
+            return False
         except Exception as e:
             logger.error(f"Error destroying block at ({x}, {y}): {e}", exc_info=True)
+            return False
             
-    def get_map(self) -> dict:
-        """Получает данные карты
-
-        Returns:
-            Словарь с данными карты, содержащий:
-            - grid: массив numpy с полной картой
-        """
+    def get_map(self) -> Dict:
+        """Получает данные карты"""
         try:
             return {
-                'grid': self.grid.tolist()
+                'grid': self.grid.tolist(),
+                'width': self.width,
+                'height': self.height
             }
         except Exception as e:
             logger.error(f"Error getting map data: {e}", exc_info=True)
             # Return empty grid in case of error
-            return {'grid': []}
+            return {
+                'grid': [],
+                'width': self.width,
+                'height': self.height
+            }
         
     def clear_changes(self) -> None:
         """Очищает список отслеживаемых изменений"""
@@ -156,7 +144,7 @@ class Map:
             logger.error(f"Error clearing map changes: {e}", exc_info=True)
             self.changed_cells = []
         
-    def get_changes(self) -> list[dict[str, int]]:
+    def get_changes(self) -> List[Dict[str, int]]:
         """Возвращает список изменённых ячеек и очищает его"""
         try:
             changes = self.changed_cells.copy()

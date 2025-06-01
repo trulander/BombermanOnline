@@ -8,6 +8,8 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+#TODO убрать DATABASE_URL код отсюда и использовать settings файл, там есть все что нужно для этого
+
 # Создаем URL для подключения к базе данных
 DATABASE_URL = f"postgresql+asyncpg://{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_HOST}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}"
 

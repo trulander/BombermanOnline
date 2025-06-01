@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     PORT: int = 5003
     DEBUG: bool = True
     RELOAD: bool = True
-    SWAGGER_URL: str = "/auth/api/docs"
+    SWAGGER_URL: str = "/auth/docs"
     
     # CORS settings
     CORS_ORIGINS: list[str] = ["*"]
