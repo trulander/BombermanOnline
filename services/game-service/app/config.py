@@ -32,13 +32,15 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_PASSWORD: str | None = None
     
+    # Game engine settings (не настраиваемые пользователями)
+    GAME_UPDATE_FPS: float = 30.0
+    GAME_OVER_TIMEOUT: float = 5.0  # секунды
+    
     # Game settings
     CELL_SIZE: int = 40
     MAP_WIDTH: int = 15
     MAP_HEIGHT: int = 13
     MAX_PLAYERS: int = 4
-    GAME_UPDATE_FPS: float = 30
-    GAME_OVER_TIMEOUT: float = 5 #sec
     
     # NATS settings
     NATS_URL: str = "nats://localhost:4222"

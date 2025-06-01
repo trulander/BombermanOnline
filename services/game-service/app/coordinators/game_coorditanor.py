@@ -54,7 +54,7 @@ class GameCoordinator:
                 for game_id, game in list(self.games.items()):
                     if game.is_active():
                         active_games += 1
-                        updated_state = game.update()
+                        updated_state = await game.update()
                         # Отправляем обновление через NATS всем подключенным клиентам
                         await self.notification_service.send_game_update(game_id=game_id, data=updated_state)
                     else:
@@ -94,8 +94,6 @@ class GameCoordinator:
                 cell_size=settings.CELL_SIZE,
                 default_map_width=settings.MAP_WIDTH,
                 default_map_height=settings.MAP_HEIGHT,
-                fps=settings.GAME_UPDATE_FPS,
-                game_over_timeout=settings.GAME_OVER_TIMEOUT,
                 game_mode=game_mode_settings
             )
             
@@ -110,6 +108,9 @@ class GameCoordinator:
                 game_settings=game_settings,
                 map_service=map_service
             )
+            
+            # Инициализируем продвинутую карту асинхронно
+            await game_service.initialize_advanced_map()
             
             self.games[game_id] = game_service
             logger.info(f"Game {game_id} created with mode {game_mode_type}")

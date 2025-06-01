@@ -8,6 +8,7 @@ from ..entities.game_settings import GameSettings
 from ..entities.enemy import EnemyType
 from ..models.map_models import MapTemplate
 from ..repositories.map_repository import MapRepository
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,45 @@ class MapService:
             logger.error(f"Error creating map from template {template_id}: {e}", exc_info=True)
             return None
     
+    async def create_map_from_chain(self, chain_id: str, level_index: int = 0) -> Optional[Map]:
+        """Создать карту из цепочки карт по индексу уровня"""
+        try:
+            chain = await self.map_repository.get_map_chain(chain_id)
+            if not chain:
+                logger.warning(f"Map chain {chain_id} not found")
+                return None
+                
+            if level_index >= len(chain.map_ids):
+                logger.warning(f"Level index {level_index} exceeds chain length {len(chain.map_ids)}")
+                return None
+                
+            template_id = chain.map_ids[level_index]
+            return await self.create_map_from_template(template_id)
+            
+        except Exception as e:
+            logger.error(f"Error creating map from chain {chain_id}, level {level_index}: {e}", exc_info=True)
+            return None
+    
+    async def create_map_from_group(self, group_id: str) -> Optional[Map]:
+        """Создать случайную карту из группы карт"""
+        try:
+            group = await self.map_repository.get_map_group(group_id)
+            if not group:
+                logger.warning(f"Map group {group_id} not found")
+                return None
+                
+            if not group.map_ids:
+                logger.warning(f"Map group {group_id} has no maps")
+                return None
+                
+            # Выбираем случайную карту из группы
+            template_id = random.choice(group.map_ids)
+            return await self.create_map_from_template(template_id)
+            
+        except Exception as e:
+            logger.error(f"Error creating map from group {group_id}: {e}", exc_info=True)
+            return None
+    
     def generate_random_map(self, width: int, height: int, difficulty: int = 1) -> Map:
         """Генерировать случайную карту"""
         try:
@@ -45,14 +85,17 @@ class MapService:
             # Заполняем границы твердыми стенами
             self._add_border_walls(game_map)
             
-            # Добавляем внутренние стены в шахматном порядке
-            self._add_internal_walls(game_map)
-            
-            # Добавляем разрушаемые блоки
-            self._add_breakable_blocks(game_map, difficulty)
+            # Добавляем внутренние стены
+            if self.game_settings.enable_snake_walls:
+                self._add_snake_walls(game_map)
+            else:
+                self._add_internal_walls(game_map)
             
             # Добавляем стартовые позиции игроков
             self._add_player_spawns(game_map)
+            
+            # Добавляем разрушаемые блоки (после спавнов игроков)
+            self._add_breakable_blocks(game_map, difficulty)
             
             # Добавляем точки появления врагов
             self._add_enemy_spawns(game_map, difficulty)
@@ -67,7 +110,6 @@ class MapService:
     
     def _add_border_walls(self, game_map: Map) -> None:
         """Добавить стены по границам карты"""
-        #TODO добавить возможность генерировать стены во круг змейкой, так чтобы можно было через 1 клетку стены размещать позицию для спавна игроков в некоторый режимах игры. Вынести параметр настройки игры для генерации такого типа стен.
         try:
             # Верхняя и нижняя границы
             game_map.grid[0, :] = CellType.SOLID_WALL
@@ -89,6 +131,84 @@ class MapService:
         except Exception as e:
             logger.error(f"Error adding internal walls: {e}", exc_info=True)
     
+    def _add_snake_walls(self, game_map: Map) -> None:
+        """Добавить стены змейкой с промежутками для спавна игроков"""
+        try:
+            # Генерируем стены змейкой через клетку
+            for y in range(2, game_map.height - 2, 4):
+                for x in range(2, game_map.width - 2, 2):
+                    game_map.grid[y, x] = CellType.SOLID_WALL
+                    
+            for y in range(4, game_map.height - 2, 4):
+                for x in range(1, game_map.width - 1, 2):
+                    if x != 1 and x != game_map.width - 2:  # Оставляем места для спавна в углах
+                        game_map.grid[y, x] = CellType.SOLID_WALL
+            
+        except Exception as e:
+            logger.error(f"Error adding snake walls: {e}", exc_info=True)
+    
+    def _add_player_spawns(self, game_map: Map) -> None:
+        """Добавить стартовые позиции игроков для случаев рандомной генерации карты"""
+        try:
+            # Получаем максимальное количество игроков из настроек
+            max_players = self.game_settings.max_players
+            
+            # Получаем все пустые клетки
+            empty_cells = game_map.get_empty_cells()
+            
+            if not empty_cells:
+                logger.warning("No empty cells found for player spawns")
+                return
+            
+            # Определяем приоритетные позиции (углы карты)
+            corners = [
+                (1, 1),                                # Верхний левый
+                (game_map.width - 2, 1),               # Верхний правый
+                (1, game_map.height - 2),              # Нижний левый
+                (game_map.width - 2, game_map.height - 2)  # Нижний правый
+            ]
+            
+            # Фильтруем углы, которые являются пустыми клетками
+            available_corners = [corner for corner in corners if corner in empty_cells]
+            
+            # Добавляем дополнительные позиции для больших карт если нужно больше спавнов
+            additional_positions = []
+            if max_players > len(available_corners) and game_map.width >= 15 and game_map.height >= 15:
+                additional_positions = [
+                    (game_map.width // 2, 1),           # Верхний центр
+                    (1, game_map.height // 2),          # Левый центр
+                    (game_map.width - 2, game_map.height // 2),  # Правый центр
+                    (game_map.width // 2, game_map.height - 2),  # Нижний центр
+                ]
+                # Фильтруем дополнительные позиции
+                additional_positions = [pos for pos in additional_positions if pos in empty_cells]
+            
+            # Объединяем приоритетные позиции
+            priority_positions = available_corners + additional_positions
+            
+            # Если все еще не хватает позиций, берем случайные пустые клетки
+            if len(priority_positions) < max_players:
+                remaining_cells = [cell for cell in empty_cells if cell not in priority_positions]
+                if remaining_cells:
+                    # Сортируем по расстоянию от центра карты для лучшего распределения
+                    center_x, center_y = game_map.width // 2, game_map.height // 2
+                    remaining_cells.sort(key=lambda pos: abs(pos[0] - center_x) + abs(pos[1] - center_y), reverse=True)
+                    
+                    needed = max_players - len(priority_positions)
+                    priority_positions.extend(remaining_cells[:needed])
+            
+            # Размещаем спавны игроков
+            placed_spawns = 0
+            for x, y in priority_positions[:max_players]:
+                game_map.set_cell_type(x, y, CellType.PLAYER_SPAWN)
+                placed_spawns += 1
+
+            
+            logger.debug(f"Added {placed_spawns} player spawn points for max_players={max_players}")
+            
+        except Exception as e:
+            logger.error(f"Error adding player spawns: {e}", exc_info=True)
+    
     def _add_breakable_blocks(self, game_map: Map, difficulty: int) -> None:
         """Добавить разрушаемые блоки"""
         try:
@@ -97,154 +217,69 @@ class MapService:
             difficulty_multiplier = 1 + (difficulty - 1) * 0.05
             block_probability = min(base_probability * difficulty_multiplier, 0.3)
             
-            # Получаем пустые клетки
-            empty_cells = self.get_empty_cells(game_map)
+            # Получаем пустые клетки, исключая зоны рядом с игроками
+            empty_cells = game_map.get_empty_cells(exclude_near_players=True, min_distance_from_players=3)
             
             # Размещаем блоки случайным образом
             for x, y in empty_cells:
                 if random.random() < block_probability:
-                    # Проверяем, что это не зона старта игроков
-                    if not self._is_player_start_area(x, y, game_map.width, game_map.height):
-                        game_map.grid[y, x] = CellType.BREAKABLE_BLOCK
+                    game_map.set_cell_type(x, y, CellType.BREAKABLE_BLOCK)
             
             logger.debug(f"Added breakable blocks with probability {block_probability:.2f}")
             
         except Exception as e:
             logger.error(f"Error adding breakable blocks: {e}", exc_info=True)
     
-    def _add_player_spawns(self, game_map: Map) -> None:
-        """Добавить стартовые позиции игроков"""
-        #TODO Этот метод должен быть переписан и использовать методы get_empty_cells
-        try:
-            # Базовые позиции в углах (совместимость с существующим кодом)
-            spawn_positions = [
-                (1, 1),                                # Верхний левый
-                (game_map.width - 2, 1),               # Верхний правый
-                (1, game_map.height - 2),              # Нижний левый
-                (game_map.width - 2, game_map.height - 2)  # Нижний правый
-            ]
-
-            # Добавляем дополнительные позиции для больших карт
-            if game_map.width >= 15 and game_map.height >= 15:
-                additional_spawns = [
-                    (game_map.width // 2, 1),           # Верхний центр
-                    (1, game_map.height // 2),          # Левый центр
-                    (game_map.width - 2, game_map.height // 2),  # Правый центр
-                    (game_map.width // 2, game_map.height - 2),  # Нижний центр
-                ]
-                spawn_positions.extend(additional_spawns)
-
-            # Размещаем позиции спавна
-            placed_spawns = 0
-            for x, y in spawn_positions:
-                if (0 <= x < game_map.width and 0 <= y < game_map.height and
-                    game_map.grid[y, x] == CellType.EMPTY):
-                    game_map.grid[y, x] = CellType.PLAYER_SPAWN
-                    placed_spawns += 1
-                    
-                    # Освобождаем область вокруг спавна
-                    self._clear_spawn_area(game_map, x, y, radius=2)
-            
-            logger.debug(f"Added {placed_spawns} player spawn points")
-            
-        except Exception as e:
-            logger.error(f"Error adding player spawns: {e}", exc_info=True)
-    
     def _add_enemy_spawns(self, game_map: Map, difficulty: int) -> None:
         """Добавить точки появления врагов"""
         try:
-            empty_cells = self.get_empty_cells(game_map)
+            # Получаем пустые клетки с учетом настроек расстояния от игроков
+            min_distance = self.game_settings.min_distance_from_players
+            allow_near_players = self.game_settings.allow_enemies_near_players
+            
+            empty_cells = game_map.get_empty_cells(
+                exclude_near_players=not allow_near_players,
+                min_distance_from_players=min_distance
+            )
             
             # Количество точек спавна зависит от сложности и размера карты
             map_area = game_map.width * game_map.height
             base_spawn_count = max(3, map_area // 100)
             spawn_count = int(base_spawn_count * (1 + difficulty * 0.3))
             
-            # Фильтруем клетки - исключаем зоны рядом с игроками
-            valid_cells = []
-            for x, y in empty_cells:
-                if not self._is_near_player_spawn(game_map, x, y, min_distance=4):
-                    valid_cells.append((x, y))
-            
             # Размещаем точки спавна врагов
-            if valid_cells:
+            if empty_cells:
                 spawn_positions = random.sample(
-                    valid_cells, 
-                    min(spawn_count, len(valid_cells))
+                    empty_cells, 
+                    min(spawn_count, len(empty_cells))
                 )
                 
                 for x, y in spawn_positions:
-                    game_map.grid[y, x] = CellType.ENEMY_SPAWN
+                    game_map.set_cell_type(x, y, CellType.ENEMY_SPAWN)
             
-            logger.debug(f"Added {len(spawn_positions)} enemy spawn points")
+            logger.debug(f"Added {len(spawn_positions) if empty_cells else 0} enemy spawn points")
             
         except Exception as e:
             logger.error(f"Error adding enemy spawns: {e}", exc_info=True)
-
-    #TODO убрать этот ебаный метод отсюда, он должен быть в самой карте, карта может отфильтровать пустые яцейки так как там nympy массив, а не эта поганая логика которая тут реализована
-    def get_empty_cells(self, game_map: Map) -> List[Tuple[int, int]]:
-        """Получить список пустых клеток на карте"""
-        try:
-            empty_cells = []
-            for y in range(game_map.height):
-                for x in range(game_map.width):
-                    if game_map.grid[y, x] == CellType.EMPTY:
-                        empty_cells.append((x, y))
-            
-            logger.debug(f"Found {len(empty_cells)} empty cells")
-            return empty_cells
-            
-        except Exception as e:
-            logger.error(f"Error getting empty cells: {e}", exc_info=True)
-            return []
-
-    #TODO удрать этот ебучий метод отсюда, он должен быть в классе карты, вместо этой ебучей логики нужно использовать фильтрацию в карте так как там numpy array
-    def get_player_spawn_positions(self, game_map: Map) -> List[Tuple[int, int]]:
-        """Получить позиции спавна игроков"""
-        try:
-            spawn_positions = []
-            for y in range(game_map.height):
-                for x in range(game_map.width):
-                    if game_map.grid[y, x] == CellType.PLAYER_SPAWN:
-                        spawn_positions.append((x, y))
-            
-            logger.debug(f"Found {len(spawn_positions)} player spawn positions")
-            return spawn_positions
-            
-        except Exception as e:
-            logger.error(f"Error getting player spawn positions: {e}", exc_info=True)
-            return []
-
-    #TODO удрать этот ебучий метод отсюда, он должен быть в классе карты, вместо этой ебучей логики нужно использовать фильтрацию в карте так как там numpy array
-    def get_enemy_spawn_positions(self, game_map: Map) -> List[Tuple[int, int]]:
-        """Получить позиции спавна врагов"""
-        try:
-            spawn_positions = []
-            for y in range(game_map.height):
-                for x in range(game_map.width):
-                    if game_map.grid[y, x] == CellType.ENEMY_SPAWN:
-                        spawn_positions.append((x, y))
-            
-            logger.debug(f"Found {len(spawn_positions)} enemy spawn positions")
-            return spawn_positions
-            
-        except Exception as e:
-            logger.error(f"Error getting enemy spawn positions: {e}", exc_info=True)
-            return []
     
     def generate_enemies_for_level(self, game_map: Map, level: int) -> List[Dict[str, Any]]:
         """Генерировать врагов для уровня"""
         try:
-            enemy_spawns = self.get_enemy_spawn_positions(game_map)
+            # Получаем позиции спавна врагов с учетом настроек
+            min_distance = self.game_settings.min_distance_from_players
+            allow_near_players = self.game_settings.allow_enemies_near_players
+            
+            enemy_spawns = game_map.get_enemy_spawn_positions(
+                exclude_near_players=not allow_near_players,
+                min_distance_from_players=min_distance
+            )
+            
             if not enemy_spawns:
                 # Если нет специальных точек спавна, используем пустые клетки
-                #TODO должен быть заменен на метод который возвращает пустые клетки с учетом позиций размещения игроков
-                empty_cells = self.get_empty_cells(game_map)
-                # Фильтруем клетки подальше от игроков
-                enemy_spawns = [
-                    (x, y) for x, y in empty_cells 
-                    if not self._is_near_player_spawn(game_map, x, y, min_distance=3)
-                ]
+                enemy_spawns = game_map.get_empty_cells(
+                    exclude_near_players=not allow_near_players,
+                    min_distance_from_players=min_distance
+                )
             
             # Базовое количество врагов + увеличение по уровням
             base_enemy_count = 3
@@ -286,61 +321,4 @@ class MapService:
             
         except Exception as e:
             logger.error(f"Error generating enemies for level {level}: {e}", exc_info=True)
-            return []
-
-    #TODO этот метод не нужен вообще, он повторяет логику метода который исключает из доступных для размещения разрушаемыз блоков позиции для спавна игроков
-    def _is_player_start_area(self, x: int, y: int, width: int, height: int) -> bool:
-        """Проверить, находится ли позиция в стартовой зоне игрока"""
-        try:
-            # Углы карты - традиционные зоны старта
-            corner_size = 3
-            
-            # Верхний левый угол
-            if x < corner_size and y < corner_size:
-                return True
-            # Верхний правый угол
-            if x >= width - corner_size and y < corner_size:
-                return True
-            # Нижний левый угол
-            if x < corner_size and y >= height - corner_size:
-                return True
-            # Нижний правый угол
-            if x >= width - corner_size and y >= height - corner_size:
-                return True
-            
-            return False
-            
-        except Exception as e:
-            logger.error(f"Error checking player start area at ({x}, {y}): {e}", exc_info=True)
-            return True  # В случае ошибки считаем зоной старта для безопасности
-
-    #TODO перенести эту ебаную логику в метод get_enemy_spawn_positions и вместе с ним перенести в класс карты в и добавить в него новый параметр настройки игры в котором можно задавать разрешать появляться enemy рядом с игроками, или нет, по дефолту нельзя.
-    def _is_near_player_spawn(self, game_map: Map, x: int, y: int, min_distance: int) -> bool:
-        """Проверить, находится ли позиция рядом с точкой спавна игрока"""
-        try:
-            for sy in range(game_map.height):
-                for sx in range(game_map.width):
-                    if game_map.grid[sy, sx] == CellType.PLAYER_SPAWN:
-                        distance = abs(x - sx) + abs(y - sy)  # Манхэттенское расстояние
-                        if distance < min_distance:
-                            return True
-            return False
-            
-        except Exception as e:
-            logger.error(f"Error checking proximity to player spawn at ({x}, {y}): {e}", exc_info=True)
-            return True  # В случае ошибки считаем близко к спавну
-
-    #TODO этого метода не должно существовать, эта логика должна быть реализована в классе карты в виде дополненного метода get_empty_cells с учетом позиций спавнов для игроков и использоваться и в _add_breakable_blocks и в _add_enemy_spawns и в generate_enemies_for_level так как используется подобная логика.
-    def _clear_spawn_area(self, game_map: Map, center_x: int, center_y: int, radius: int) -> None:
-        """Очистить область вокруг точки спавна"""
-        try:
-            for dy in range(-radius, radius + 1):
-                for dx in range(-radius, radius + 1):
-                    x, y = center_x + dx, center_y + dy
-                    if (0 <= x < game_map.width and 0 <= y < game_map.height):
-                        # Очищаем только разрушаемые блоки, не затрагивая стены
-                        if game_map.grid[y, x] == CellType.BREAKABLE_BLOCK:
-                            game_map.grid[y, x] = CellType.EMPTY
-                            
-        except Exception as e:
-            logger.error(f"Error clearing spawn area at ({center_x}, {center_y}): {e}", exc_info=True) 
+            return [] 

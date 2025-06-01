@@ -13,6 +13,7 @@ from ..entities.bomb import Bomb
 from ..entities.power_up import PowerUp, PowerUpType
 from ..entities.game_settings import GameSettings
 from ..services.map_service import MapService
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -35,32 +36,71 @@ class GameService:
             self.last_update_time: float = time.time()
             self.timer_is_alive: float = time.time()
             
-            # Инициализируем карту
-            self._initialize_map()
+            # Инициализируем базовую карту (синхронно)
+            self._initialize_basic_map()
             
             logger.info(f"Game service initialized with settings: {self.settings.game_mode.mode_type}")
         except Exception as e:
             logger.error(f"Error initializing game service: {e}", exc_info=True)
             raise
 
-    def _initialize_map(self) -> None:
+    def _initialize_basic_map(self) -> None:
+        """Инициализировать базовую карту синхронно для конструктора"""
+        try:
+            # Создаем базовую случайную карту
+            self.map = self.map_service.generate_random_map(
+                width=self.settings.default_map_width,
+                height=self.settings.default_map_height,
+                difficulty=self.level
+            )
+            
+            # Создаем врагов если включены
+            if self.settings.game_mode.enable_enemies:
+                self._create_enemies()
+                
+        except Exception as e:
+            logger.error(f"Error initializing basic map: {e}", exc_info=True)
+            # Создаем базовую карту при ошибке
+            self.map = Map(self.settings.default_map_width, self.settings.default_map_height)
+
+    async def initialize_advanced_map(self) -> None:
+        """Инициализировать продвинутую карту асинхронно после создания сервиса"""
+        try:
+            await self._initialize_map()
+        except Exception as e:
+            logger.error(f"Error initializing advanced map: {e}", exc_info=True)
+
+    async def _initialize_map(self) -> None:
         """Инициализировать карту для игры"""
         try:
             # Генерируем новую карту или загружаем из шаблона
             if self.settings.game_mode.map_chain_id:
-                # TODO: Загрузка из цепочки карт create_map_from_template должно учитываться что карты должны вызываться по очереди прохождения игроком
-                self.map = self.map_service.generate_random_map(
-                    width=self.settings.default_map_width,
-                    height=self.settings.default_map_height,
-                    difficulty=self.level
+                # Загрузка из цепочки карт с учетом текущего уровня
+                self.map = await self.map_service.create_map_from_chain(
+                    chain_id=self.settings.game_mode.map_chain_id,
+                    level_index=self.level - 1  # Индексация с 0
                 )
+                if not self.map:
+                    logger.warning(f"Failed to load map from chain {self.settings.game_mode.map_chain_id}, level {self.level}")
+                    # Фолбэк на случайную генерацию
+                    self.map = self.map_service.generate_random_map(
+                        width=self.settings.default_map_width,
+                        height=self.settings.default_map_height,
+                        difficulty=self.level
+                    )
             elif self.settings.game_mode.map_group_id:
-                # TODO: Загрузка из группы карт create_map_from_template
-                self.map = self.map_service.generate_random_map(
-                    width=self.settings.default_map_width,
-                    height=self.settings.default_map_height,
-                    difficulty=self.level
+                # Загрузка случайной карты из группы карт
+                self.map = await self.map_service.create_map_from_group(
+                    group_id=self.settings.game_mode.map_group_id
                 )
+                if not self.map:
+                    logger.warning(f"Failed to load map from group {self.settings.game_mode.map_group_id}")
+                    # Фолбэк на случайную генерацию
+                    self.map = self.map_service.generate_random_map(
+                        width=self.settings.default_map_width,
+                        height=self.settings.default_map_height,
+                        difficulty=self.level
+                    )
             else:
                 # Генерируем случайную карту
                 self.map = self.map_service.generate_random_map(
@@ -87,7 +127,7 @@ class GameService:
                 return False
             
             # Получаем доступные позиции спавна
-            spawn_positions = self.map_service.get_player_spawn_positions(self.map)
+            spawn_positions = self.map.get_player_spawn_positions()
             
             if not spawn_positions:
                 logger.warning("No player spawn positions found, using fallback positions")
@@ -186,7 +226,7 @@ class GameService:
         except Exception as e:
             logger.error(f"Error creating enemies for level {self.level}: {e}", exc_info=True)
 
-    def update(self) -> Dict[str, Any]:
+    async def update(self) -> Dict[str, Any]:
         """Обновить состояние игры и вернуть новое состояние"""
         try:
             # Вычисляем delta time
@@ -214,7 +254,7 @@ class GameService:
             
             # Проверяем завершение уровня
             if self._is_level_complete():
-                self._level_complete()
+                await self._level_complete()
             
             return self.get_state()
             
@@ -587,21 +627,21 @@ class GameService:
             logger.error(f"Error checking level completion: {e}", exc_info=True)
             return False
     
-    def _level_complete(self) -> None:
+    async def _level_complete(self) -> None:
         """Обработать завершение уровня"""
         try:
             self.level += 1
             self.score += self.settings.level_complete_score
             
             # Сброс карты для следующего уровня
-            self._initialize_map()
+            await self._initialize_map()
             
             # Очистка бомб и усилений
             self.bombs = {}
             self.power_ups = {}
             
             # Сброс позиций игроков
-            spawn_positions = self.map_service.get_player_spawn_positions(self.map)
+            spawn_positions = self.map.get_player_spawn_positions()
             if not spawn_positions:
                 spawn_positions = [(1, 1), (self.map.width - 2, 1), 
                                  (1, self.map.height - 2), (self.map.width - 2, self.map.height - 2)]
@@ -620,7 +660,7 @@ class GameService:
         try:
             is_active = not self.game_over and len(self.players) > 0
             if not is_active:
-                if time.time() - self.timer_is_alive < self.settings.game_over_timeout:
+                if time.time() - self.timer_is_alive < settings.GAME_OVER_TIMEOUT:
                     is_active = True
                 else:
                     if not self.game_over and len(self.players) == 0:

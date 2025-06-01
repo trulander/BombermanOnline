@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import numpy as np
 from .cell_type import CellType
 
@@ -116,6 +116,108 @@ class Map:
         except Exception as e:
             logger.error(f"Error destroying block at ({x}, {y}): {e}", exc_info=True)
             return False
+    
+    def get_empty_cells(self, exclude_near_players: bool = False, min_distance_from_players: int = 3) -> List[Tuple[int, int]]:
+        """Получить список пустых клеток на карте с возможностью исключения клеток рядом с игроками"""
+        try:
+            # Находим все пустые клетки с помощью numpy
+            empty_mask = (self.grid == CellType.EMPTY)
+            empty_coords = np.where(empty_mask)
+            empty_cells = list(zip(empty_coords[1], empty_coords[0]))  # (x, y) координаты
+            
+            if exclude_near_players:
+                # Получаем позиции спавна игроков
+                player_spawns = self.get_player_spawn_positions()
+                
+                # Фильтруем клетки, исключая те, что близко к спавнам игроков
+                filtered_cells = []
+                for x, y in empty_cells:
+                    is_far_enough = True
+                    for px, py in player_spawns:
+                        distance = abs(x - px) + abs(y - py)  # Манхэттенское расстояние
+                        if distance < min_distance_from_players:
+                            is_far_enough = False
+                            break
+                    if is_far_enough:
+                        filtered_cells.append((x, y))
+                
+                empty_cells = filtered_cells
+            
+            logger.debug(f"Found {len(empty_cells)} empty cells (exclude_near_players={exclude_near_players})")
+            return empty_cells
+            
+        except Exception as e:
+            logger.error(f"Error getting empty cells: {e}", exc_info=True)
+            return []
+    
+    def get_player_spawn_positions(self) -> List[Tuple[int, int]]:
+        """Получить позиции спавна игроков с помощью numpy"""
+        try:
+            spawn_mask = (self.grid == CellType.PLAYER_SPAWN)
+            spawn_coords = np.where(spawn_mask)
+            spawn_positions = list(zip(spawn_coords[1], spawn_coords[0]))  # (x, y) координаты
+            
+            logger.debug(f"Found {len(spawn_positions)} player spawn positions")
+            return spawn_positions
+            
+        except Exception as e:
+            logger.error(f"Error getting player spawn positions: {e}", exc_info=True)
+            return []
+    
+    def get_enemy_spawn_positions(self, exclude_near_players: bool = True, min_distance_from_players: int = 3) -> List[Tuple[int, int]]:
+        """Получить позиции спавна врагов с возможностью исключения позиций рядом с игроками"""
+        try:
+            spawn_mask = (self.grid == CellType.ENEMY_SPAWN)
+            spawn_coords = np.where(spawn_mask)
+            spawn_positions = list(zip(spawn_coords[1], spawn_coords[0]))  # (x, y) координаты
+            
+            if exclude_near_players:
+                # Получаем позиции спавна игроков
+                player_spawns = self.get_player_spawn_positions()
+                
+                # Фильтруем позиции спавна врагов
+                filtered_positions = []
+                for x, y in spawn_positions:
+                    is_far_enough = True
+                    for px, py in player_spawns:
+                        distance = abs(x - px) + abs(y - py)  # Манхэттенское расстояние
+                        if distance < min_distance_from_players:
+                            is_far_enough = False
+                            break
+                    if is_far_enough:
+                        filtered_positions.append((x, y))
+                
+                spawn_positions = filtered_positions
+            
+            logger.debug(f"Found {len(spawn_positions)} enemy spawn positions (exclude_near_players={exclude_near_players})")
+            return spawn_positions
+            
+        except Exception as e:
+            logger.error(f"Error getting enemy spawn positions: {e}", exc_info=True)
+            return []
+
+    
+    def is_position_in_player_start_area(self, x: int, y: int, corner_size: int = 3) -> bool:
+        """Проверить, находится ли позиция в стартовой зоне игрока (углы карты)"""
+        try:
+            # Верхний левый угол
+            if x < corner_size and y < corner_size:
+                return True
+            # Верхний правый угол
+            if x >= self.width - corner_size and y < corner_size:
+                return True
+            # Нижний левый угол
+            if x < corner_size and y >= self.height - corner_size:
+                return True
+            # Нижний правый угол
+            if x >= self.width - corner_size and y >= self.height - corner_size:
+                return True
+            
+            return False
+            
+        except Exception as e:
+            logger.error(f"Error checking player start area at ({x}, {y}): {e}", exc_info=True)
+            return True  # В случае ошибки считаем зоной старта для безопасности
             
     def get_map(self) -> Dict:
         """Получает данные карты"""

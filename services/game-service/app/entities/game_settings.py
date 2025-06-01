@@ -10,8 +10,6 @@ class GameSettings:
     cell_size: int = 40
     default_map_width: int = 23
     default_map_height: int = 23
-    fps: float = 30.0 #TODO перенести этот параметр в settings проекта, это не настраиваемый пользователями параметр
-    game_over_timeout: float = 5.0 #TODO перенести этот параметр в settings проекта, это не настраиваемый пользователями параметр
     
     # Настройки игроков
     max_players: int = 4
@@ -38,6 +36,11 @@ class GameSettings:
     # Вероятности появления
     powerup_drop_chance: float = 0.2
     enemy_powerup_drop_chance: float = 0.3
+    
+    # Настройки генерации карт
+    enable_snake_walls: bool = False  # Генерация стен змейкой для некоторых режимов
+    allow_enemies_near_players: bool = False  # Разрешить появление врагов рядом с игроками
+    min_distance_from_players: int = 3  # Минимальное расстояние от игроков для врагов
     
     # Режим игры
     game_mode: GameModeSettings = None
