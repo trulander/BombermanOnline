@@ -72,7 +72,7 @@ def configure_logging():
         formatter = CustomJsonFormatter()
     else:
         formatter = logging.Formatter(
-            "%(asctime)s | %(levelname)s | game-service | %(name)s | %(message)s"
+            "%(asctime)s | %(levelname)-8s | game-service | %(name)s [%(filename)s:%(lineno)d] (%(funcName)s) | %(message)s"
         )
     
     log_handler.setFormatter(formatter)

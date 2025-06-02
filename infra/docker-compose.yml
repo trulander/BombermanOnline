@@ -47,6 +47,7 @@ services:
       - POSTGRES_DB=game_service
       - POSTGRES_USER=bomberman
       - POSTGRES_PASSWORD=bomberman
+      - LOG_FORMAT=json
     depends_on:
       - redis
       - nats

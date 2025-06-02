@@ -47,7 +47,7 @@ class Settings(BaseSettings):
 
     # Logging settings
     LOG_LEVEL: str = "INFO"
-    LOG_FORMAT: str = "json"
+    LOG_FORMAT: str = "text" #json
     TRACE_CALLER: bool = True
 
     @computed_field

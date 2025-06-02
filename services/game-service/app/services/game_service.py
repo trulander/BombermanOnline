@@ -36,32 +36,32 @@ class GameService:
             self.last_update_time: float = time.time()
             self.timer_is_alive: float = time.time()
             
-            # Инициализируем базовую карту (синхронно)
-            self._initialize_basic_map()
+            # # Инициализируем базовую карту (синхронно)
+            # self._initialize_basic_map()
             
             logger.info(f"Game service initialized with settings: {self.settings.game_mode.mode_type}")
         except Exception as e:
             logger.error(f"Error initializing game service: {e}", exc_info=True)
             raise
 
-    def _initialize_basic_map(self) -> None:
-        """Инициализировать базовую карту синхронно для конструктора"""
-        try:
-            # Создаем базовую случайную карту
-            self.map = self.map_service.generate_random_map(
-                width=self.settings.default_map_width,
-                height=self.settings.default_map_height,
-                difficulty=self.level
-            )
-            
-            # Создаем врагов если включены
-            if self.settings.game_mode.enable_enemies:
-                self._create_enemies()
-                
-        except Exception as e:
-            logger.error(f"Error initializing basic map: {e}", exc_info=True)
-            # Создаем базовую карту при ошибке
-            self.map = Map(self.settings.default_map_width, self.settings.default_map_height)
+    # def _initialize_basic_map(self) -> None:
+    #     """Инициализировать базовую карту синхронно для конструктора"""
+    #     try:
+    #         # Создаем базовую случайную карту
+    #         self.map = self.map_service.generate_random_map(
+    #             width=self.settings.default_map_width,
+    #             height=self.settings.default_map_height,
+    #             difficulty=self.level
+    #         )
+    #
+    #         # Создаем врагов если включены
+    #         if self.settings.game_mode.enable_enemies:
+    #             self._create_enemies()
+    #
+    #     except Exception as e:
+    #         logger.error(f"Error initializing basic map: {e}", exc_info=True)
+    #         # Создаем базовую карту при ошибке
+    #         self.map = Map(self.settings.default_map_width, self.settings.default_map_height)
 
     async def initialize_advanced_map(self) -> None:
         """Инициализировать продвинутую карту асинхронно после создания сервиса"""

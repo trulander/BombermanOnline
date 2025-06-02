@@ -7,3 +7,4 @@ class CellType(IntEnum):
     BREAKABLE_BLOCK = 2
     PLAYER_SPAWN = 3
     ENEMY_SPAWN = 4
+    LEVEL_EXIT = 5

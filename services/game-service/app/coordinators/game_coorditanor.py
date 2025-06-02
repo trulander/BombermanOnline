@@ -5,7 +5,7 @@ import time
 
 from ..config import settings
 from ..services.game_service import GameService
-from ..services.nats_service import NatsService, NatsEvents
+from ..services.event_service import EventService, NatsEvents
 from ..services.map_service import MapService
 
 from ..repositories.map_repository import MapRepository
@@ -16,9 +16,9 @@ from ..entities.game_mode import GameModeType
 logger = logging.getLogger(__name__)
 
 class GameCoordinator:
-    def __init__(self, notification_service: NatsService) -> None:
+    def __init__(self, notification_service: EventService) -> None:
         try:
-            self.notification_service: NatsService = notification_service
+            self.notification_service: EventService = notification_service
 
             self.games: dict[str, GameService] = {}
             

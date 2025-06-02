@@ -11,7 +11,8 @@ from fastapi.responses import JSONResponse
 from .services.game_service import GameService
 from .config import settings
 from .logging_config import configure_logging
-from .services.nats_service import NatsService
+from .services.event_service import EventService
+from .repositories.nats_repository import NatsRepository
 from .coordinators.game_coorditanor import GameCoordinator
 from .auth import get_current_user, get_current_admin
 from .routes.map_routes import router as map_router
@@ -22,10 +23,11 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 # Глобальные переменные для сервисов
-nats_service = NatsService()
+nats_repository = NatsRepository()
+event_service = EventService(nats_repository=nats_repository)
 map_repository = MapRepository()
 game_coordinator = GameCoordinator(
-    notification_service=nats_service
+    notification_service=event_service
 )
 
 @asynccontextmanager
@@ -55,7 +57,7 @@ async def lifespan(app: FastAPI):
         logger.info("Shutting down Game service")
         
         # Закрываем NATS соединение
-        await nats_service.disconnect()
+        await event_service.disconnect()
         
         # Закрываем подключения к базам данных
         await map_repository.disconnect()

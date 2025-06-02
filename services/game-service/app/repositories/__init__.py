@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import Any, TypeVar, Generic
+from .nats_repository import NatsRepository 
 
 T = TypeVar('T')
 

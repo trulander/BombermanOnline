@@ -16,12 +16,13 @@ COPY pyproject.toml ./
 
 # Устанавливаем зависимости через uv (с флагом --system)
 RUN uv pip install --no-cache-dir --system -e .
-
-# Копируем исходный код
-COPY . .
+RUN uv sync
+## Копируем исходный код
+#COPY . .
 
 # Создаем директорию для логов
 RUN mkdir -p /app/logs
 
+WORKDIR /app/game-service
 # Запускаем приложение
-CMD ["python", "-m", "app.main"]
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5002"]
