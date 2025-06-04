@@ -3,7 +3,6 @@ import time
 import math
 import json
 import logging
-from enum import Enum
 from typing import Dict, List, Tuple, Optional, Any, Set
 
 from ..entities.map import Map
@@ -16,23 +15,16 @@ from ..entities.game_settings import GameSettings
 from ..entities.game_mode import GameModeType
 from ..entities.unit_type import UnitType
 from ..entities.weapon import WeaponType
+from ..entities.game_status import GameStatus
 from ..services.map_service import MapService
 from ..services.game_mode_service import GameModeService
+from ..services.team_service import TeamService
 from ..services.modes.campaign_mode import CampaignMode
 from ..services.modes.free_for_all_mode import FreeForAllMode
 from ..services.modes.capture_flag_mode import CaptureFlagMode
 from ..config import settings
 
 logger = logging.getLogger(__name__)
-
-
-class GameStatus(Enum):
-    """Статусы игры"""
-    PENDING = "pending"        # Ожидание игроков
-    STARTING = "starting"      # Подготовка к запуску
-    ACTIVE = "active"          # Активная игра
-    PAUSED = "paused"          # Приостановлена
-    FINISHED = "finished"      # Завершена
 
 
 class GameService:
@@ -43,6 +35,9 @@ class GameService:
             self.settings: GameSettings = game_settings
             self.map_service: MapService = map_service
             self.status: GameStatus = GameStatus.PENDING
+            
+            # Инициализируем сервис команд
+            self.team_service: TeamService = TeamService(game_settings.game_mode)
             
             # Создаем игровой режим в зависимости от настроек
             self.game_mode: GameModeService = self._create_game_mode()
@@ -57,18 +52,21 @@ class GameService:
         mode_type = self.settings.game_mode
         
         if mode_type == GameModeType.CAMPAIGN:
-            return CampaignMode(self.settings, self.map_service)
+            return CampaignMode(self.settings, self.map_service, self.team_service)
         elif mode_type == GameModeType.FREE_FOR_ALL:
-            return FreeForAllMode(self.settings, self.map_service)
+            return FreeForAllMode(self.settings, self.map_service, self.team_service)
         elif mode_type == GameModeType.CAPTURE_THE_FLAG:
-            return CaptureFlagMode(self.settings, self.map_service)
+            return CaptureFlagMode(self.settings, self.map_service, self.team_service)
         else:
             logger.warning(f"Unknown game mode {mode_type}, defaulting to campaign")
-            return CampaignMode(self.settings, self.map_service)
+            return CampaignMode(self.settings, self.map_service, self.team_service)
     
     async def initialize_game(self) -> None:
         """Инициализировать игру"""
         try:
+            # Настраиваем команды по умолчанию для режима
+            self.team_service.setup_default_teams()
+            
             await self.game_mode.initialize_map()
             self.status = GameStatus.PENDING
             logger.info("Game initialized successfully")
@@ -87,6 +85,14 @@ class GameService:
             success = self.game_mode.add_player(player)
             
             if success:
+                # Автоматически распределяем игрока по командам если настроено
+                self.team_service.auto_distribute_players([player])
+                
+                # Обновляем team_id у игрока
+                team = self.team_service.get_player_team(player.id)
+                if team:
+                    player.set_team(team.id)
+                
                 logger.info(f"Player {player_id} added with unit type {unit_type.value}")
             
             return success
@@ -97,6 +103,9 @@ class GameService:
     def remove_player(self, player_id: str) -> bool:
         """Удалить игрока из игры"""
         try:
+            # Удаляем игрока из команд
+            self.team_service._remove_player_from_all_teams(player_id)
+            
             success = self.game_mode.remove_player(player_id)
             
             # Если игра активна и нет игроков, помечаем как завершенную
@@ -123,6 +132,13 @@ class GameService:
             if len(self.game_mode.players) == 0:
                 logger.debug("Cannot start game: no players")
                 return False
+            
+            # Проверяем корректность настройки команд
+            validation_errors = self.team_service.validate_teams()
+            if validation_errors:
+                logger.warning(f"Team validation errors: {validation_errors}")
+                # Можно либо блокировать запуск, либо предупредить
+                # В данном случае только предупреждаем
             
             self.status = GameStatus.ACTIVE
             logger.info("Game started successfully")
@@ -192,11 +208,20 @@ class GameService:
             return False
     
     def assign_player_to_team(self, player_id: str, team_id: str) -> bool:
-        """Назначить игрока в команду (для режимов с командами)"""
+        """Назначить игрока в команду (устаревший метод, используйте team_service)"""
         try:
-            if hasattr(self.game_mode, 'assign_player_to_team'):
-                return self.game_mode.assign_player_to_team(player_id, team_id)
-            return False
+            if self.status != GameStatus.PENDING:
+                return False
+            
+            player = self.get_player(player_id)
+            if not player:
+                return False
+            
+            success = self.team_service.add_player_to_team(team_id, player_id)
+            if success:
+                player.set_team(team_id)
+            
+            return success
         except Exception as e:
             logger.error(f"Error assigning player {player_id} to team {team_id}: {e}", exc_info=True)
             return False
@@ -218,6 +243,8 @@ class GameService:
             state = self.game_mode.get_state()
             state['status'] = self.status.value
             state['gameMode'] = self.settings.game_mode.value
+            # Добавляем состояние команд из TeamService
+            state['teams'] = self.team_service.get_teams_state()
             return state
         except Exception as e:
             logger.error(f"Error getting game state: {e}", exc_info=True)
@@ -238,26 +265,9 @@ class GameService:
             }
     
     def get_teams(self) -> Dict[str, Any]:
-        """Получить информацию о командах"""
+        """Получить информацию о командах (устаревший метод, используйте team_service)"""
         try:
-            teams_info = {}
-            for team_id, player_ids in self.game_mode.teams.items():
-                team_players = []
-                for player_id in player_ids:
-                    player = self.game_mode.get_player(player_id)
-                    if player:
-                        team_players.append({
-                            'id': player_id,
-                            'lives': player.lives,
-                            'unitType': player.unit_type.value
-                        })
-                
-                teams_info[team_id] = {
-                    'players': team_players,
-                    'playerCount': len(team_players)
-                }
-            
-            return teams_info
+            return self.team_service.get_teams_state()
         except Exception as e:
             logger.error(f"Error getting teams info: {e}", exc_info=True)
             return {}

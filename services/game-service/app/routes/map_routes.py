@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from typing import List, Optional
 import logging
 
+
 from ..repositories.map_repository import MapRepository
 from ..models.map_models import (
     MapTemplate, MapTemplateCreate, MapTemplateUpdate, MapTemplateFilter,
@@ -16,7 +17,9 @@ router = APIRouter(prefix="/maps", tags=["maps"])
 
 # Зависимость для получения репозитория
 async def get_map_repository() -> MapRepository:
-    return MapRepository()
+    # TODO: Заменить на правильную инъекцию зависимости
+    from ..main import map_repository
+    return map_repository
 
 
 # Эндпоинты для Map Templates

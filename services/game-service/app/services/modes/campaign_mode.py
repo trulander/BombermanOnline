@@ -1,6 +1,7 @@
 import logging
 from ..game_mode_service import GameModeService
 from ...entities.game_settings import GameSettings
+from ...models.team_models import TeamModeSettings
 from ...services.map_service import MapService
 
 logger = logging.getLogger(__name__)
@@ -8,23 +9,29 @@ logger = logging.getLogger(__name__)
 
 class CampaignMode(GameModeService):
     """Режим прохождения с возможностью кооператива"""
-    
-    def __init__(self, game_settings: GameSettings, map_service: MapService):
-        super().__init__(game_settings, map_service)
+
+    team_mode_settings = TeamModeSettings(
+        default_team_count=1,
+        max_team_count=1,
+        min_players_per_team=1,
+        max_players_per_team=8,
+        auto_distribute_players=True,
+        allow_uneven_teams=True,
+        default_team_names=["Heroes"]
+    )
+
+    def __init__(self, game_settings: GameSettings, map_service: MapService, team_service=None):
+        super().__init__(game_settings, map_service, team_service)
         self.setup_teams()
     
     def setup_teams(self) -> None:
-        """Настроить команды для режима прохождения - одна команда"""
-        self.teams = {"team_1": []}
-        logger.info("Campaign mode: single team created")
+        """Настроить команды для режима прохождения - команды уже настроены в TeamService"""
+        logger.info("Campaign mode: team setup completed via TeamService")
     
     def add_player(self, player) -> bool:
         """Добавить игрока в режим прохождения"""
         if super().add_player(player):
-            # Автоматически добавляем всех игроков в одну команду
-            player.set_team("team_1")
-            self.teams["team_1"].append(player.id)
-            logger.info(f"Player {player.id} added to team_1 in campaign mode")
+            logger.info(f"Player {player.id} added to campaign mode")
             return True
         return False
     
@@ -64,7 +71,15 @@ class CampaignMode(GameModeService):
         """Обработать завершение уровня"""
         try:
             self.level += 1
-            self.score += self.settings.level_complete_score
+            
+            # Начисляем очки команде за завершение уровня
+            if self.team_service:
+                # В кампании все игроки в одной команде, начисляем очки первому игроку (команде)
+                if self.players:
+                    first_player_id = next(iter(self.players.keys()))
+                    self.team_service.add_score_to_player_team(first_player_id, self.settings.level_complete_score)
+            else:
+                self.score += self.settings.level_complete_score
             
             # Сброс карты для следующего уровня
             await self.initialize_map()

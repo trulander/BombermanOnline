@@ -10,14 +10,13 @@ from fastapi.responses import JSONResponse
 
 from app.repositories.postgres_repository import PostgresRepository
 from app.repositories.redis_repository import RedisRepository
-from .services.game_service import GameService
 from .config import settings
 from .logging_config import configure_logging
 from .services.event_service import EventService
 from .repositories.nats_repository import NatsRepository
 from .coordinators.game_coorditanor import GameCoordinator
-from .auth import get_current_user, get_current_admin
 from .routes.map_routes import router as map_router
+from .routes.team_routes import router as team_router
 from .repositories.map_repository import MapRepository
 
 # Настройка логирования
@@ -106,6 +105,7 @@ try:
     
     # Подключаем роуты
     app.include_router(map_router, prefix=settings.API_V1_STR)
+    app.include_router(team_router, prefix=settings.API_V1_STR)
     
     # Добавляем middleware для авторизации
     @app.middleware("http")

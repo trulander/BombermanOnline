@@ -6,9 +6,8 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Optional, Any, Set
 
 from ..entities.map import Map
-from ..entities.cell_type import CellType
 from ..entities.player import Player, UnitType
-from ..entities.enemy import Enemy, EnemyType
+from ..entities.enemy import Enemy
 from ..entities.weapon import Weapon, WeaponType
 from ..entities.bomb import Bomb
 from ..entities.bullet import Bullet
@@ -23,13 +22,13 @@ logger = logging.getLogger(__name__)
 class GameModeService(ABC):
     """Базовый класс для игровых режимов с общей логикой"""
     
-    def __init__(self, game_settings: GameSettings, map_service: MapService):
+    def __init__(self, game_settings: GameSettings, map_service: MapService, team_service=None):
         self.settings: GameSettings = game_settings
         self.map_service: MapService = map_service
+        self.team_service = team_service  # TeamService injection
         
         # Состояние игры
         self.players: Dict[str, Player] = {}
-        self.teams: Dict[str, List[str]] = {}  # team_id -> список player_id
         self.enemies: List[Enemy] = []
         self.weapons: Dict[str, Weapon] = {}
         self.power_ups: Dict[str, PowerUp] = {}
@@ -134,12 +133,7 @@ class GameModeService(ABC):
         """Удалить игрока из игры"""
         try:
             if player_id in self.players:
-                # Удаляем игрока из команды
-                for team_id, player_ids in self.teams.items():
-                    if player_id in player_ids:
-                        player_ids.remove(player_id)
-                        break
-                
+                # Удаление из команд теперь обрабатывается TeamService
                 logger.info(f"Player {player_id} removed from game")
                 del self.players[player_id]
                 return True
@@ -346,7 +340,7 @@ class GameModeService(ABC):
                 
                 for enemy in self.enemies:
                     if not enemy.destroyed and self.check_entity_collision(weapon, enemy):
-                        self.handle_enemy_hit(enemy)
+                        self.handle_enemy_hit(enemy, weapon.owner_id)
                         weapon.activate()
                         self.weapons.pop(weapon.id)
                         break
@@ -464,7 +458,11 @@ class GameModeService(ABC):
                     # Если попали в разрушаемый блок, разрушаем его и останавливаем взрыв
                     if self.map.is_breakable_block(check_x, check_y):
                         if self.map.destroy_block(check_x, check_y):
-                            self.score += self.settings.block_destroy_score
+                            # Начисляем очки команде владельца бомбы
+                            if self.team_service:
+                                self.team_service.add_score_to_player_team(bomb.owner_id, self.settings.block_destroy_score)
+                            else:
+                                self.score += self.settings.block_destroy_score
                         
                             # Шанс появления усиления
                             if random.random() < self.settings.powerup_drop_chance:
@@ -483,7 +481,7 @@ class GameModeService(ABC):
             if self.settings.enable_enemies:
                 for enemy in list(self.enemies):
                     if not enemy.destroyed and not enemy.invulnerable and self.check_explosion_collision(bomb, enemy):
-                        self.handle_enemy_hit(enemy)
+                        self.handle_enemy_hit(enemy, bomb.owner_id)
 
             # Проверка коллизии с другим оружием (цепная реакция)
             for other_weapon in self.weapons.values():
@@ -575,7 +573,7 @@ class GameModeService(ABC):
         except Exception as e:
             logger.error(f"Error handling player hit for player {player.id}: {e}", exc_info=True)
     
-    def handle_enemy_hit(self, enemy: Enemy) -> None:
+    def handle_enemy_hit(self, enemy: Enemy, attacker_id: str = None) -> None:
         """Обработать попадание во врага"""
         try:
             if enemy.invulnerable:
@@ -589,7 +587,12 @@ class GameModeService(ABC):
             else:
                 enemy.destroyed = True
                 enemy.destroy_animation_timer = 0
-                self.score += self.settings.enemy_destroy_score
+                
+                # Начисляем очки команде атакующего игрока
+                if self.team_service and attacker_id:
+                    self.team_service.add_score_to_player_team(attacker_id, self.settings.enemy_destroy_score)
+                else:
+                    self.score += self.settings.enemy_destroy_score
 
                 # Шанс появления усиления
                 if random.random() < self.settings.enemy_powerup_drop_chance:
@@ -611,7 +614,13 @@ class GameModeService(ABC):
         """Применить усиление к игроку"""
         try:
             power_up.apply_to_player(player)
-            self.score += self.settings.powerup_collect_score
+            
+            # Начисляем очки команде игрока
+            if self.team_service:
+                self.team_service.add_score_to_player_team(player.id, self.settings.powerup_collect_score)
+            else:
+                self.score += self.settings.powerup_collect_score
+                
         except Exception as e:
             logger.error(f"Error applying power-up {power_up.type.name} to player {player.id}: {e}", exc_info=True)
     
@@ -674,14 +683,6 @@ class GameModeService(ABC):
                     'color': player.color,
                     'unitType': player.unit_type.value,
                     'teamId': player.team_id
-                }
-
-            # Данные команд
-            teams_data = {}
-            for team_id, player_ids in self.teams.items():
-                teams_data[team_id] = {
-                    'players': player_ids,
-                    'score': 0  # TODO: добавить подсчет очков команды
                 }
 
             # Данные врагов
@@ -751,7 +752,6 @@ class GameModeService(ABC):
 
             state = {
                 'players': players_data,
-                'teams': teams_data,
                 'enemies': enemies_data,
                 'weapons': weapons_data,
                 'powerUps': power_ups_data,
@@ -769,7 +769,6 @@ class GameModeService(ABC):
             return {
                 'error': True,
                 'players': {},
-                'teams': {},
                 'enemies': [],
                 'weapons': [],
                 'powerUps': [],
