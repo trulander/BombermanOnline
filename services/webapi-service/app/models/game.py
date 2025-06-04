@@ -33,6 +33,11 @@ class PlaceBombRequest(BaseModel):
     """Модель запроса на установку бомбы"""
     game_id: str = Field(..., description="Идентификатор игры")
 
+class ApplyWeaponRequest(BaseModel):
+    """Модель запроса на применение оружия"""
+    game_id: str = Field(..., description="Идентификатор игры")
+    weapon_type: str = Field("bomb", description="Тип оружия (bomb, bullet, mine)")
+
 class GameState(BaseModel):
     """Модель состояния игры"""
     players: Dict[str, Any] = Field(default_factory=dict, description="Информация об игроках")

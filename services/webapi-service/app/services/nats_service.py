@@ -207,6 +207,32 @@ class NatsService:
             logger.error(error_msg, exc_info=True)
             return {"success": False, "message": error_msg}
 
+    async def apply_weapon(self, game_id: str, player_id: str, weapon_type: str = "bomb") -> Dict[str, Any]:
+        """Отправка запроса на применение оружия"""
+        logger.info(f"Player {player_id} applying weapon {weapon_type} in game {game_id}")
+
+        try:
+            nc = await self.get_nc()
+            response = await nc.request(
+                "game.apply_weapon",
+                json.dumps({
+                    "game_id": game_id,
+                    "player_id": player_id,
+                    "weapon_type": weapon_type
+                }).encode(),
+                timeout=5.0
+            )
+            result = json.loads(response.data.decode())
+            if result.get('success'):
+                logger.info(f"Weapon {weapon_type} applied successfully by player {player_id} in game {game_id}")
+            else:
+                logger.debug(f"Failed to apply weapon {weapon_type} for player {player_id} in game {game_id}: {result.get('message')}")
+            return result
+        except Exception as e:
+            error_msg = f"Error applying weapon: {e}"
+            logger.error(error_msg, exc_info=True)
+            return {"success": False, "message": error_msg}
+
     
     async def get_game_state(self, game_id: str) -> Dict[str, Any]:
         """Получение состояния игры"""

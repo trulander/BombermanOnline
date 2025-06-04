@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 import logging
 
-from ...models.game import GameCreate, JoinGameRequest, JoinGameResponse, InputRequest, PlaceBombRequest
+from ...models.game import GameCreate, JoinGameRequest, JoinGameResponse, InputRequest, PlaceBombRequest, ApplyWeaponRequest
 from ...services.game_service import GameService
 from ...dependencies import get_game_service
 
@@ -120,7 +120,7 @@ async def place_bomb(
         
         result = await game_service.place_bomb(
             game_id=request.game_id,
-            player_id=player_id
+            sid_user_id=player_id
         )
         
         if not result.get("success"):
@@ -137,6 +137,47 @@ async def place_bomb(
         raise
     except Exception as e:
         logger.error(f"Unexpected error placing bomb in game {request.game_id}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred"
+        )
+
+@router.post("/apply-weapon")
+async def apply_weapon(
+    request: ApplyWeaponRequest,
+    game_service: GameService = Depends(get_game_service)
+) -> dict:
+    """
+    Применить оружие
+    
+    Эта функция используется для применения различных видов оружия в игре.
+    """
+    try:
+        # В реальном приложении здесь нужно было бы получить player_id из JWT токена
+        player_id = "player123"  # Заглушка, обычно получаем из токена
+        
+        logger.debug(f"Player {player_id} requesting to apply weapon {request.weapon_type} in game {request.game_id}")
+        
+        result = await game_service.apply_weapon(
+            game_id=request.game_id,
+            sid_user_id=player_id,
+            weapon_type=request.weapon_type
+        )
+        
+        if not result.get("success"):
+            logger.warning(f"Failed to apply weapon {request.weapon_type} in game {request.game_id}: {result.get('message')}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=result.get("message", "Failed to apply weapon")
+            )
+        
+        logger.debug(f"Weapon {request.weapon_type} applied successfully by player {player_id} in game {request.game_id}")
+        return result
+    except HTTPException:
+        # Re-raise HTTPException to maintain FastAPI's error handling
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error applying weapon in game {request.game_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred"

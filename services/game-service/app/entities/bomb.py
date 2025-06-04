@@ -1,13 +1,12 @@
-from .entity import Entity
+from .weapon import Weapon, WeaponType
 import logging
 
 logger = logging.getLogger(__name__)
 
-class Bomb(Entity):
+class Bomb(Weapon):
     def __init__(self, x: float, y: float, size: float, power: int, owner_id: str):
-        super().__init__(x=x, y=y, width=size, height=size, name="Bomb")
+        super().__init__(x=x, y=y, size=size, weapon_type=WeaponType.BOMB, owner_id=owner_id)
         self.power: int = power
-        self.owner_id: str = owner_id
         
         # Timing
         self.timer: float = 0
@@ -18,3 +17,20 @@ class Bomb(Entity):
         self.explosion_cells: list[tuple[int, int]] = []
         
         logger.debug(f"Bomb created: position=({x}, {y}), power={power}, owner={owner_id}")
+    
+    def activate(self) -> None:
+        """Активировать взрыв бомбы"""
+        self.activated = True
+        self.exploded = True
+        logger.info(f"Bomb {self.id} exploded!")
+    
+    def update(self, delta_time: float) -> None:
+        """Обновить состояние бомбы"""
+        if self.exploded:
+            self.explosion_timer += delta_time
+        else:
+            self.timer += delta_time
+    
+    def get_damage_area(self) -> list[tuple[int, int]]:
+        """Получить область поражения взрыва"""
+        return self.explosion_cells.copy()

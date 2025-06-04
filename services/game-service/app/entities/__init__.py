@@ -5,7 +5,7 @@ from .enemy import Enemy, EnemyType
 from .bomb import Bomb
 from .power_up import PowerUp, PowerUpType
 from .map import Map
-from .game_mode import GameModeType, GameModeSettings
+from .game_mode import GameModeType
 from .game_settings import GameSettings
 
 __all__ = [
@@ -20,6 +20,5 @@ __all__ = [
     'PowerUpType',
     'Map',
     'GameModeType',
-    'GameModeSettings',
     'GameSettings'
 ] 

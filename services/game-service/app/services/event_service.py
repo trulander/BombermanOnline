@@ -2,9 +2,12 @@ import asyncio
 import json
 import logging
 from enum import Enum
-from typing import Dict, Any, Callable, Awaitable
+from typing import Dict, Any, Callable, TYPE_CHECKING
 from nats.aio.msg import Msg
-from ..repositories.nats_repository import NatsRepository
+
+
+if TYPE_CHECKING:
+    from ..repositories.nats_repository import NatsRepository
 
 
 logger = logging.getLogger(__name__)
@@ -15,12 +18,13 @@ class NatsEvents(Enum):
     GAME_JOIN = "game.join"
     GAME_INPUT = "game.input"
     GAME_PLACE_BOMB = "game.place_bomb"
+    GAME_APPLY_WEAPON = "game.apply_weapon"
     GAME_GET_STATE = "game.get_state"
     GAME_DISCONNECT = "game.disconnect"
 
 
 class EventService:
-    def __init__(self, nats_repository: NatsRepository) -> None:
+    def __init__(self, nats_repository: "NatsRepository") -> None:
         try:
             self.nats_repository = nats_repository
             self._subscriptions = []
@@ -41,7 +45,7 @@ class EventService:
                             payload=response
                         )
                 except Exception as e:
-                    error_msg = f"Error creating game: {e}"
+                    error_msg = f"Error processing event: {e}"
                     logger.error(error_msg, exc_info=True)
                     if msg and msg.reply:
                         await self.nats_repository.publish_simple(
@@ -63,6 +67,8 @@ class EventService:
                 cb = subscribe_wrapper(handler=self.handle_input)
             case NatsEvents.GAME_PLACE_BOMB:
                 cb = subscribe_wrapper(handler=self.handle_place_bomb)
+            case NatsEvents.GAME_APPLY_WEAPON:
+                cb = subscribe_wrapper(handler=self.handle_apply_weapon)
             case NatsEvents.GAME_GET_STATE:
                 cb = subscribe_wrapper(handler=self.handle_get_game_state)
             case NatsEvents.GAME_DISCONNECT:
@@ -124,7 +130,7 @@ class EventService:
                 logger.info(f"Player {player_id} joined game {game_id}")
             else:
                 response = {"success": False, "message": result.get("message")}
-                logger.warning(f"Failed to join game: Game {game_id} {result.get("message")}")
+                logger.warning(f"Failed to join game: Game {game_id} {result.get('message')}")
         return response
 
     async def handle_input(self, data: dict, callback: Callable) -> None:
@@ -132,7 +138,12 @@ class EventService:
         await callback(**data)
 
     async def handle_place_bomb(self, data: dict, callback: Callable) -> dict:
-        """Обработчик размещения бомбы"""
+        """Обработчик размещения бомбы (совместимость со старым API)"""
+        status, result = await callback(**data)
+        return {"success": status, **result}
+
+    async def handle_apply_weapon(self, data: dict, callback: Callable) -> dict:
+        """Обработчик применения оружия"""
         status, result = await callback(**data)
         return {"success": status, **result}
 

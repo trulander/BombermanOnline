@@ -183,7 +183,44 @@ class GameService:
             error_msg = f"Error placing bomb for SID {sid_user_id} in game {game_id}: {e}"
             logger.error(error_msg, exc_info=True)
             return {"success": False, "message": error_msg}
-    
+
+    async def apply_weapon(self, game_id: str, sid_user_id: str, weapon_type: str = "bomb") -> Dict[str, Any]:
+        """
+        Команда: Применить оружие
+        
+        Args:
+            game_id: Идентификатор игры
+            sid_user_id: Идентификатор пользователя
+            weapon_type: Тип оружия (bomb, bullet, mine)
+            
+        Returns:
+            Dict[str, Any]: Результат применения оружия
+        """
+        try:
+            if not game_id:
+                logger.warning("Cannot apply weapon: missing game_id")
+                return {"success": False, "message": "Missing game_id"}
+                
+            if sid_user_id not in self.sid_user_id_to_player:
+                logger.warning(f"Cannot apply weapon in game {game_id}: SID {sid_user_id} not associated with any player")
+                return {"success": False, "message": "Invalid player"}
+
+            player_id = self.sid_user_id_to_player[sid_user_id]
+            logger.debug(f"Player {player_id} is applying weapon {weapon_type} in game {game_id}")
+
+            result = await self.nats_service.apply_weapon(game_id, player_id, weapon_type)
+            
+            if result.get('success'):
+                logger.debug(f"Weapon {weapon_type} applied successfully by player {player_id} in game {game_id}")
+            else:
+                logger.debug(f"Failed to apply weapon {weapon_type} for player {player_id} in game {game_id}: {result.get('message')}")
+                
+            return result
+        except Exception as e:
+            error_msg = f"Error applying weapon for SID {sid_user_id} in game {game_id}: {e}"
+            logger.error(error_msg, exc_info=True)
+            return {"success": False, "message": error_msg}
+
     async def disconnect_player(self, sid_user_id: str) -> Dict[str, Any]:
         """
         Команда: Отключить игрока

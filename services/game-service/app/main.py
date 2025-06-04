@@ -8,6 +8,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 from fastapi.responses import JSONResponse
 
+from app.repositories.postgres_repository import PostgresRepository
+from app.repositories.redis_repository import RedisRepository
 from .services.game_service import GameService
 from .config import settings
 from .logging_config import configure_logging
@@ -23,11 +25,18 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 # Глобальные переменные для сервисов
+
+# Глобальный экземпляр репозитория
 nats_repository = NatsRepository()
+redis_repository = RedisRepository()
+postgres_repository = PostgresRepository()
+map_repository = MapRepository(redis_repository=redis_repository, postgres_repository=postgres_repository)
+
 event_service = EventService(nats_repository=nats_repository)
-map_repository = MapRepository()
+
 game_coordinator = GameCoordinator(
-    notification_service=event_service
+    notification_service=event_service,
+    map_repository=map_repository
 )
 
 @asynccontextmanager
@@ -37,7 +46,9 @@ async def lifespan(app: FastAPI):
         logger.info("Starting Game service")
         
         # Инициализируем подключения к базам данных
-        await map_repository.connect()
+        await nats_repository.get_nc()
+        await redis_repository.get_redis()
+        await postgres_repository.connect()
         
         # Инициализируем обработчики NATS
         await game_coordinator.initialize_handlers()
@@ -55,12 +66,11 @@ async def lifespan(app: FastAPI):
     # Shutdown
     try:
         logger.info("Shutting down Game service")
-        
-        # Закрываем NATS соединение
-        await event_service.disconnect()
-        
+
         # Закрываем подключения к базам данных
-        await map_repository.disconnect()
+        await redis_repository.disconnect()
+        await event_service.disconnect()
+        await postgres_repository.disconnect()
         
         logger.info("Game service stopped successfully")
     except Exception as e:

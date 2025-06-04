@@ -11,38 +11,41 @@ class RedisRepository:
     """Repository for Redis"""
     
     def __init__(self) -> None:
-        """Initialize Redis connection"""
-        try:
-            self.redis: redis.Redis = redis.Redis(
-                host=settings.REDIS_HOST,
-                port=settings.REDIS_PORT,
-                db=settings.REDIS_DB,
-                password=settings.REDIS_PASSWORD,
-                decode_responses=True
-            )
-            logger.info(f"Redis repository initialized with host={settings.REDIS_HOST}, port={settings.REDIS_PORT}, db={settings.REDIS_DB}")
-        except Exception as e:
-            logger.error(f"Error initializing Redis repository: {e}", exc_info=True)
-            raise
+        """Initialize Redis repository"""
+        self._redis: redis.Redis | None = None
+        logger.info(f"Redis repository initialized with host={settings.REDIS_HOST}, port={settings.REDIS_PORT}, db={settings.REDIS_DB}")
     
-    async def connect(self) -> None:
-        """Connect to Redis"""
+    async def get_redis(self) -> redis.Redis:
+        """Get Redis connection with caching"""
         try:
-            # Redis connects on the first command, but we'll ping to check connection
-            await self.redis.ping()
-            logger.info("Successfully connected to Redis")
+            if self._redis is None or self._redis.connection_pool.connection_pool_class is None:
+                logger.info(f"Connecting to Redis server at {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+                self._redis = redis.Redis(
+                    host=settings.REDIS_HOST,
+                    port=settings.REDIS_PORT,
+                    db=settings.REDIS_DB,
+                    password=settings.REDIS_PASSWORD,
+                    decode_responses=True
+                )
+                # Test connection
+                await self._redis.ping()
+                logger.info(f"Connected to Redis: {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+            return self._redis
         except Exception as e:
-            logger.error(f"Error connecting to Redis: {e}", exc_info=True)
+            logger.error(f"Error connecting to Redis at {settings.REDIS_HOST}:{settings.REDIS_PORT}: {e}", exc_info=True)
             raise
-    
+
     async def disconnect(self) -> None:
         """Disconnect from Redis"""
         try:
-            await self.redis.close()
-            logger.info("Disconnected from Redis")
+            if self._redis:
+                logger.info("Disconnecting from Redis server")
+                await self._redis.close()
+                self._redis = None
+                logger.info("Disconnected from Redis server")
         except Exception as e:
             logger.error(f"Error disconnecting from Redis: {e}", exc_info=True)
-    
+
     async def set(self, key: str, value: Any, expire: int = 0) -> bool:
         """
         Set a key-value pair in Redis
@@ -56,8 +59,9 @@ class RedisRepository:
             True if successful
         """
         try:
+            redis_client = await self.get_redis()
             value_str = json.dumps(value)
-            result = await self.redis.set(key, value_str, ex=expire if expire > 0 else None)
+            result = await redis_client.set(key, value_str, ex=expire if expire > 0 else None)
             if result:
                 if expire > 0:
                     logger.debug(f"Set Redis key '{key}' with expiration {expire}s")
@@ -81,7 +85,8 @@ class RedisRepository:
             Deserialized value or None if not found
         """
         try:
-            value = await self.redis.get(key)
+            redis_client = await self.get_redis()
+            value = await redis_client.get(key)
             if value is not None:
                 logger.debug(f"Retrieved Redis key '{key}'")
                 return json.loads(value)
@@ -106,7 +111,8 @@ class RedisRepository:
             True if key was deleted, False if it didn't exist
         """
         try:
-            result = await self.redis.delete(key)
+            redis_client = await self.get_redis()
+            result = await redis_client.delete(key)
             if result > 0:
                 logger.debug(f"Deleted Redis key '{key}'")
             else:

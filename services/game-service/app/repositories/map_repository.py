@@ -1,11 +1,10 @@
 import json
 import logging
 import uuid
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, TYPE_CHECKING
 from datetime import datetime
-import asyncpg
-import redis.asyncio as redis
 from sqlalchemy import select, insert, update, delete, and_, or_, func
+
 from ..models.map_models import (
     MapTemplate, MapGroup, MapChain,
     MapTemplateORM, MapGroupORM, MapChainORM,
@@ -14,9 +13,12 @@ from ..models.map_models import (
     MapChainCreate, MapChainUpdate,
     MapTemplateFilter, MapGroupFilter, MapChainFilter
 )
-from .postgres_repository import db as postgres_db
-from .redis_repository import RedisRepository
-from ..config import settings
+
+if TYPE_CHECKING:
+    from .redis_repository import RedisRepository
+    from .postgres_repository import PostgresRepository
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,20 +26,11 @@ logger = logging.getLogger(__name__)
 class MapRepository:
     """Репозиторий для работы с картами в PostgreSQL и Redis"""
     
-    def __init__(self):
-        self.postgres_db = postgres_db
-        self.redis_repository = RedisRepository()
+    def __init__(self, redis_repository:"RedisRepository", postgres_repository:"PostgresRepository"):
+        self.postgres_repository = postgres_repository
+        self.redis_repository = redis_repository
         self.cache_ttl = 3600  # 1 час
-    
-    async def connect(self) -> None:
-        """Инициализация подключений"""
-        await self.postgres_db.connect()
-        await self.redis_repository.connect()
-    
-    async def disconnect(self) -> None:
-        """Закрытие подключений"""
-        await self.postgres_db.disconnect()
-        await self.redis_repository.disconnect()
+
     
     # CRUD операции для MapTemplate
     async def create_map_template(self, template_data: MapTemplateCreate, created_by: str) -> MapTemplate:
@@ -45,7 +38,7 @@ class MapRepository:
         try:
             template_id = str(uuid.uuid4())
             
-            async with self.postgres_db.get_session() as session:
+            async with self.postgres_repository.get_session() as session:
                 new_template = MapTemplateORM(
                     id=template_id,
                     name=template_data.name,
@@ -96,7 +89,7 @@ class MapRepository:
                 return MapTemplate(**cached_data)
             
             # Если нет в кеше, запрашиваем из базы
-            async with self.postgres_db.get_session() as session:
+            async with self.postgres_repository.get_session() as session:
                 result = await session.execute(
                     select(MapTemplateORM).where(
                         and_(MapTemplateORM.id == map_id, MapTemplateORM.is_active == True)
@@ -126,7 +119,7 @@ class MapRepository:
     async def update_map_template(self, map_id: str, template_data: MapTemplateUpdate) -> Optional[MapTemplate]:
         """Обновить шаблон карты"""
         try:
-            async with self.postgres_db.get_session() as session:
+            async with self.postgres_repository.get_session() as session:
                 # Обновляем только переданные поля
                 update_data = template_data.dict(exclude_unset=True)
                 if update_data:
@@ -166,7 +159,7 @@ class MapRepository:
     async def delete_map_template(self, map_id: str) -> bool:
         """Удалить шаблон карты (мягкое удаление)"""
         try:
-            async with self.postgres_db.get_session() as session:
+            async with self.postgres_repository.get_session() as session:
                 result = await session.execute(
                     update(MapTemplateORM)
                     .where(MapTemplateORM.id == map_id)
@@ -190,7 +183,7 @@ class MapRepository:
     async def list_map_templates(self, filter_params: MapTemplateFilter) -> List[MapTemplate]:
         """Получить список шаблонов карт с фильтрацией"""
         try:
-            async with self.postgres_db.get_session() as session:
+            async with self.postgres_repository.get_session() as session:
                 query = select(MapTemplateORM).where(MapTemplateORM.is_active == True)
                 
                 # Применяем фильтры
@@ -233,7 +226,7 @@ class MapRepository:
         try:
             group_id = str(uuid.uuid4())
             
-            async with self.postgres_db.get_session() as session:
+            async with self.postgres_repository.get_session() as session:
                 new_group = MapGroupORM(
                     id=group_id,
                     name=group_data.name,
@@ -274,7 +267,7 @@ class MapRepository:
                 logger.debug(f"Map group {group_id} loaded from cache")
                 return MapGroup(**cached_data)
             
-            async with self.postgres_db.get_session() as session:
+            async with self.postgres_repository.get_session() as session:
                 result = await session.execute(
                     select(MapGroupORM).where(
                         and_(MapGroupORM.id == group_id, MapGroupORM.is_active == True)
@@ -288,7 +281,7 @@ class MapRepository:
                 map_group = MapGroup.from_orm(row)
                 
                 # Кешируем результат
-                group_dict = map_group.dict()
+                group_dict = map_group.model_dump()
                 group_dict['created_at'] = group_dict['created_at'].isoformat()
                 group_dict['updated_at'] = group_dict['updated_at'].isoformat()
                 await self.redis_repository.set(cache_key, group_dict, expire=self.cache_ttl)
@@ -304,7 +297,7 @@ class MapRepository:
         try:
             chain_id = str(uuid.uuid4())
             
-            async with self.postgres_db.get_session() as session:
+            async with self.postgres_repository.get_session() as session:
                 new_chain = MapChainORM(
                     id=chain_id,
                     name=chain_data.name,
@@ -346,7 +339,7 @@ class MapRepository:
                 logger.debug(f"Map chain {chain_id} loaded from cache")
                 return MapChain(**cached_data)
             
-            async with self.postgres_db.get_session() as session:
+            async with self.postgres_repository.get_session() as session:
                 result = await session.execute(
                     select(MapChainORM).where(
                         and_(MapChainORM.id == chain_id, MapChainORM.is_active == True)
@@ -374,7 +367,7 @@ class MapRepository:
     async def get_maps_by_difficulty(self, min_difficulty: int, max_difficulty: int) -> List[MapTemplate]:
         """Получить карты по уровню сложности"""
         try:
-            async with self.postgres_db.get_session() as session:
+            async with self.postgres_repository.get_session() as session:
                 result = await session.execute(
                     select(MapTemplateORM)
                     .where(
@@ -401,7 +394,7 @@ class MapRepository:
     async def list_map_groups(self, filter_params: MapGroupFilter) -> List[MapGroup]:
         """Получить список групп карт с фильтрацией"""
         try:
-            async with self.postgres_db.get_session() as session:
+            async with self.postgres_repository.get_session() as session:
                 query = select(MapGroupORM).where(MapGroupORM.is_active == True)
                 
                 # Применяем фильтры
@@ -429,7 +422,7 @@ class MapRepository:
     async def list_map_chains(self, filter_params: MapChainFilter) -> List[MapChain]:
         """Получить список цепочек карт с фильтрацией"""
         try:
-            async with self.postgres_db.get_session() as session:
+            async with self.postgres_repository.get_session() as session:
                 query = select(MapChainORM).where(MapChainORM.is_active == True)
                 
                 # Применяем фильтры

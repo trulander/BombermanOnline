@@ -1,50 +1,65 @@
 from dataclasses import dataclass
 from typing import Optional
-from .game_mode import GameModeSettings, GameModeType
+
+from pydantic import BaseModel
+
+from .game_mode import GameModeType
 
 
-@dataclass
-class GameSettings:
-    """Настройки игры"""
+class GameSettings(BaseModel):
+    """Настройки игры - плоский класс без иерархии"""
     # Базовые настройки
     cell_size: int = 40
     default_map_width: int = 23
     default_map_height: int = 23
     
-    # Настройки игроков
-    max_players: int = 4
-    player_start_lives: int = 3
+    # Настройки игрока
     player_default_speed: float = 3.0
     player_invulnerable_time: float = 2.0
-    
-    # Настройки бомб
+
+    # Настройки оружия
     bomb_timer: float = 2.0
     bomb_explosion_duration: float = 0.5
     default_bomb_power: int = 1
     default_max_bombs: int = 1
-    
+    bullet_speed: float = 5.0
+    mine_timer: float = 5.0
+
     # Настройки врагов
+    enemy_count_multiplier: float = 1.0
     enemy_destroy_animation_time: float = 0.5
     enemy_invulnerable_time: float = 2.0
-    
+
     # Настройки очков
     block_destroy_score: int = 10
     enemy_destroy_score: int = 100
     powerup_collect_score: int = 25
     level_complete_score: int = 500
-    
+
     # Вероятности появления
     powerup_drop_chance: float = 0.2
     enemy_powerup_drop_chance: float = 0.3
-    
+
     # Настройки генерации карт
-    enable_snake_walls: bool = False  # Генерация стен змейкой для некоторых режимов
-    allow_enemies_near_players: bool = False  # Разрешить появление врагов рядом с игроками
-    min_distance_from_players: int = 3  # Минимальное расстояние от игроков для врагов
-    
+    enable_snake_walls: bool = False
+    allow_enemies_near_players: bool = False
+    min_distance_from_players: int = 1
+
+    game_id: str = None
     # Режим игры
-    game_mode: GameModeSettings = None
-    
-    def __post_init__(self):
-        if self.game_mode is None:
-            self.game_mode = GameModeSettings(mode_type=GameModeType.SINGLE_PLAYER) 
+    game_mode: GameModeType = GameModeType.CAMPAIGN
+    # Настройки игроков и команд
+    max_players: int = 4
+    team_count: int = 1  # Для CAMPAIGN = 1, для FREE_FOR_ALL = количество игроков, для CAPTURE_THE_FLAG определяется картой
+    player_start_lives: int = 3
+    # Настройки врагов
+    enable_enemies: bool = True
+    # Настройки карт
+    map_chain_id: Optional[str] = None
+    map_template_id: Optional[str] = None
+    # Игровые настройки
+    respawn_enabled: bool = False
+    friendly_fire: bool = False
+    time_limit: Optional[int] = 300  # в секундах
+    score_limit: Optional[int] = 10
+    rounds_count: Optional[int] = 15

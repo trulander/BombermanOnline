@@ -283,7 +283,7 @@ class MapService:
             
             # Базовое количество врагов + увеличение по уровням
             base_enemy_count = 3
-            level_multiplier = self.game_settings.game_mode.enemy_count_multiplier
+            level_multiplier = self.game_settings.enemy_count_multiplier
             enemy_count = int(base_enemy_count + level * level_multiplier)
             
             # Ограничиваем количество доступными позициями

@@ -4,37 +4,32 @@ import logging
 import time
 
 from ..config import settings
+from ..models.game_create_models import GameCreateSettings
 from ..services.game_service import GameService
 from ..services.event_service import EventService, NatsEvents
 from ..services.map_service import MapService
 
 from ..repositories.map_repository import MapRepository
-from ..entities.player import Player
-from ..entities.game_settings import GameSettings, GameModeSettings
+from ..entities.player import UnitType
+from ..entities.game_settings import GameSettings
 from ..entities.game_mode import GameModeType
+from ..entities.weapon import WeaponType
 
 logger = logging.getLogger(__name__)
 
 class GameCoordinator:
-    def __init__(self, notification_service: EventService) -> None:
-        try:
-            self.notification_service: EventService = notification_service
+    def __init__(self, notification_service: EventService, map_repository:MapRepository) -> None:
+        self.notification_service: EventService = notification_service
+        self.map_repository: MapRepository = map_repository
+        self.games: dict[str, GameService] = {}
 
-            self.games: dict[str, GameService] = {}
-            
-            # Инициализируем сервисы
-            self.map_repository: MapRepository = MapRepository()
-            
-            logger.info("GameCoordinator initialized")
-        except Exception as e:
-            logger.error(f"Error initializing GameCoordinator: {e}", exc_info=True)
-            raise
 
     async def initialize_handlers(self) -> None:
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_CREATE, callback=self.game_create)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_JOIN, callback=self.game_join)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_INPUT, callback=self.game_input)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_PLACE_BOMB, callback=self.game_place_bomb)
+        await self.notification_service.subscribe_handler(event=NatsEvents.GAME_APPLY_WEAPON, callback=self.game_apply_weapon)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_GET_STATE, callback=self.game_get_state)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_DISCONNECT, callback=self.game_player_disconnect)
 
@@ -76,26 +71,20 @@ class GameCoordinator:
     async def game_create(self, **kwargs) -> None:
         """Создать новую игру с настройками"""
         try:
-            game_id = kwargs.get("game_id")
-            game_mode_type = kwargs.get("game_mode", GameModeType.SINGLE_PLAYER.value)
-            map_template_id = kwargs.get("map_template_id")
-            map_chain_id = kwargs.get("map_chain_id")
-            map_group_id = kwargs.get("map_group_id")
-            
-            # Создаем настройки игрового режима
-            game_mode_settings = GameModeSettings(
-                mode_type=GameModeType(game_mode_type),
-                map_chain_id=map_chain_id,
-                map_group_id=map_group_id
-            )
-            
-            # Создаем настройки игры
-            game_settings = GameSettings(
-                cell_size=settings.CELL_SIZE,
-                default_map_width=settings.MAP_WIDTH,
-                default_map_height=settings.MAP_HEIGHT,
-                game_mode=game_mode_settings
-            )
+            new_game_settings = kwargs.get("new_game_settings")
+            if new_game_settings and isinstance(new_game_settings, GameCreateSettings):
+                game_settings = GameSettings(**new_game_settings.model_dump())
+            else:
+
+                game_settings = GameSettings(
+                    game_id=kwargs.get("game_id"),
+                    game_mode = kwargs.get("game_mode", GameModeType.CAMPAIGN.value),
+                    map_template_id = kwargs.get("map_template_id"),
+                    map_chain_id = kwargs.get("map_chain_id")
+                )
+            #
+            # # Создаем настройки игры с новой архитектурой
+
             
             # Создаем сервис карт
             map_service = MapService(
@@ -109,26 +98,31 @@ class GameCoordinator:
                 map_service=map_service
             )
             
-            # Инициализируем продвинутую карту асинхронно
-            await game_service.initialize_advanced_map()
+            # Инициализируем игру
+            await game_service.initialize_game()
             
-            self.games[game_id] = game_service
-            logger.info(f"Game {game_id} created with mode {game_mode_type}")
+            self.games[game_settings.game_id] = game_service
+            logger.info(f"Game {game_settings.game_id} created with mode {game_settings.game_mode}")
             
         except Exception as e:
-            logger.error(f"Error creating game {game_id}: {e}", exc_info=True)
+            logger.error(f"Error creating game {kwargs}: {e}", exc_info=True)
             raise
 
     async def game_join(self, **kwargs) -> (bool, dict):
         player_id = kwargs.get("player_id")
         game_id = kwargs.get("game_id")
+        unit_type_str = kwargs.get("unit_type", UnitType.BOMBERMAN.value)
         
         if game_id not in self.games:
             logger.warning(f"Failed to join game: Game {game_id} not found")
             return False, {"message": "Game not found"}
 
-        player = Player(player_id)
-        result = self.games[game_id].add_player(player)
+        try:
+            unit_type = UnitType(unit_type_str)
+        except ValueError:
+            unit_type = UnitType.BOMBERMAN
+            
+        result = self.games[game_id].add_player(player_id, unit_type)
         if result:
             # Получаем начальное состояние игры с данными для текущего игрока
             return True, {"game_state": self.games[game_id].get_state()}
@@ -160,18 +154,49 @@ class GameCoordinator:
             player = game.get_player(player_id)
 
             if player:
-                result = game.place_bomb(player)
+                # Используем новый метод apply_weapon вместо place_bomb
+                result = game.apply_weapon(player_id, player.primary_weapon)
                 response = result, {}
                 if result:
-                    logger.info(f"Bomb placed by player {player_id} in game {game_id}")
+                    logger.info(f"Weapon applied by player {player_id} in game {game_id}")
                 else:
-                    logger.debug(f"Failed to place bomb for player {player_id} in game {game_id}")
+                    logger.debug(f"Failed to apply weapon for player {player_id} in game {game_id}")
             else:
                 response = False, {"message": "Player not found"}
                 logger.warning(f"Player {player_id} not found in game {game_id} for place_bomb")
         else:
             response = False, {"message": "Game not found"}
             logger.warning(f"Game {game_id} not found for place_bomb")
+        return response
+
+    async def game_apply_weapon(self, **kwargs) -> (bool, dict):
+        """Применить оружие игрока (новый универсальный метод)"""
+        game_id = kwargs.get("game_id")
+        player_id = kwargs.get("player_id")
+        weapon_type_str = kwargs.get("weapon_type", "bomb")  # По умолчанию бомба для совместимости
+
+        if game_id in self.games:
+            game = self.games[game_id]
+            player = game.get_player(player_id)
+
+            if player:
+                try:
+                    weapon_type = WeaponType(weapon_type_str)
+                except ValueError:
+                    weapon_type = player.primary_weapon  # Используем основное оружие игрока
+                
+                result = game.apply_weapon(player_id, weapon_type)
+                response = result, {}
+                if result:
+                    logger.info(f"Weapon {weapon_type.value} applied by player {player_id} in game {game_id}")
+                else:
+                    logger.debug(f"Failed to apply weapon {weapon_type.value} for player {player_id} in game {game_id}")
+            else:
+                response = False, {"message": "Player not found"}
+                logger.warning(f"Player {player_id} not found in game {game_id} for apply_weapon")
+        else:
+            response = False, {"message": "Game not found"}
+            logger.warning(f"Game {game_id} not found for apply_weapon")
         return response
 
     async def game_get_state(self, **kwargs) -> (bool, dict):
@@ -182,8 +207,8 @@ class GameCoordinator:
             game_state = self.games[game_id].get_state()
 
             # Дополнительно получаем полную карту
-            if self.games[game_id].map:
-                full_map = self.games[game_id].map.get_map()
+            if self.games[game_id].game_mode.map:
+                full_map = self.games[game_id].game_mode.map.get_map()
             else:
                 full_map = {"grid": [], "width": 0, "height": 0}
                 
