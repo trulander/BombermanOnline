@@ -1,10 +1,12 @@
+from enum import Enum
 from typing import TypedDict
 from .entity import Entity
-from .unit_type import UnitType
 from .weapon import WeaponType
 import logging
 
+
 logger = logging.getLogger(__name__)
+
 
 class PlayerInputs(TypedDict):
     up: bool
@@ -12,12 +14,30 @@ class PlayerInputs(TypedDict):
     left: bool
     right: bool
     weapon1: bool  # Основное оружие
+    action1: bool  # дополнительное действие для оружия 1
     weapon2: bool  # Вторичное оружие
+
+
+class UnitType(Enum):
+    """Типы игровых юнитов"""
+    BOMBERMAN = "bomberman"  # Классический бомбермен
+    TANK = "tank"           # Танк с пулями
+
 
 class Player(Entity):
     # Colors for different players
     COLORS: list[str] = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12']
-    
+    # Input state
+    inputs: PlayerInputs = {
+        'up': False,
+        'down': False,
+        'left': False,
+        'right': False,
+        'weapon1': False,
+        'action1': False,
+        'weapon2': False
+    }
+
     def __init__(self, player_id: str, unit_type: UnitType = UnitType.BOMBERMAN):
         try:
             super().__init__(
@@ -44,22 +64,14 @@ class Player(Entity):
                 self.max_weapons: int = 10  # Танк может стрелять много пуль
                 self.weapon_power: int = 1
             
-            # Input state
-            self.inputs: PlayerInputs = {
-                'up': False,
-                'down': False,
-                'left': False,
-                'right': False,
-                'weapon1': False,
-                'weapon2': False
-            }
+
             
             logger.info(f"Player created: id={player_id}, unit_type={unit_type.value}")
         except Exception as e:
             logger.error(f"Error creating player {player_id}: {e}", exc_info=True)
             raise
     
-    def set_inputs(self, inputs: dict) -> None:
+    def set_inputs(self, inputs: PlayerInputs) -> None:
         """Update player inputs"""
         try:
             changed_inputs = []
@@ -106,3 +118,5 @@ class Player(Entity):
     @bomb_power.setter
     def bomb_power(self, value: int) -> None:
         self.weapon_power = value
+
+

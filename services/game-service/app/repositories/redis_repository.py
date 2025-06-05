@@ -18,7 +18,7 @@ class RedisRepository:
     async def get_redis(self) -> redis.Redis:
         """Get Redis connection with caching"""
         try:
-            if self._redis is None or self._redis.connection_pool.connection_pool_class is None:
+            if self._redis is None or self._redis.connection_pool.connection_class is None:
                 logger.info(f"Connecting to Redis server at {settings.REDIS_HOST}:{settings.REDIS_PORT}")
                 self._redis = redis.Redis(
                     host=settings.REDIS_HOST,

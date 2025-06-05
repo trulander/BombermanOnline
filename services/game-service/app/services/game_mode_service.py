@@ -5,6 +5,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Optional, Any, Set
 
+from .team_service import TeamService
 from ..entities.map import Map
 from ..entities.player import Player, UnitType
 from ..entities.enemy import Enemy
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 class GameModeService(ABC):
     """Базовый класс для игровых режимов с общей логикой"""
     
-    def __init__(self, game_settings: GameSettings, map_service: MapService, team_service=None):
+    def __init__(self, game_settings: GameSettings, map_service: MapService, team_service: TeamService=None):
         self.settings: GameSettings = game_settings
         self.map_service: MapService = map_service
         self.team_service = team_service  # TeamService injection
@@ -682,7 +683,7 @@ class GameModeService(ABC):
                     'invulnerable': player.invulnerable,
                     'color': player.color,
                     'unitType': player.unit_type.value,
-                    'teamId': player.team_id
+                    'teamId': player.team_id #self.team_service.get_player_team(player_id=player_id).id
                 }
 
             # Данные врагов
@@ -772,8 +773,12 @@ class GameModeService(ABC):
                 'enemies': [],
                 'weapons': [],
                 'powerUps': [],
-                'map': {'width': self.settings.default_map_width, 'height': self.settings.default_map_height, 
-                       'changedCells': [], 'cellSize': self.settings.cell_size},
+                'map': {
+                    'width': self.settings.default_map_width,
+                    'height': self.settings.default_map_height,
+                    'changedCells': [],
+                    'cellSize': self.settings.cell_size
+                },
                 'score': self.score,
                 'level': self.level,
                 'gameOver': True

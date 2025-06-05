@@ -1,5 +1,4 @@
 import asyncio
-import json
 import logging
 import time
 
@@ -28,7 +27,6 @@ class GameCoordinator:
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_CREATE, callback=self.game_create)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_JOIN, callback=self.game_join)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_INPUT, callback=self.game_input)
-        await self.notification_service.subscribe_handler(event=NatsEvents.GAME_PLACE_BOMB, callback=self.game_place_bomb)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_APPLY_WEAPON, callback=self.game_apply_weapon)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_GET_STATE, callback=self.game_get_state)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_DISCONNECT, callback=self.game_player_disconnect)
@@ -145,29 +143,6 @@ class GameCoordinator:
         else:
             logger.warning(f"Game {game_id} not found for input")
 
-    async def game_place_bomb(self, **kwargs) -> (bool, dict):
-        game_id = kwargs.get("game_id")
-        player_id = kwargs.get("player_id")
-
-        if game_id in self.games:
-            game = self.games[game_id]
-            player = game.get_player(player_id)
-
-            if player:
-                # Используем новый метод apply_weapon вместо place_bomb
-                result = game.apply_weapon(player_id, player.primary_weapon)
-                response = result, {}
-                if result:
-                    logger.info(f"Weapon applied by player {player_id} in game {game_id}")
-                else:
-                    logger.debug(f"Failed to apply weapon for player {player_id} in game {game_id}")
-            else:
-                response = False, {"message": "Player not found"}
-                logger.warning(f"Player {player_id} not found in game {game_id} for place_bomb")
-        else:
-            response = False, {"message": "Game not found"}
-            logger.warning(f"Game {game_id} not found for place_bomb")
-        return response
 
     async def game_apply_weapon(self, **kwargs) -> (bool, dict):
         """Применить оружие игрока (новый универсальный метод)"""
@@ -185,7 +160,7 @@ class GameCoordinator:
                 except ValueError:
                     weapon_type = player.primary_weapon  # Используем основное оружие игрока
                 
-                result = game.apply_weapon(player_id, weapon_type)
+                result = game.apply_weapon(player_id=player_id, weapon_type=weapon_type)
                 response = result, {}
                 if result:
                     logger.info(f"Weapon {weapon_type.value} applied by player {player_id} in game {game_id}")

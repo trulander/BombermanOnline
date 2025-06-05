@@ -1,8 +1,5 @@
-from dataclasses import dataclass
 from typing import Optional
-
 from pydantic import BaseModel
-
 from .game_mode import GameModeType
 
 
@@ -45,6 +42,8 @@ class GameSettings(BaseModel):
     allow_enemies_near_players: bool = False
     min_distance_from_players: int = 1
 
+
+   #Настраиваемые параметры во время создания игры
     game_id: str = None
     # Режим игры
     game_mode: GameModeType = GameModeType.CAMPAIGN

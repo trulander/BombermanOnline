@@ -14,15 +14,16 @@ class WeaponType(Enum):
 
 class Weapon(Entity, ABC):
     """Базовый класс для всех видов оружия"""
-    
-    def __init__(self, x: float, y: float, size: float, weapon_type: WeaponType, owner_id: str):
-        super().__init__(x=x, y=y, width=size, height=size, name=f"Weapon_{weapon_type.value}")
-        self.weapon_type: WeaponType = weapon_type
+    weapon_type: WeaponType = None
+
+    def __init__(self, x: float, y: float, size: float, owner_id: str, direction: tuple[float, float] = None):
+        super().__init__(x=x, y=y, width=size, height=size, name=f"Weapon_{self.weapon_type.value}")
+        self.direction: tuple[float, float] = direction
         self.owner_id: str = owner_id
         self.activated: bool = False
         self.timer: float = 0
         
-        logger.debug(f"Weapon created: type={weapon_type.value}, position=({x}, {y}), owner={owner_id}")
+        logger.debug(f"Weapon created: type={self.weapon_type.value}, position=({x}, {y}), owner={owner_id}")
     
     @abstractmethod
     def activate(self) -> None:

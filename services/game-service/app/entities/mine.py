@@ -5,8 +5,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 class Mine(Weapon):
+    weapon_type: WeaponType = WeaponType.MINE
+
     def __init__(self, x: float, y: float, size: float, owner_id: str):
-        super().__init__(x=x, y=y, size=size, weapon_type=WeaponType.MINE, owner_id=owner_id)
+        super().__init__(x=x, y=y, size=size, owner_id=owner_id)
         self.exploded: bool = False
         self.triggered: bool = False
         

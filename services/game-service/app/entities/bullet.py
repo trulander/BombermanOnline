@@ -5,8 +5,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 class Bullet(Weapon):
-    def __init__(self, x: float, y: float, size: float, direction: tuple[float, float], speed: float, owner_id: str):
-        super().__init__(x=x, y=y, size=size, weapon_type=WeaponType.BULLET, owner_id=owner_id)
+    weapon_type: WeaponType = WeaponType.BULLET
+
+    def __init__(self, x: float, y: float, size: float, speed: float, owner_id: str, direction: tuple[float, float]):
+        super().__init__(x=x, y=y, size=size, owner_id=owner_id)
         self.direction: tuple[float, float] = direction  # Нормализованный вектор направления
         self.speed: float = speed
         self.hit_target: bool = False

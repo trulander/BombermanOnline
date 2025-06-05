@@ -4,8 +4,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 class Bomb(Weapon):
+    weapon_type: WeaponType = WeaponType.BOMB
+
     def __init__(self, x: float, y: float, size: float, power: int, owner_id: str):
-        super().__init__(x=x, y=y, size=size, weapon_type=WeaponType.BOMB, owner_id=owner_id)
+        super().__init__(x=x, y=y, size=size, owner_id=owner_id)
         self.power: int = power
         
         # Timing

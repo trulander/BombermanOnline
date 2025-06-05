@@ -7,13 +7,12 @@ from typing import Dict, List, Tuple, Optional, Any, Set
 
 from ..entities.map import Map
 from ..entities.cell_type import CellType
-from ..entities.player import Player
+from ..entities.player import Player, UnitType
 from ..entities.enemy import Enemy, EnemyType
 from ..entities.bomb import Bomb
 from ..entities.power_up import PowerUp, PowerUpType
 from ..entities.game_settings import GameSettings
 from ..entities.game_mode import GameModeType
-from ..entities.unit_type import UnitType
 from ..entities.weapon import WeaponType
 from ..entities.game_status import GameStatus
 from ..services.map_service import MapService
@@ -152,27 +151,27 @@ class GameService:
         try:
             if self.status != GameStatus.ACTIVE:
                 return False
-            
+
             self.status = GameStatus.PAUSED
             logger.info("Game paused")
             return True
         except Exception as e:
             logger.error(f"Error pausing game: {e}", exc_info=True)
             return False
-    
+
     def resume_game(self) -> bool:
         """Возобновить игру"""
         try:
             if self.status != GameStatus.PAUSED:
                 return False
-            
+
             self.status = GameStatus.ACTIVE
             logger.info("Game resumed")
             return True
         except Exception as e:
             logger.error(f"Error resuming game: {e}", exc_info=True)
             return False
-    
+
     async def update(self) -> Dict[str, Any]:
         """Обновить состояние игры"""
         try:
@@ -271,9 +270,3 @@ class GameService:
         except Exception as e:
             logger.error(f"Error getting teams info: {e}", exc_info=True)
             return {}
-
-
-# Поддержка старых методов для совместимости
-def place_bomb(game_service: GameService, player: Player) -> bool:
-    """Совместимость со старым API"""
-    return game_service.apply_weapon(player.id, WeaponType.BOMB) 

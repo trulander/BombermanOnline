@@ -5,7 +5,6 @@ from typing import Optional
 import nats
 import numpy as np
 from nats.aio.client import Client as NATS
-from nats.aio.msg import Msg
 
 from ..config import settings
 

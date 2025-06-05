@@ -25,4 +25,5 @@ dependencies = [
     "numpy>=2.2.0",
     "quantile-python>=1.1",
     "python-json-logger>=3.3.0",
+    "typer>=0.16.0",
 ]
