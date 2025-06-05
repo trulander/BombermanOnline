@@ -1,6 +1,8 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
 
+from app.entities import GameModeType
+
 
 class TeamBase(BaseModel):
     """Базовая модель команды."""
@@ -39,6 +41,7 @@ class TeamDistributionRequest(BaseModel):
 
 class TeamModeSettings(BaseModel):
     """Настройки команд для конкретного игрового режима."""
+    game_mode: GameModeType
     default_team_count: int
     max_team_count: int
     min_players_per_team: int

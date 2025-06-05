@@ -1,16 +1,6 @@
-import random
-import time
-import math
-import json
 import logging
-from typing import Dict, List, Tuple, Optional, Any, Set
-
-from ..entities.map import Map
-from ..entities.cell_type import CellType
+from typing import Dict, Optional, Any
 from ..entities.player import Player, UnitType
-from ..entities.enemy import Enemy, EnemyType
-from ..entities.bomb import Bomb
-from ..entities.power_up import PowerUp, PowerUpType
 from ..entities.game_settings import GameSettings
 from ..entities.game_mode import GameModeType
 from ..entities.weapon import WeaponType
@@ -36,7 +26,7 @@ class GameService:
             self.status: GameStatus = GameStatus.PENDING
             
             # Инициализируем сервис команд
-            self.team_service: TeamService = TeamService(game_settings.game_mode)
+            self.team_service: TeamService = TeamService(team_mode_settings=self.settings.team_mode_settings)
             
             # Создаем игровой режим в зависимости от настроек
             self.game_mode: GameModeService = self._create_game_mode()

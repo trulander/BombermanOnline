@@ -3,7 +3,7 @@ import time
 import math
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple, Optional, Any, Set
+from typing import Dict, List, Tuple, Optional, Any
 
 from .team_service import TeamService
 from ..entities.map import Map

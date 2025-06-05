@@ -1,7 +1,6 @@
 import logging
 from ..game_mode_service import GameModeService
 from ...entities.game_settings import GameSettings
-from ...models.team_models import TeamModeSettings
 from ...services.map_service import MapService
 
 logger = logging.getLogger(__name__)
@@ -9,17 +8,6 @@ logger = logging.getLogger(__name__)
 
 class FreeForAllMode(GameModeService):
     """Режим 'каждый сам за себя'"""
-
-    team_mode_settings = TeamModeSettings(
-        default_team_count=0,  # Каждый игрок в своей команде
-        max_team_count=8,
-        min_players_per_team=1,
-        max_players_per_team=1,
-        auto_distribute_players=True,
-        allow_uneven_teams=True,
-        default_team_names=[]  # Имена генерируются автоматически
-    )
-
     def __init__(self, game_settings: GameSettings, map_service: MapService, team_service=None):
         super().__init__(game_settings, map_service, team_service)
         

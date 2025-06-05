@@ -1,6 +1,7 @@
 from typing import Optional
 from pydantic import BaseModel
 from .game_mode import GameModeType
+from ..models.team_models import TeamModeSettings
 
 
 class GameSettings(BaseModel):
@@ -62,3 +63,41 @@ class GameSettings(BaseModel):
     time_limit: Optional[int] = 300  # в секундах
     score_limit: Optional[int] = 10
     rounds_count: Optional[int] = 15
+
+    @property
+    def team_mode_settings(self) -> TeamModeSettings:
+        match self.game_mode:
+            case GameModeType.FREE_FOR_ALL:
+                return TeamModeSettings(
+                    game_mode=GameModeType.FREE_FOR_ALL,
+                    default_team_count=0,  # Каждый игрок в своей команде
+                    max_team_count=8,
+                    min_players_per_team=1,
+                    max_players_per_team=1,
+                    auto_distribute_players=True,
+                    allow_uneven_teams=True,
+                    default_team_names=[]  # Имена генерируются автоматически
+                )
+            case GameModeType.CAPTURE_THE_FLAG:
+                return TeamModeSettings(
+                    game_mode=GameModeType.CAPTURE_THE_FLAG,
+                    default_team_count=2,
+                    max_team_count=4,
+                    min_players_per_team=1,
+                    max_players_per_team=4,
+                    auto_distribute_players=True,
+                    allow_uneven_teams=False,
+                    default_team_names=["Red Team", "Blue Team", "Green Team", "Yellow Team"]
+                )
+            case _: # значение по умолчанию для GameModeType.CAMPAIGN
+                return TeamModeSettings(
+                    game_mode = GameModeType.CAMPAIGN,
+                    default_team_count=1,
+                    max_team_count=1,
+                    min_players_per_team=1,
+                    max_players_per_team=8,
+                    auto_distribute_players=True,
+                    allow_uneven_teams=True,
+                    default_team_names=["Heroes"]
+                )
+

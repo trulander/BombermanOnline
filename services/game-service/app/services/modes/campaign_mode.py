@@ -1,7 +1,6 @@
 import logging
 from ..game_mode_service import GameModeService
 from ...entities.game_settings import GameSettings
-from ...models.team_models import TeamModeSettings
 from ...services.map_service import MapService
 
 logger = logging.getLogger(__name__)
@@ -9,17 +8,6 @@ logger = logging.getLogger(__name__)
 
 class CampaignMode(GameModeService):
     """Режим прохождения с возможностью кооператива"""
-
-    team_mode_settings = TeamModeSettings(
-        default_team_count=1,
-        max_team_count=1,
-        min_players_per_team=1,
-        max_players_per_team=8,
-        auto_distribute_players=True,
-        allow_uneven_teams=True,
-        default_team_names=["Heroes"]
-    )
-
     def __init__(self, game_settings: GameSettings, map_service: MapService, team_service=None):
         super().__init__(game_settings, map_service, team_service)
         self.setup_teams()

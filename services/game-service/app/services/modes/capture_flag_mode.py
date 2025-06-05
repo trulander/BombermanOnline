@@ -2,7 +2,6 @@ import logging
 from typing import Dict, List, Set
 from ..game_mode_service import GameModeService
 from ...entities.game_settings import GameSettings
-from ...models.team_models import TeamModeSettings
 from ...services.map_service import MapService
 
 logger = logging.getLogger(__name__)
@@ -10,17 +9,6 @@ logger = logging.getLogger(__name__)
 
 class CaptureFlagMode(GameModeService):
     """Режим захвата флага"""
-
-    team_mode_settings = TeamModeSettings(
-        default_team_count=2,
-        max_team_count=4,
-        min_players_per_team=1,
-        max_players_per_team=4,
-        auto_distribute_players=True,
-        allow_uneven_teams=False,
-        default_team_names=["Red Team", "Blue Team", "Green Team", "Yellow Team"]
-    )
-    
     def __init__(self, game_settings: GameSettings, map_service: MapService, team_service=None):
         super().__init__(game_settings, map_service, team_service)
         

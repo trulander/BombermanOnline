@@ -3,17 +3,15 @@ import random
 from app.entities.team import Team
 from app.models.team_models import TeamModeSettings
 from app.entities.game_mode import GameModeType
-from app.entities.game_mode_class_name import GAME_MODE_CLASS_MAPPING
 from app.entities.player import Player
 
 
 class TeamService:
     """Сервис для управления командами в игровой сессии."""
     
-    def __init__(self, game_mode: GameModeType):
-        self.game_mode = game_mode
+    def __init__(self, team_mode_settings: TeamModeSettings):
         self.teams: Dict[str, Team] = {}
-        self.mode_settings: TeamModeSettings = GAME_MODE_CLASS_MAPPING[self.game_mode].team_mode_settings
+        self.mode_settings: TeamModeSettings = team_mode_settings
     
     def create_team(self, team_name: str, team_id: str = None) -> Team:
         """Создает новую команду."""
@@ -98,7 +96,7 @@ class TeamService:
         """Создает команды по умолчанию для текущего игрового режима."""
         self.teams.clear()
         
-        if self.game_mode == GameModeType.FREE_FOR_ALL:
+        if self.mode_settings.game_mode == GameModeType.FREE_FOR_ALL:
             # Для FFA команды создаются для каждого игрока отдельно
             return
         
@@ -132,7 +130,7 @@ class TeamService:
         if not unassigned_players:
             return
         
-        if self.game_mode == GameModeType.FREE_FOR_ALL:
+        if self.mode_settings.game_mode == GameModeType.FREE_FOR_ALL:
             # Каждый игрок в своей команде
             self._distribute_ffa_players(unassigned_players)
         else:
