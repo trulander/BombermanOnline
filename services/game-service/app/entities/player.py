@@ -37,13 +37,14 @@ class Player(Entity):
         'action1': False,
         'weapon2': False
     }
+    scale_size = 0.8
 
-    def __init__(self, player_id: str, unit_type: UnitType = UnitType.BOMBERMAN):
+    def __init__(self, player_id: str, size: float, unit_type: UnitType = UnitType.BOMBERMAN):
         try:
             super().__init__(
                 entity_id=player_id,
-                width=32.0,
-                height=32.0,
+                width=size * self.scale_size,
+                height=size * self.scale_size,
                 speed=3.0,
                 lives=3,
                 color=self.COLORS[0] # Default color, will be assigned later

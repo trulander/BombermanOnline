@@ -16,6 +16,7 @@ class Enemy(Entity):
         EnemyType.BEAR: 3,
         EnemyType.GHOST: 2,
     }
+    scale_size: float = 0.8
 
     def __init__(
             self,
@@ -28,8 +29,8 @@ class Enemy(Entity):
         super().__init__(
             x=x,
             y=y,
-            width=size * 0.8,
-            height=size * 0.8,
+            width=size * self.scale_size,
+            height=size * self.scale_size,
             speed=speed,
             ai=True,
             name=f"Enemy_{enemy_type.value}"

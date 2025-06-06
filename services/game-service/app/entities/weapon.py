@@ -15,9 +15,16 @@ class WeaponType(Enum):
 class Weapon(Entity, ABC):
     """Базовый класс для всех видов оружия"""
     weapon_type: WeaponType = None
+    scale_size = 0.8
 
     def __init__(self, x: float, y: float, size: float, owner_id: str, direction: tuple[float, float] = None):
-        super().__init__(x=x, y=y, width=size, height=size, name=f"Weapon_{self.weapon_type.value}")
+        super().__init__(
+            x=x,
+            y=y,
+            width=size * self.scale_size,
+            height=size * self.scale_size,
+            name=f"Weapon_{self.weapon_type.value}"
+        )
         self.direction: tuple[float, float] = direction
         self.owner_id: str = owner_id
         self.activated: bool = False

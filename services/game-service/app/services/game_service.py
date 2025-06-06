@@ -83,7 +83,11 @@ class GameService:
                     "message": message
                 }
             
-            player = Player(player_id, unit_type)
+            player = Player(
+                player_id=player_id,
+                unit_type=unit_type,
+                size=self.settings.cell_size,
+            )
             success = self.game_mode.add_player(player)
             
             if success:

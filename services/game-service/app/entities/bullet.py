@@ -6,6 +6,7 @@ logger = logging.getLogger(__name__)
 
 class Bullet(Weapon):
     weapon_type: WeaponType = WeaponType.BULLET
+    scale_size = 0.3
 
     def __init__(self, x: float, y: float, size: float, speed: float, owner_id: str, direction: tuple[float, float]):
         super().__init__(x=x, y=y, size=size, owner_id=owner_id)

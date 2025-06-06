@@ -12,10 +12,11 @@ class PowerUpType(Enum):
     LIFE_UP = 'LIFE_UP'
 
 class PowerUp(Entity):
+    scale_size = 0.7
     def __init__(self, x: float, y: float, size: float, power_type: PowerUpType):
         try:
-            width = size * 0.7
-            height = size * 0.7
+            width = size * self.scale_size
+            height = size * self.scale_size
             super().__init__(
                 x=x + (size - width) / 2,
                 y=y + (size - height) / 2,

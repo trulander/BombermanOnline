@@ -5,6 +5,7 @@ logger = logging.getLogger(__name__)
 
 class Entity:
     """Базовый класс для всех игровых сущностей."""
+    scale_size: float = 1.0
 
     def __init__(
         self,
