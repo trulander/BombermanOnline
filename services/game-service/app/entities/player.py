@@ -1,3 +1,4 @@
+from abc import ABC
 from enum import Enum
 from typing import TypedDict
 from .entity import Entity
@@ -24,7 +25,7 @@ class UnitType(Enum):
     TANK = "tank"           # Танк с пулями
 
 
-class Player(Entity):
+class Player(Entity, ABC):
     # Colors for different players
     COLORS: list[str] = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12']
     # Input state
@@ -38,8 +39,9 @@ class Player(Entity):
         'weapon2': False
     }
     scale_size = 0.8
+    unit_type: UnitType = None
 
-    def __init__(self, player_id: str, size: float, unit_type: UnitType = UnitType.BOMBERMAN):
+    def __init__(self, player_id: str, size: float):
         try:
             super().__init__(
                 entity_id=player_id,
@@ -49,25 +51,20 @@ class Player(Entity):
                 lives=3,
                 color=self.COLORS[0] # Default color, will be assigned later
             )
-            self.unit_type: UnitType = unit_type
             self.team_id: str = ""  # ID команды
             self.direction: tuple[float, float] = (0, 1)  # Направление для танка
-            
-            # Настройки оружия в зависимости от типа юнита
-            if unit_type == UnitType.BOMBERMAN:
-                self.primary_weapon: WeaponType = WeaponType.BOMB
-                self.secondary_weapon: WeaponType = WeaponType.MINE
-                self.max_weapons: int = 1  # Максимальное количество активного оружия
-                self.weapon_power: int = 1
-            elif unit_type == UnitType.TANK:
-                self.primary_weapon: WeaponType = WeaponType.BULLET
-                self.secondary_weapon: WeaponType = WeaponType.MINE
-                self.max_weapons: int = 10  # Танк может стрелять много пуль
-                self.weapon_power: int = 1
-            
 
+            # Настройки оружия в зависимости от типа юнита
+
+            self.primary_weapon: WeaponType = WeaponType.BOMB
+            self.primary_weapon_max_count: int = 1
+            self.primary_weapon_power: int = 1
+
+            self.secondary_weapon: WeaponType = None
+            self.secondary_weapon_max_count: int = 1
+            self.secondary_weapon_power: int = 1
             
-            logger.info(f"Player created: id={player_id}, unit_type={unit_type.value}")
+            logger.info(f"Player created: id={player_id}, unit_type={self.unit_type.value}")
         except Exception as e:
             logger.error(f"Error creating player {player_id}: {e}", exc_info=True)
             raise
@@ -101,23 +98,5 @@ class Player(Entity):
         """Назначить игрока в команду"""
         self.team_id = team_id
         logger.info(f"Player {self.id} assigned to team {team_id}")
-    
-    # Поддержка старых свойств для совместимости
-    @property
-    def max_bombs(self) -> int:
-        return self.max_weapons if self.primary_weapon == WeaponType.BOMB else 0
-    
-    @max_bombs.setter
-    def max_bombs(self, value: int) -> None:
-        if self.primary_weapon == WeaponType.BOMB:
-            self.max_weapons = value
-    
-    @property
-    def bomb_power(self) -> int:
-        return self.weapon_power
-    
-    @bomb_power.setter
-    def bomb_power(self, value: int) -> None:
-        self.weapon_power = value
 
 

@@ -3,11 +3,17 @@ from .entity import Entity
 from .player import Player # Keep for type hinting in apply_to_player
 import logging
 
+from .weapon import WeaponType
+
 logger = logging.getLogger(__name__)
 
 class PowerUpType(Enum):
     BOMB_UP = 'BOMB_UP'
+    BULLET_UP = 'BULLET_UP'
+    MINE_UP = 'MINE_UP'
     BOMB_POWER_UP = 'BOMB_POWER_UP'
+    BULLET_POWER_UP = 'BULLET_POWER_UP'
+    MINE_POWER_UP = 'MINE_POWER_UP'
     SPEED_UP = 'SPEED_UP'
     LIFE_UP = 'LIFE_UP'
 
@@ -29,22 +35,38 @@ class PowerUp(Entity):
         except Exception as e:
             logger.error(f"Error creating PowerUp at ({x}, {y}): {e}", exc_info=True)
             raise
-        
+
+    def _update_player_weapon(self, player: Player, weapon_type, count, power):
+        if player.primary_weapon == weapon_type:
+            player.primary_weapon_max_count += count
+            player.primary_weapon_power += power
+        elif player.secondary_weapon == weapon_type:
+            player.secondary_weapon_max_count += count
+            player.secondary_weapon_power += power
+
     def apply_to_player(self, player: Player) -> None:
         try:
-            if self.type == PowerUpType.BOMB_UP:
-                player.max_bombs += 1
-                logger.info(f"Player {player.id} received BOMB_UP. New max bombs: {player.max_bombs}")
-            elif self.type == PowerUpType.BOMB_POWER_UP:
-                player.bomb_power += 1
-                logger.info(f"Player {player.id} received BOMB_POWER_UP. New bomb power: {player.bomb_power}")
-            elif self.type == PowerUpType.SPEED_UP:
-                player.speed += 0.5
-                if player.speed > 6:
-                    player.speed = 6
-                logger.info(f"Player {player.id} received SPEED_UP. New speed: {player.speed}")
-            elif self.type == PowerUpType.LIFE_UP:
-                player.lives += 1
-                logger.info(f"Player {player.id} received LIFE_UP. New lives: {player.lives}")
+            match self.type:
+                case PowerUpType.BOMB_UP:
+                    self._update_player_weapon(player=player, weapon_type=WeaponType.BOMB, count=1, power=0)
+                case PowerUpType.BULLET_UP:
+                    self._update_player_weapon(player=player, weapon_type=WeaponType.BULLET, count=1, power=0)
+                case PowerUpType.MINE_UP:
+                    self._update_player_weapon(player=player, weapon_type=WeaponType.MINE, count=1, power=0)
+                case PowerUpType.BOMB_POWER_UP:
+                    self._update_player_weapon(player=player, weapon_type=WeaponType.BOMB, count=0, power=1)
+                case PowerUpType.BULLET_POWER_UP:
+                    self._update_player_weapon(player=player, weapon_type=WeaponType.BULLET, count=0, power=1)
+                case PowerUpType.MINE_POWER_UP:
+                    self._update_player_weapon(player=player, weapon_type=WeaponType.MINE, count=0, power=1)
+                case PowerUpType.SPEED_UP:
+                    player.speed += 0.5
+                    if player.speed > 6:
+                        player.speed = 6
+                    logger.info(f"Player {player.id} received SPEED_UP. New speed: {player.speed}")
+                case PowerUpType.LIFE_UP:
+                    player.lives += 1
+                    logger.info(f"Player {player.id} received LIFE_UP. New lives: {player.lives}")
+
         except Exception as e:
             logger.error(f"Error applying powerup {self.type.name} to player {player.id}: {e}", exc_info=True)

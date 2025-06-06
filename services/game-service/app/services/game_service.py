@@ -1,6 +1,9 @@
 import logging
 from typing import Dict, Optional, Any
+
+from ..entities.bomberman import Bomberman
 from ..entities.player import Player, UnitType
+from ..entities.tank import Tank
 from ..models.game_models import GameSettings
 from ..entities.game_mode import GameModeType
 from ..entities.weapon import WeaponType
@@ -82,12 +85,23 @@ class GameService:
                     "success": False,
                     "message": message
                 }
-            
-            player = Player(
-                player_id=player_id,
-                unit_type=unit_type,
-                size=self.settings.cell_size,
-            )
+
+            match unit_type:
+                case UnitType.BOMBERMAN:
+                    player = Bomberman(
+                        player_id=player_id,
+                        size=self.settings.cell_size,
+                    )
+                case UnitType.TANK:
+                    player = Tank(
+                        player_id=player_id,
+                        size=self.settings.cell_size,
+                    )
+                case _:
+                    player = Bomberman(
+                        player_id=player_id,
+                        size=self.settings.cell_size,
+                    )
             success = self.game_mode.add_player(player)
             
             if success:
