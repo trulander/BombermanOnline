@@ -44,13 +44,12 @@ class GameSettings(BaseModel):
     min_distance_from_players: int = 1
 
 
-   #Настраиваемые параметры во время создания игры
+    #Настраиваемые параметры во время создания игры
     game_id: str = None
     # Режим игры
     game_mode: GameModeType = GameModeType.CAMPAIGN
     # Настройки игроков и команд
     max_players: int = 4
-    team_count: int = 1  # Для CAMPAIGN = 1, для FREE_FOR_ALL = количество игроков, для CAPTURE_THE_FLAG определяется картой
     player_start_lives: int = 3
     # Настройки врагов
     enable_enemies: bool = True

@@ -9,7 +9,6 @@ class GameCreateSettings(BaseModel):
     game_mode: GameModeType = GameModeType.CAMPAIGN
     # Настройки игроков и команд
     max_players: int = 4
-    team_count: int = 1
     player_start_lives: int = 3
 
     # Настройки врагов
