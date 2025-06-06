@@ -93,7 +93,7 @@ class GameService:
         """Удалить игрока из игры"""
         try:
             # Удаляем игрока из команд
-            self.team_service._remove_player_from_all_teams(player_id)
+            self.team_service.remove_player_from_team(player_id)
             
             success = self.game_mode.remove_player(player_id)
             
@@ -195,25 +195,7 @@ class GameService:
         except Exception as e:
             logger.error(f"Error applying weapon for player {player_id}: {e}", exc_info=True)
             return False
-    
-    def assign_player_to_team(self, player_id: str, team_id: str) -> bool:
-        """Назначить игрока в команду (устаревший метод, используйте team_service)"""
-        try:
-            if self.status != GameStatus.PENDING:
-                return False
-            
-            player = self.get_player(player_id)
-            if not player:
-                return False
-            
-            success = self.team_service.add_player_to_team(team_id, player_id)
-            if success:
-                player.set_team(team_id)
-            
-            return success
-        except Exception as e:
-            logger.error(f"Error assigning player {player_id} to team {team_id}: {e}", exc_info=True)
-            return False
+
     
     def is_active(self) -> bool:
         """Проверить активность игры"""
@@ -252,11 +234,3 @@ class GameService:
                 'level': 1,
                 'gameOver': True
             }
-    
-    def get_teams(self) -> Dict[str, Any]:
-        """Получить информацию о командах (устаревший метод, используйте team_service)"""
-        try:
-            return self.team_service.get_teams_state()
-        except Exception as e:
-            logger.error(f"Error getting teams info: {e}", exc_info=True)
-            return {}

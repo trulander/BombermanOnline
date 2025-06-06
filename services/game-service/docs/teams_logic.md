@@ -209,9 +209,6 @@ TeamModeSettings(
 
 ### 9.1. Обратная Совместимость
 
-Сохранены устаревшие методы для совместимости:
--   `game_service.assign_player_to_team()` - делегируется `TeamService`.
--   `game_service.get_teams()` - возвращает состояние из `TeamService`.
 
 ### 9.2. Переход от Старой Системы
 
