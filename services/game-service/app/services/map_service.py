@@ -4,7 +4,7 @@ from typing import List, Tuple, Optional, Dict, Any
 import numpy as np
 from ..entities.cell_type import CellType
 from ..entities.map import Map
-from ..entities.game_settings import GameSettings
+from ..models.game_models import GameSettings
 from ..entities.enemy import EnemyType
 from ..models.map_models import MapTemplate
 from ..repositories.map_repository import MapRepository

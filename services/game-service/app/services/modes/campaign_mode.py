@@ -1,6 +1,6 @@
 import logging
 from ..game_mode_service import GameModeService
-from ...entities.game_settings import GameSettings
+from ...models.game_models import GameSettings
 from ...services.map_service import MapService
 
 logger = logging.getLogger(__name__)
@@ -61,13 +61,11 @@ class CampaignMode(GameModeService):
             self.level += 1
             
             # Начисляем очки команде за завершение уровня
-            if self.team_service:
-                # В кампании все игроки в одной команде, начисляем очки первому игроку (команде)
-                if self.players:
-                    first_player_id = next(iter(self.players.keys()))
-                    self.team_service.add_score_to_player_team(first_player_id, self.settings.level_complete_score)
-            else:
-                self.score += self.settings.level_complete_score
+            # В кампании все игроки в одной команде, начисляем очки первому игроку (команде)
+            if self.players:
+                first_player_id = next(iter(self.players.keys()))
+                self.team_service.add_score_to_player_team(first_player_id, self.settings.level_complete_score)
+
             
             # Сброс карты для следующего уровня
             await self.initialize_map()

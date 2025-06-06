@@ -2,10 +2,11 @@ from typing import List
 from fastapi import APIRouter, HTTPException, Depends, status
 
 from app.auth import get_current_user
-from app.coordinators.game_coorditanor import GameCoordinator
+from app.coordinators.game_coordinator import GameCoordinator
 from app.models.team_models import Team, TeamCreate, TeamUpdate, PlayerTeamAction, TeamDistributionRequest
 
 from app.entities.game_status import GameStatus
+from app.dependenties import game_coordinator
 
 
 router = APIRouter(prefix="/teams", tags=["teams"])
@@ -14,7 +15,6 @@ router = APIRouter(prefix="/teams", tags=["teams"])
 def get_game_coordinator() -> GameCoordinator:
     """Dependency для получения GameCoordinator."""
     # TODO: Заменить на правильную инъекцию зависимости
-    from app.main import game_coordinator
     return game_coordinator
 
 

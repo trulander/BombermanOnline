@@ -6,7 +6,7 @@ from .bomb import Bomb
 from .power_up import PowerUp, PowerUpType
 from .map import Map
 from .game_mode import GameModeType
-from .game_settings import GameSettings
+
 
 __all__ = [
     'CellType',
@@ -19,6 +19,5 @@ __all__ = [
     'PowerUp',
     'PowerUpType',
     'Map',
-    'GameModeType',
-    'GameSettings'
+    'GameModeType'
 ] 

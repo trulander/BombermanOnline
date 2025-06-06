@@ -1,16 +1,16 @@
 import asyncio
 import logging
 import time
+from uuid import uuid4
 
 from ..config import settings
-from ..models.game_create_models import GameCreateSettings
+from ..models.game_models import GameCreateSettings, GameSettings
 from ..services.game_service import GameService
 from ..services.event_service import EventService, NatsEvents
 from ..services.map_service import MapService
 
 from ..repositories.map_repository import MapRepository
 from ..entities.player import UnitType
-from ..entities.game_settings import GameSettings
 from ..entities.game_mode import GameModeType
 from ..entities.weapon import WeaponType
 
@@ -66,24 +66,22 @@ class GameCoordinator:
         except Exception as e:
             logger.error(f"Error in game loop: {e}", exc_info=True)
 
-    async def game_create(self, **kwargs) -> None:
+    async def game_create(self, **kwargs) -> dict:
         """Создать новую игру с настройками"""
         try:
             new_game_settings = kwargs.get("new_game_settings")
             if new_game_settings and isinstance(new_game_settings, GameCreateSettings):
                 game_settings = GameSettings(**new_game_settings.model_dump())
             else:
-
+                game_id = str(uuid4())
+                logger.info(f"Creating new game settings for game {game_id}")
                 game_settings = GameSettings(
-                    game_id=kwargs.get("game_id"),
+                    game_id=game_id,
                     game_mode = kwargs.get("game_mode", GameModeType.CAMPAIGN.value),
                     map_template_id = kwargs.get("map_template_id"),
                     map_chain_id = kwargs.get("map_chain_id")
                 )
-            #
-            # # Создаем настройки игры с новой архитектурой
 
-            
             # Создаем сервис карт
             map_service = MapService(
                 map_repository=self.map_repository,
@@ -101,30 +99,38 @@ class GameCoordinator:
             
             self.games[game_settings.game_id] = game_service
             logger.info(f"Game {game_settings.game_id} created with mode {game_settings.game_mode}")
+            return {
+                "success": True,
+                "game_id": game_settings.game_id
+            }
             
         except Exception as e:
             logger.error(f"Error creating game {kwargs}: {e}", exc_info=True)
-            raise
+            return {
+                "success": False,
+                "message": str(e)
+            }
 
-    async def game_join(self, **kwargs) -> (bool, dict):
+
+    async def game_join(self, **kwargs) -> dict:
         player_id = kwargs.get("player_id")
         game_id = kwargs.get("game_id")
         unit_type_str = kwargs.get("unit_type", UnitType.BOMBERMAN.value)
         
         if game_id not in self.games:
             logger.warning(f"Failed to join game: Game {game_id} not found")
-            return False, {"message": "Game not found"}
+            return {
+                "success": False,
+                "message": "Game not found"
+            }
 
         try:
             unit_type = UnitType(unit_type_str)
         except ValueError:
             unit_type = UnitType.BOMBERMAN
             
-        result = self.games[game_id].add_player(player_id, unit_type)
-        if result:
-            # Получаем начальное состояние игры с данными для текущего игрока
-            return True, {"game_state": self.games[game_id].get_state()}
-        return False, {"message": "Game is full"}
+        return self.games[game_id].add_player(player_id, unit_type)
+
 
     async def game_input(self, **kwargs) -> None:
         game_id = kwargs.get("game_id")
@@ -144,69 +150,98 @@ class GameCoordinator:
             logger.warning(f"Game {game_id} not found for input")
 
 
-    async def game_apply_weapon(self, **kwargs) -> (bool, dict):
+    async def game_apply_weapon(self, **kwargs) -> dict:
         """Применить оружие игрока (новый универсальный метод)"""
         game_id = kwargs.get("game_id")
         player_id = kwargs.get("player_id")
         weapon_type_str = kwargs.get("weapon_type", "bomb")  # По умолчанию бомба для совместимости
 
-        if game_id in self.games:
-            game = self.games[game_id]
-            player = game.get_player(player_id)
-
-            if player:
-                try:
-                    weapon_type = WeaponType(weapon_type_str)
-                except ValueError:
-                    weapon_type = player.primary_weapon  # Используем основное оружие игрока
-                
-                result = game.apply_weapon(player_id=player_id, weapon_type=weapon_type)
-                response = result, {}
-                if result:
-                    logger.info(f"Weapon {weapon_type.value} applied by player {player_id} in game {game_id}")
-                else:
-                    logger.debug(f"Failed to apply weapon {weapon_type.value} for player {player_id} in game {game_id}")
-            else:
-                response = False, {"message": "Player not found"}
-                logger.warning(f"Player {player_id} not found in game {game_id} for apply_weapon")
-        else:
-            response = False, {"message": "Game not found"}
+        if not game_id in self.games:
             logger.warning(f"Game {game_id} not found for apply_weapon")
-        return response
+            return {
+                "success": False,
+                "message": "Game not found"
+            }
 
-    async def game_get_state(self, **kwargs) -> (bool, dict):
+        game = self.games[game_id]
+        player = game.get_player(player_id)
+
+        if player:
+            try:
+                weapon_type = WeaponType(weapon_type_str)
+            except ValueError:
+                weapon_type = player.primary_weapon  # Используем основное оружие игрока
+
+            result = game.apply_weapon(player_id=player_id, weapon_type=weapon_type)
+
+            logger.info(f"Weapon {weapon_type.value} applied by player {player_id} in game {game_id}, result: {result}")
+            return result
+
+        else:
+            logger.warning(f"Player {player_id} not found in game {game_id} for apply_weapon")
+            return {
+                "success": False,
+                "message": "Player not found"
+            }
+
+
+    async def game_get_state(self, **kwargs) -> dict:
         game_id = kwargs.get("game_id")
 
         if game_id in self.games:
-            # Получаем состояние игры
-            game_state = self.games[game_id].get_state()
+            game_service = self.games[game_id]
+            game_state = game_service.get_state()
 
-            # Дополнительно получаем полную карту
-            if self.games[game_id].game_mode.map:
-                full_map = self.games[game_id].game_mode.map.get_map()
+            if game_service.game_mode.map:
+                full_map = game_service.game_mode.map.get_map()
             else:
-                full_map = {"grid": [], "width": 0, "height": 0}
+                return {
+                    "success": False,
+                    "message": "Map not found"
+                }
                 
             logger.debug(f"State requested for game {game_id}")
-            return True, {"game_state": game_state, "full_map": full_map}
+            return {
+                "success": True,
+                "game_state": game_state,
+                "full_map": full_map
+            }
         else:
             logger.warning(f"Game {game_id} not found for get_game_state")
-            return False, {"message": "Game not found"}
+            return {
+                "success": False,
+                "message": "Game not found"
+            }
 
-    async def game_player_disconnect(self, **kwargs) -> (bool, dict):
+    async def game_player_disconnect(self, **kwargs) -> dict:
         game_id = kwargs.get("game_id")
         player_id = kwargs.get("player_id")
 
         if game_id and game_id in self.games and player_id:
             game = self.games[game_id]
-            status_removing = game.remove_player(player_id)
-            logger.info(f"Player {player_id} disconnected from game {game_id}")
-            return status_removing, {"message": "Player disconnected"}
+            result = game.remove_player(player_id)
+            logger.info(f"Player {player_id} disconnected from game {game_id}, status: {result}")
+            return result
         else:
             if not game_id:
                 logger.warning("Missing game_id in disconnect request")
+                return {
+                    "success": False,
+                    "message": "Missing game_id"
+                }
             elif game_id not in self.games:
                 logger.warning(f"Game {game_id} not found for disconnect")
+                return {
+                    "success": False,
+                    "message": "Game not found"
+                }
             elif not player_id:
                 logger.warning(f"Missing player_id in disconnect request for game {game_id}")
-            return False, {}
+                return {
+                    "success": False,
+                    "message": "Missing player_id"
+                }
+            return {
+                "success": False,
+                "message": "Unknown error during disconnect"
+            }

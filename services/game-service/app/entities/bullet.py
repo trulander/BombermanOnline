@@ -1,4 +1,4 @@
-from .game_settings import GameSettings
+from ..models.game_models import GameSettings
 from .weapon import Weapon, WeaponType
 import logging
 

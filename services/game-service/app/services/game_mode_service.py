@@ -14,7 +14,7 @@ from ..entities.bomb import Bomb
 from ..entities.bullet import Bullet
 from ..entities.mine import Mine
 from ..entities.power_up import PowerUp, PowerUpType
-from ..entities.game_settings import GameSettings
+from ..models.game_models import GameSettings
 from ..services.map_service import MapService
 
 logger = logging.getLogger(__name__)
@@ -34,7 +34,6 @@ class GameModeService(ABC):
         self.weapons: Dict[str, Weapon] = {}
         self.power_ups: Dict[str, PowerUp] = {}
         self.map: Optional[Map] = None
-        self.score: int = 0
         self.level: int = 1
         self.game_over: bool = False
         self.last_update_time: float = time.time()
@@ -460,10 +459,8 @@ class GameModeService(ABC):
                     if self.map.is_breakable_block(check_x, check_y):
                         if self.map.destroy_block(check_x, check_y):
                             # Начисляем очки команде владельца бомбы
-                            if self.team_service:
-                                self.team_service.add_score_to_player_team(bomb.owner_id, self.settings.block_destroy_score)
-                            else:
-                                self.score += self.settings.block_destroy_score
+                            self.team_service.add_score_to_player_team(bomb.owner_id, self.settings.block_destroy_score)
+
                         
                             # Шанс появления усиления
                             if random.random() < self.settings.powerup_drop_chance:
@@ -590,10 +587,8 @@ class GameModeService(ABC):
                 enemy.destroy_animation_timer = 0
                 
                 # Начисляем очки команде атакующего игрока
-                if self.team_service and attacker_id:
-                    self.team_service.add_score_to_player_team(attacker_id, self.settings.enemy_destroy_score)
-                else:
-                    self.score += self.settings.enemy_destroy_score
+                self.team_service.add_score_to_player_team(attacker_id, self.settings.enemy_destroy_score)
+
 
                 # Шанс появления усиления
                 if random.random() < self.settings.enemy_powerup_drop_chance:
@@ -617,10 +612,8 @@ class GameModeService(ABC):
             power_up.apply_to_player(player)
             
             # Начисляем очки команде игрока
-            if self.team_service:
-                self.team_service.add_score_to_player_team(player.id, self.settings.powerup_collect_score)
-            else:
-                self.score += self.settings.powerup_collect_score
+            self.team_service.add_score_to_player_team(player.id, self.settings.powerup_collect_score)
+
                 
         except Exception as e:
             logger.error(f"Error applying power-up {power_up.type.name} to player {player.id}: {e}", exc_info=True)
@@ -663,10 +656,7 @@ class GameModeService(ABC):
         try:
             # Данные карты - только изменения
             map_data = {
-                'width': self.map.width if self.map else self.settings.default_map_width,
-                'height': self.map.height if self.map else self.settings.default_map_height,
                 'changedCells': self.map.get_changes() if self.map else [],
-                'cellSize': self.settings.cell_size
             }
             
             # Данные игроков
@@ -675,15 +665,12 @@ class GameModeService(ABC):
                 players_data[player_id] = {
                     'x': player.x,
                     'y': player.y,
-                    'width': player.width,
-                    'height': player.height,
                     'lives': player.lives,
                     'maxWeapons': player.max_weapons,
                     'weaponPower': player.weapon_power,
                     'invulnerable': player.invulnerable,
                     'color': player.color,
                     'unitType': player.unit_type.value,
-                    'teamId': player.team_id #self.team_service.get_player_team(player_id=player_id).id
                 }
 
             # Данные врагов
@@ -693,8 +680,6 @@ class GameModeService(ABC):
                     enemies_data.append({
                         'x': enemy.x,
                         'y': enemy.y,
-                        'width': enemy.width,
-                        'height': enemy.height,
                         'type': enemy.type.value,
                         'lives': enemy.lives,
                         'invulnerable': enemy.invulnerable,
@@ -707,8 +692,6 @@ class GameModeService(ABC):
                 weapon_data = {
                     'x': weapon.x,
                     'y': weapon.y,
-                    'width': weapon.width,
-                    'height': weapon.height,
                     'type': weapon.weapon_type.value,
                     'activated': weapon.activated,
                     'ownerId': weapon.owner_id
@@ -744,8 +727,6 @@ class GameModeService(ABC):
                 {
                     'x': power_up.x,
                     'y': power_up.y,
-                    'width': power_up.width,
-                    'height': power_up.height,
                     'type': power_up.type.value
                 }
                 for power_up in self.power_ups.values()
@@ -757,7 +738,6 @@ class GameModeService(ABC):
                 'weapons': weapons_data,
                 'powerUps': power_ups_data,
                 'map': map_data,
-                'score': self.score,
                 'level': self.level,
                 'gameOver': self.game_over
             }
@@ -779,7 +759,6 @@ class GameModeService(ABC):
                     'changedCells': [],
                     'cellSize': self.settings.cell_size
                 },
-                'score': self.score,
                 'level': self.level,
                 'gameOver': True
             }

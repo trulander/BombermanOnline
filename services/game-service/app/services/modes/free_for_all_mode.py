@@ -1,6 +1,6 @@
 import logging
 from ..game_mode_service import GameModeService
-from ...entities.game_settings import GameSettings
+from ...models.game_models import GameSettings
 from ...services.map_service import MapService
 
 logger = logging.getLogger(__name__)

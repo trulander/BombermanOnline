@@ -18,7 +18,7 @@ router = APIRouter(prefix="/maps", tags=["maps"])
 # Зависимость для получения репозитория
 async def get_map_repository() -> MapRepository:
     # TODO: Заменить на правильную инъекцию зависимости
-    from ..main import map_repository
+    from ..dependenties import map_repository
     return map_repository
 
 

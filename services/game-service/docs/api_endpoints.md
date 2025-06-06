@@ -1,9 +1,10 @@
 # HTTP API Endpoints
 
-Game Service предоставляет RESTful API для управления ресурсами, связанными с картами и командами. Все эндпоинты, описанные ниже, требуют аутентификации пользователя.
+Game Service предоставляет RESTful API для управления ресурсами, связанными с картами, командами и играми. Все эндпоинты, описанные ниже, требуют аутентификации пользователя.
 
 Префикс для всех эндпоинтов карт: `{settings.API_V1_STR}/maps` (например, `/games/api/v1/maps`).
 Префикс для всех эндпоинтов команд: `{settings.API_V1_STR}/teams` (например, `/games/api/v1/teams`).
+Префикс для всех эндпоинтов игр: `{settings.API_V1_STR}/games` (например, `/games/api/v1/games`).
 
 ## Общие эндпоинты (из `app/main.py`)
 
@@ -21,6 +22,206 @@ Game Service предоставляет RESTful API для управления 
 
 -   **`GET {settings.SWAGGER_URL}/openapi.json`** (например, `/games/docs/openapi.json`)
     -   Описание: Спецификация OpenAPI в формате JSON.
+
+## Эндпоинты для Игр (`/games`)
+
+Эти эндпоинты управляют игровыми сессиями, позволяя создавать, настраивать и контролировать игры.
+
+### `GET /games/`
+
+-   Описание: Получить список игр с фильтрацией.
+-   Параметры запроса (Query Parameters):
+    -   `status: Optional[GameStatus]`: Фильтр по статусу игры (`pending`, `starting`, `active`, `paused`, `finished`).
+    -   `game_mode: Optional[GameModeType]`: Фильтр по режиму игры (`campaign`, `free_for_all`, `capture_the_flag`).
+    -   `has_free_slots: Optional[bool]`: Только игры со свободными местами для игроков.
+    -   `min_players: Optional[int]`: Минимальное количество игроков (0-8).
+    -   `max_players: Optional[int]`: Максимальное количество игроков (1-8).
+    -   `limit: int`: Количество записей на страницу (по умолчанию 20, макс. 100).
+    -   `offset: int`: Смещение для пагинации (по умолчанию 0).
+-   Ответ: `List[GameListItem]` (см. [Модели данных для игр](#модели-данных-для-игр)).
+-   Аутентификация: Требуется.
+
+### `GET /games/{game_id}`
+
+-   Описание: Получить подробную информацию об игре.
+-   Параметр пути:
+    -   `game_id: str`: Уникальный идентификатор игры.
+-   Ответ: `GameInfo` (см. [Модели данных для игр](#модели-данных-для-игр)).
+-   Статус код при ошибке: `404 Not Found` (игра не найдена).
+-   Аутентификация: Требуется.
+
+### `POST /games/`
+
+-   Описание: Создать новую игру.
+-   Тело запроса: `GameCreateSettings` (см. [Модели данных для создания игры](./architecture/models.md#24-модели-для-создания-игры)).
+-   Ответ: `GameCreateResponse` (см. [Модели данных для игр](#модели-данных-для-игр)).
+-   Статус код при успехе: `201 Created`.
+-   Аутентификация: Требуется.
+
+### `PUT /games/{game_id}/settings`
+
+-   Описание: Обновить настройки игры (только в статусе `PENDING`).
+-   Параметр пути:
+    -   `game_id: str`: Уникальный идентификатор игры.
+-   Тело запроса: `GameSettingsUpdate` (см. [Модели данных для игр](#модели-данных-для-игр)).
+-   Ответ: `StandardResponse` (см. [Модели данных для игр](#модели-данных-для-игр)).
+-   Статус код при ошибке:
+    -   `404 Not Found` (игра не найдена)
+    -   `400 Bad Request` (игра не в статусе PENDING)
+-   Аутентификация: Требуется.
+
+### `PUT /games/{game_id}/status`
+
+-   Описание: Изменить статус игры (start/pause/resume).
+-   Параметр пути:
+    -   `game_id: str`: Уникальный идентификатор игры.
+-   Тело запроса: `GameStatusUpdate` (см. [Модели данных для игр](#модели-данных-для-игр)).
+    ```json
+    {
+      "action": "start" // "start", "pause", "resume"
+    }
+    ```
+-   Ответ: `StandardResponse` (см. [Модели данных для игр](#модели-данных-для-игр)).
+-   Статус код при ошибке:
+    -   `404 Not Found` (игра не найдена)
+    -   `400 Bad Request` (некорректное действие для текущего статуса)
+-   Аутентификация: Требуется.
+
+### `POST /games/{game_id}/players`
+
+-   Описание: Добавить игрока в игру.
+-   Параметр пути:
+    -   `game_id: str`: Уникальный идентификатор игры.
+-   Тело запроса: `PlayerAction` (см. [Модели данных для игр](#модели-данных-для-игр)).
+    ```json
+    {
+      "player_id": "player_123",
+      "unit_type": "bomberman" // "bomberman" или "tank"
+    }
+    ```
+-   Ответ: `StandardResponse` с дополнительными данными об игроке.
+-   Статус код при ошибке:
+    -   `404 Not Found` (игра не найдена)
+    -   `400 Bad Request` (игра заполнена или другие ограничения)
+-   Аутентификация: Требуется.
+
+### `DELETE /games/{game_id}/players/{player_id}`
+
+-   Описание: Удалить игрока из игры.
+-   Параметры пути:
+    -   `game_id: str`: Уникальный идентификатор игры.
+    -   `player_id: str`: Уникальный идентификатор игрока.
+-   Ответ: `StandardResponse`.
+-   Статус код при ошибке:
+    -   `404 Not Found` (игра или игрок не найдены)
+    -   `400 Bad Request` (игрок не в игре)
+-   Аутентификация: Требуется.
+
+### `DELETE /games/{game_id}`
+
+-   Описание: Удалить игру (только в статусе `PENDING` или `FINISHED`).
+-   Параметр пути:
+    -   `game_id: str`: Уникальный идентификатор игры.
+-   Ответ: `StandardResponse`.
+-   Статус код при успехе: `204 No Content`.
+-   Статус код при ошибке:
+    -   `404 Not Found` (игра не найдена)
+    -   `400 Bad Request` (игра в неподходящем статусе)
+-   Аутентификация: Требуется.
+
+## Модели данных для игр
+
+### `GameListItem`
+```json
+{
+  "game_id": "uuid",
+  "status": "pending",
+  "game_mode": "campaign",
+  "current_players_count": 2,
+  "max_players": 4,
+  "level": 1,
+  "created_at": "2024-01-01T00:00:00Z"
+}
+```
+
+### `GameInfo`
+```json
+{
+  "game_id": "uuid",
+  "status": "active",
+  "game_mode": "campaign",
+  "max_players": 4,
+  "current_players_count": 2,
+  "team_count": 1,
+  "level": 1,
+  "score": 150,
+  "game_over": false,
+  "players": [
+    {
+      "id": "player_1",
+      "name": "Player 1",
+      "unit_type": "bomberman",
+      "team_id": "team_1",
+      "lives": 3,
+      "x": 40.0,
+      "y": 40.0,
+      "color": "#3498db",
+      "invulnerable": false
+    }
+  ],
+  "teams": [
+    {
+      "id": "team_1",
+      "name": "Team Alpha",
+      "score": 150,
+      "player_ids": ["player_1", "player_2"],
+      "player_count": 2
+    }
+  ],
+  "settings": {
+    "game_mode": "campaign",
+    "max_players": 4,
+    "player_start_lives": 3,
+    "enable_enemies": true
+    // ... другие настройки
+  },
+  "created_at": "2024-01-01T00:00:00Z",
+  "updated_at": "2024-01-01T00:05:00Z"
+}
+```
+
+### `GameSettingsUpdate`
+```json
+{
+  "max_players": 6,
+  "team_count": 2,
+  "player_start_lives": 5,
+  "enable_enemies": false,
+  "respawn_enabled": true,
+  "friendly_fire": false,
+  "time_limit": 600,
+  "score_limit": 20,
+  "rounds_count": 10
+}
+```
+
+### `GameCreateResponse`
+```json
+{
+  "success": true,
+  "game_id": "uuid",
+  "message": "Game created successfully"
+}
+```
+
+### `StandardResponse`
+```json
+{
+  "success": true,
+  "message": "Operation completed successfully",
+  "data": null
+}
+```
 
 ## Эндпоинты для Команд (`/teams`)
 
@@ -257,4 +458,4 @@ Game Service предоставляет RESTful API для управления 
 
 -   Для операций создания (`POST`) и чтения (`GET`) обычно достаточно быть аутентифицированным пользователем.
 -   Для операций изменения (`PUT`) и удаления (`DELETE`) шаблонов карт требуется, чтобы текущий пользователь был либо создателем ресурса, либо имел роль `admin`.
--   Операции с командами доступны всем аутентифицированным пользователям, но только для игр в статусе `PENDING`. 
+-   Операции с командами и играми доступны всем аутентифицированным пользователям, но с ограничениями по статусу игры. 

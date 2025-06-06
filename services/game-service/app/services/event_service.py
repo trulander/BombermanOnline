@@ -116,22 +116,16 @@ class EventService:
         game_id = data.get("game_id")
         player_id = data.get("player_id")
 
-        if not game_id or not player_id:
-            response = {"success": False, "message": "Missing game_id or player_id"}
-            logger.warning(f"Failed to join game: Missing game_id or player_id. Data: {data}")
+        if ['unit_type', 'game_id', 'player_id'] not in data:
+            logger.error(f"Failed to join game: Missing game_id or player_id or unit_type. Data: {data}")
+            return {"success": False, "message": "Missing game_id or player_id or unit_type"}
         else:
-            status, result = await callback(game_id=game_id, player_id=player_id)
-            if status:
-                response = {
-                    "success": True,
-                    "player_id": player_id,
-                    "game_state": result.get("game_state"),
-                }
+            result = await callback(**data)
+            if result.get('success'):
                 logger.info(f"Player {player_id} joined game {game_id}")
             else:
-                response = {"success": False, "message": result.get("message")}
                 logger.warning(f"Failed to join game: Game {game_id} {result.get('message')}")
-        return response
+            return result
 
     async def handle_input(self, data: dict, callback: Callable) -> None:
         """Обработчик ввода игрока"""
@@ -139,34 +133,28 @@ class EventService:
 
     async def handle_place_bomb(self, data: dict, callback: Callable) -> dict:
         """Обработчик размещения бомбы (совместимость со старым API)"""
-        status, result = await callback(**data)
-        return {"success": status, **result}
+        result = await callback(**data)
+        return result
 
     async def handle_apply_weapon(self, data: dict, callback: Callable) -> dict:
         """Обработчик применения оружия"""
-        status, result = await callback(**data)
-        return {"success": status, **result}
+        result = await callback(**data)
+        return result
 
     async def handle_get_game_state(self, data: dict, callback: Callable) -> dict:
         """Обработчик получения состояния игры"""
         game_id = data.get("game_id")
-        status, result = await callback(**data)
-        if status:
-            response = {
-                "success": True, **result
-            }
-            logger.debug(f"State requested for game {game_id}")
-        else:
-            response = {"success": False, **result}
-
-        return response
+        result = await callback(**data)
+        if not result.get('success'):
+            logger.warning(f"State requested for game {game_id}, result: {result}")
+        return result
 
     async def handle_player_disconnect(self, data: dict, callback: Callable) -> dict:
         """Обработчик отключения игрока"""
         game_id = data.get("game_id")
         player_id = data.get("player_id")
-        status, result = await callback(**data)
-        if status:
+        result = await callback(**data)
+        if result.get('success'):
             # Уведомляем других игроков об отключении
             await self.nats_repository.publish_event(
                 subject_base="game.player_disconnected",
@@ -174,5 +162,5 @@ class EventService:
                 game_id=game_id
             )
             logger.info(f"Sent player_disconnected notification for player {player_id} in game {game_id}")
-            return {"success": True}
-        return {"success": False, **result} 
+
+        return result

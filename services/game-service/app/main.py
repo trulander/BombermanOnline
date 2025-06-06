@@ -8,35 +8,17 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette_exporter import PrometheusMiddleware, handle_metrics
 from fastapi.responses import JSONResponse
 
-from app.repositories.postgres_repository import PostgresRepository
-from app.repositories.redis_repository import RedisRepository
+from app.dependenties import nats_repository, redis_repository, postgres_repository, event_service, game_coordinator
 from .config import settings
 from .logging_config import configure_logging
-from .services.event_service import EventService
-from .repositories.nats_repository import NatsRepository
-from .coordinators.game_coorditanor import GameCoordinator
 from .routes.map_routes import router as map_router
 from .routes.team_routes import router as team_router
-from .repositories.map_repository import MapRepository
+from .routes.game_routes import router as game_router
 
 # Настройка логирования
 configure_logging()
 logger = logging.getLogger(__name__)
 
-# Глобальные переменные для сервисов
-
-# Глобальный экземпляр репозитория
-nats_repository = NatsRepository()
-redis_repository = RedisRepository()
-postgres_repository = PostgresRepository()
-map_repository = MapRepository(redis_repository=redis_repository, postgres_repository=postgres_repository)
-
-event_service = EventService(nats_repository=nats_repository)
-
-game_coordinator = GameCoordinator(
-    notification_service=event_service,
-    map_repository=map_repository
-)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -51,7 +33,7 @@ async def lifespan(app: FastAPI):
         
         # Инициализируем обработчики NATS
         await game_coordinator.initialize_handlers()
-        
+
         # Запускаем игровой цикл
         asyncio.create_task(game_coordinator.start_game_loop())
         
@@ -106,6 +88,7 @@ try:
     # Подключаем роуты
     app.include_router(map_router, prefix=settings.API_V1_STR)
     app.include_router(team_router, prefix=settings.API_V1_STR)
+    app.include_router(game_router, prefix=settings.API_V1_STR)
     
     # Добавляем middleware для авторизации
     @app.middleware("http")

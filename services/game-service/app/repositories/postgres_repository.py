@@ -1,12 +1,10 @@
-from sqlalchemy import create_engine, text
+from sqlalchemy import text
 from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 from contextlib import asynccontextmanager
 import sqlalchemy.ext.asyncio as sa_asyncio
-import asyncpg
+from app.config import settings
 import logging
 
-from app.config import settings
 
 logger = logging.getLogger(__name__)
 
