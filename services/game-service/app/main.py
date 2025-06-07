@@ -14,6 +14,7 @@ from .logging_config import configure_logging
 from .routes.map_routes import router as map_router
 from .routes.team_routes import router as team_router
 from .routes.game_routes import router as game_router
+from .routes.entity_routes import router as entity_router
 
 # Настройка логирования
 configure_logging()
@@ -89,6 +90,7 @@ try:
     app.include_router(map_router, prefix=settings.API_V1_STR)
     app.include_router(team_router, prefix=settings.API_V1_STR)
     app.include_router(game_router, prefix=settings.API_V1_STR)
+    app.include_router(entity_router, prefix=settings.API_V1_STR)
     
     # Добавляем middleware для авторизации
     @app.middleware("http")

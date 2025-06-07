@@ -117,6 +117,33 @@ cd BombermanOnline
 docker-compose -f infra/docker-compose.yml up -d
 ```
 
+### Установка зависимостей
+
+```bash
+# Установка зависимостей для всех Python сервисов с помощью uv
+uv sync
+```
+
+### Запуск отдельных сервисов (для разработки)
+
+Для запуска отдельных сервисов можно использовать следующий подход:
+
+1.  **Запуск инфраструктурных компонентов**:
+
+    ```bash
+    docker-compose -f infra/docker-compose.yml up -d postgres redis nats
+    ```
+
+2.  **Запуск конкретного сервиса (например, game-service)**:
+
+    ```bash
+    # Убедитесь, что вы находитесь в корне проекта BombermanOnline
+    # Запустите сервис с перезагрузкой для отслеживания изменений кода
+    uvicorn app.main:app --host 0.0.0.0 --port 5002 --reload
+    ```
+
+    Повторите для `auth-service` и `webapi-service`, изменив порт и путь к `app.main:app` соответственно.
+
 ### Доступ к сервисам
 
 После запуска сервисы доступны по следующим адресам:
@@ -230,12 +257,14 @@ npm run build
 - PostgreSQL для основной базы данных
 - Redis для кэширования и состояний
 - NATS для межсервисной коммуникации
+- `uv` для управления зависимостями Python
 
 ### DevOps
 - Docker + Docker Compose
 - Traefik как API Gateway
 - Prometheus + Grafana для мониторинга
 - Loki + Fluent Bit для логирования
+- Dockerfile для каждого сервиса
 
 ## Лицензия
 
