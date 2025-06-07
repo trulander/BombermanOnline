@@ -8,4 +8,4 @@ echo "Применяем миграции..."
 uv run alembic upgrade head
 
 echo "Запускаем приложение..."
-exec uv run uvicorn auth-service.app.main:app --host 0.0.0.0 --port 5003 
+exec uv run uvicorn app.main:app --host 0.0.0.0 --port 5003

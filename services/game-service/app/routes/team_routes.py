@@ -199,7 +199,7 @@ async def remove_player_from_team(
             detail="Игроков можно удалять из команд только в играх со статусом PENDING"
         )
     
-    if not game_service.team_service.remove_player_from_team(team_id, player_id):
+    if not game_service.team_service.remove_player_from_team(player_id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Команда или игрок не найдены"

@@ -15,19 +15,14 @@ RUN uv sync
 ## Копирование кода приложения
 #COPY app/ ./app/
 
-# Создание директорий для приложения
-RUN mkdir -p ./app/templates ./app/static ./migrations/versions ./scripts
+## Создание директорий для приложения
+RUN mkdir -p ./app/templates ./app/static
 
-# Копирование файлов для миграций
-COPY migrations/script.py.mako ./migrations/
-COPY alembic.ini ./
+## Копирование файлов для миграций
+#COPY migrations/script.py.mako ./migrations/
+#COPY alembic.ini ./
 
 # Порт, который будет слушать приложение
 EXPOSE 5003
 
-# Скрипт запуска с применением миграций
-COPY docker-entrypoint.sh ./
-RUN chmod +x docker-entrypoint.sh
-
-# Запуск приложения с применением миграций
-CMD ["./docker-entrypoint.sh"]
+CMD ["uv", "run", "uvicorn", "auth-service.app.main:app", "--host", "0.0.0.0", "--port", "5003"]

@@ -64,9 +64,9 @@ class TeamService:
         team.add_player(player_id)
         return True
     
-    def remove_player_from_team(self, team_id: str, player_id: str) -> bool:
+    def remove_player_from_team(self, player_id: str) -> bool:
         """Удаляет игрока из команды."""
-        team = self.teams.get(team_id)
+        team = self.get_player_team(player_id=player_id)
         if not team:
             return False
         

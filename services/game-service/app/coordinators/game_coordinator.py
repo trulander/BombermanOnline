@@ -69,19 +69,20 @@ class GameCoordinator:
     async def game_create(self, **kwargs) -> dict:
         """Создать новую игру с настройками"""
         try:
+            game_id = str(uuid4())
+            logger.info(f"Creating new game settings for game {game_id}, kwargs: {kwargs}")
+
             new_game_settings = kwargs.get("new_game_settings")
             if new_game_settings and isinstance(new_game_settings, GameCreateSettings):
                 game_settings = GameSettings(**new_game_settings.model_dump())
             else:
-                game_id = str(uuid4())
-                logger.info(f"Creating new game settings for game {game_id}")
+
                 game_settings = GameSettings(
-                    game_id=game_id,
                     game_mode = kwargs.get("game_mode", GameModeType.CAMPAIGN.value),
                     map_template_id = kwargs.get("map_template_id"),
                     map_chain_id = kwargs.get("map_chain_id")
                 )
-
+            game_settings.game_id = game_id
             # Создаем сервис карт
             map_service = MapService(
                 map_repository=self.map_repository,

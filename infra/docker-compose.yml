@@ -7,7 +7,7 @@ services:
       dockerfile: Dockerfile
 #    command: uv run uvicorn webapi-service.app.main:app --host 0.0.0.0 --port 5001
     volumes:
-      - ../services/webapi-service:/app/webapi-service
+      - ../services/webapi-service/app:/app/webapi-service/app
       - webapi_logs:/var/log/webapi-service
     environment:
       - PYTHONUNBUFFERED=1
@@ -35,7 +35,7 @@ services:
       dockerfile: Dockerfile
 #    command: uv run --host 0.0.0.0 --port 8001
     volumes:
-      - ../services/game-service:/app/game-service
+      - ../services/game-service/app:/app/game-service/app
       - game_logs:/var/log/game-service
     environment:
       - PYTHONUNBUFFERED=1
@@ -67,7 +67,7 @@ services:
       context: ../services/auth-service
       dockerfile: Dockerfile
     volumes:
-      - ../services/auth-service:/app/auth-service
+      - ../services/auth-service/app:/app/auth-service/app
       - auth_logs:/var/log/auth-service
     environment:
       - PYTHONUNBUFFERED=1

@@ -100,15 +100,8 @@ class EventService:
 
     async def handle_create_game(self, data: dict, callback: Callable) -> dict:
         """Обработчик создания новой игры"""
-        print(data)
-        game_id = data.get("game_id")
-        if game_id:
-            await callback(game_id=game_id)
-            response = {"success": True, "game_id": game_id}
-            logger.info(f"Game created with ID: {game_id}")
-        else:
-            response = {"success": False, "message": "Missing game_id"}
-            logger.warning("Failed to create game: Missing game_id")
+        response = await callback(**data)
+        logger.info(f"Game created status: {response}")
         return response
 
     async def handle_join_game(self, data: dict, callback: Callable) -> dict:
@@ -116,9 +109,9 @@ class EventService:
         game_id = data.get("game_id")
         player_id = data.get("player_id")
 
-        if ['unit_type', 'game_id', 'player_id'] not in data:
-            logger.error(f"Failed to join game: Missing game_id or player_id or unit_type. Data: {data}")
-            return {"success": False, "message": "Missing game_id or player_id or unit_type"}
+        if not game_id and not player_id:
+            logger.error(f"Failed to join game: Missing game_id or player_id. Data: {data}")
+            return {"success": False, "message": "Missing game_id or player_id"}
         else:
             result = await callback(**data)
             if result.get('success'):

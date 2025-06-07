@@ -1,5 +1,7 @@
 from datetime import datetime
 from typing import Optional, List
+from uuid import uuid4
+
 from pydantic import BaseModel, Field
 
 
@@ -110,7 +112,7 @@ class StandardResponse(BaseModel):
 
 
 class GameCreateSettings(BaseModel):
-    game_id: str = None
+    # game_id: str = str(uuid4())
     # Режим игры
     game_mode: GameModeType = GameModeType.CAMPAIGN
     # Настройки игроков и команд

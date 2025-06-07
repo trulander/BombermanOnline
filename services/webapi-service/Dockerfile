@@ -10,7 +10,7 @@ COPY pyproject.toml ./
 
 # Устанавливаем зависимости через uv (с флагом --system)
 RUN uv pip install --no-cache-dir --system -e .
-
+RUN uv sync
 ## Сделаем приложение доступным для запуска как дев-сервер
 #VOLUME ["/app"]
 
