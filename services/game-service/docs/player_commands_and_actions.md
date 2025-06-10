@@ -20,6 +20,7 @@
     {
       "up": false, "down": false, "left": true, "right": false, // Движение
       "weapon1": false, // Основное оружие/действие
+      "action1": false, // основное оружие доп действие
       "weapon2": false  // Вторичное оружие/действие
     }
     ```
@@ -73,16 +74,17 @@
 
 -   **`UnitType.BOMBERMAN`**:
     -   `primary_weapon`: `WeaponType.BOMB`.
-    -   `secondary_weapon`: `WeaponType.MINE`.
-    -   `player.max_weapons`: Определяет, сколько бомб игрок может одновременно разместить. Увеличивается усилением `PowerUpType.BOMB_UP`.
-    -   `player.weapon_power`: Определяет радиус взрыва бомб. Увеличивается усилением `PowerUpType.BOMB_POWER_UP`.
+    -   `player.primary_weapon_max_count`: Определяет, сколько бомб игрок может одновременно разместить. Увеличивается усилением `PowerUpType.BOMB_UP`.
+    -   `player.primary_weapon_power`: Определяет радиус взрыва бомб. Увеличивается усилением `PowerUpType.BOMB_POWER_UP`.
     -   Движение стандартное в 4 направлениях.
 
 -   **`UnitType.TANK`**:
     -   `primary_weapon`: `WeaponType.BULLET`.
     -   `secondary_weapon`: `WeaponType.MINE`.
-    -   `player.max_weapons`: Обычно больше (например, 10), что позволяет выпускать несколько пуль подряд (логика кулдауна между выстрелами обрабатывается в `GameModeService`).
-    -   `player.weapon_power`: Может влиять на урон от пуль (если такая механика будет добавлена) или другие их характеристики.
+    -   `player.primary_weapon_max_count`: Обычно больше (например, 2), что позволяет выпускать несколько пуль подряд (логика кулдауна между выстрелами обрабатывается в `GameModeService`).
+    -   `player.primary_weapon_power`: Может влиять на урон от пуль (если такая механика будет добавлена) или другие их характеристики.
+    -   `player.secondary_weapon_max_count`:
+    -   `player.secondary_weapon_power`:
     -   `player.direction`: Обновляется на основе команд движения и используется для определения направления выстрела пули. Танк стреляет в направлении, в котором "смотрит".
 
 ### 4.2. Игровые Режимы (`GameModeService` и его реализации)

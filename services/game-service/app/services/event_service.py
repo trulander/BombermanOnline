@@ -17,7 +17,6 @@ class NatsEvents(Enum):
     GAME_CREATE = "game.create"
     GAME_JOIN = "game.join"
     GAME_INPUT = "game.input"
-    GAME_PLACE_BOMB = "game.place_bomb"
     GAME_APPLY_WEAPON = "game.apply_weapon"
     GAME_GET_STATE = "game.get_state"
     GAME_DISCONNECT = "game.disconnect"
@@ -65,8 +64,6 @@ class EventService:
                 cb = subscribe_wrapper(handler=self.handle_join_game)
             case NatsEvents.GAME_INPUT:
                 cb = subscribe_wrapper(handler=self.handle_input)
-            case NatsEvents.GAME_PLACE_BOMB:
-                cb = subscribe_wrapper(handler=self.handle_place_bomb)
             case NatsEvents.GAME_APPLY_WEAPON:
                 cb = subscribe_wrapper(handler=self.handle_apply_weapon)
             case NatsEvents.GAME_GET_STATE:
@@ -124,10 +121,6 @@ class EventService:
         """Обработчик ввода игрока"""
         await callback(**data)
 
-    async def handle_place_bomb(self, data: dict, callback: Callable) -> dict:
-        """Обработчик размещения бомбы (совместимость со старым API)"""
-        result = await callback(**data)
-        return result
 
     async def handle_apply_weapon(self, data: dict, callback: Callable) -> dict:
         """Обработчик применения оружия"""

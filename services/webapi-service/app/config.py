@@ -1,3 +1,4 @@
+from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
@@ -37,9 +38,17 @@ class Settings(BaseSettings):
     
     # Logging settings
     LOG_LEVEL: str = "INFO"
-    LOG_FORMAT: str = "json"
+    LOG_FORMAT: str = "text"#json
     TRACE_CALLER: bool = True
-    
+
+    @computed_field
+    @property
+    def REDIS_URI(self) -> str:
+        """Получить URL для подключения к Redis"""
+        if self.REDIS_PASSWORD:
+            return f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+        return f"redis://{self.REDIS_HOST}:{self.REDIS_PORT}/{self.REDIS_DB}"
+
     model_config = SettingsConfigDict(env_file='.env', env_file_encoding='utf-8')
 
 settings = Settings() 

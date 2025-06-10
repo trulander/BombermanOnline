@@ -21,14 +21,12 @@ class SocketIOService:
     ) -> None:
         """Initialize Socket.IO server"""
         # Используем Redis для управления комнатами и состоянием Socket.IO
-        redis_url = f"redis://{settings.REDIS_HOST}:{settings.REDIS_PORT}"
-        if settings.REDIS_PASSWORD:
-            redis_url = f"redis://:{settings.REDIS_PASSWORD}@{settings.REDIS_HOST}:{settings.REDIS_PORT}"
+
         
         # Используем наш класс с метриками вместо стандартного AsyncServer
         self.sio = MetricsSocketServer(
             async_mode='asgi',
-            client_manager=AsyncRedisManager(redis_url),
+            client_manager=AsyncRedisManager(settings.REDIS_URI),
             cors_allowed_origins=settings.CORS_ORIGINS,
             cors_credentials=settings.CORS_CREDENTIALS
         )
@@ -44,7 +42,6 @@ class SocketIOService:
         self.sio.on("create_game", self.io_handle_create_game)
         self.sio.on("join_game", self.io_handle_join_game)
         self.sio.on("input", self.io_handle_input)
-        self.sio.on("place_bomb", self.io_handle_place_bomb)
         self.sio.on("apply_weapon", self.io_handle_apply_weapon)
         self.sio.on("get_game_state", self.io_handle_get_game_state)
 
@@ -106,17 +103,6 @@ class SocketIOService:
         except Exception as e:
             logger.error(f"Error handling input: {e}", exc_info=True)
 
-    async def io_handle_place_bomb(self, sid_user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Handle bomb placement"""
-        try:
-            game_id = data.get('game_id')
-            
-            # Отправляем запрос на установку бомбы в game-service через NATS
-            response = await self.game_service.place_bomb(game_id=game_id, sid_user_id=sid_user_id)
-            return response
-        except Exception as e:
-            logger.error(f"Error placing bomb: {e}", exc_info=True)
-            return {"success": False, "message": str(e)}
 
     async def io_handle_apply_weapon(self, sid_user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle weapon application"""
