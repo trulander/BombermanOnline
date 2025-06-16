@@ -17,7 +17,7 @@ class NatsEvents(Enum):
     GAME_CREATE = "game.create"
     GAME_JOIN = "game.join"
     GAME_INPUT = "game.input"
-    GAME_APPLY_WEAPON = "game.apply_weapon"
+    GAME_PLACE_WEAPON = "game.place_weapon"
     GAME_GET_STATE = "game.get_state"
     GAME_DISCONNECT = "game.disconnect"
 
@@ -64,8 +64,8 @@ class EventService:
                 cb = subscribe_wrapper(handler=self.handle_join_game)
             case NatsEvents.GAME_INPUT:
                 cb = subscribe_wrapper(handler=self.handle_input)
-            case NatsEvents.GAME_APPLY_WEAPON:
-                cb = subscribe_wrapper(handler=self.handle_apply_weapon)
+            case NatsEvents.GAME_PLACE_WEAPON:
+                cb = subscribe_wrapper(handler=self.handle_place_weapon)
             case NatsEvents.GAME_GET_STATE:
                 cb = subscribe_wrapper(handler=self.handle_get_game_state)
             case NatsEvents.GAME_DISCONNECT:
@@ -79,20 +79,20 @@ class EventService:
         """Отключение от NATS сервера"""
         await self.nats_repository.disconnect()
 
-    async def send_game_update(self, game_id: str, data: dict) -> bool:
+    async def send_game_update(self, data: dict) -> bool:
         """Отправка обновления игры"""
         return await self.nats_repository.publish_event(
             subject_base="game.update",
             payload=data,
-            game_id=game_id
         )
 
     async def send_game_over(self, game_id: str) -> bool:
         """Отправка события окончания игры"""
         return await self.nats_repository.publish_event(
             subject_base="game.over",
-            payload={},
-            game_id=game_id
+            payload={
+                "game_id": game_id,
+            }
         )
 
     async def handle_create_game(self, data: dict, callback: Callable) -> dict:
@@ -122,7 +122,7 @@ class EventService:
         await callback(**data)
 
 
-    async def handle_apply_weapon(self, data: dict, callback: Callable) -> dict:
+    async def handle_place_weapon(self, data: dict, callback: Callable) -> dict:
         """Обработчик применения оружия"""
         result = await callback(**data)
         return result
@@ -144,8 +144,10 @@ class EventService:
             # Уведомляем других игроков об отключении
             await self.nats_repository.publish_event(
                 subject_base="game.player_disconnected",
-                payload={"player_id": player_id},
-                game_id=game_id
+                payload={
+                    "player_id": player_id,
+                    "game_id": game_id,
+                }
             )
             logger.info(f"Sent player_disconnected notification for player {player_id} in game {game_id}")
 

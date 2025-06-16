@@ -27,7 +27,7 @@ class GameCoordinator:
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_CREATE, callback=self.game_create)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_JOIN, callback=self.game_join)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_INPUT, callback=self.game_input)
-        await self.notification_service.subscribe_handler(event=NatsEvents.GAME_APPLY_WEAPON, callback=self.game_apply_weapon)
+        await self.notification_service.subscribe_handler(event=NatsEvents.GAME_PLACE_WEAPON, callback=self.game_place_weapon)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_GET_STATE, callback=self.game_get_state)
         await self.notification_service.subscribe_handler(event=NatsEvents.GAME_DISCONNECT, callback=self.game_player_disconnect)
 
@@ -49,7 +49,7 @@ class GameCoordinator:
                         active_games += 1
                         updated_state = await game.update()
                         # Отправляем обновление через NATS всем подключенным клиентам
-                        await self.notification_service.send_game_update(game_id=game_id, data=updated_state)
+                        await self.notification_service.send_game_update(data=updated_state)
                     else:
                         # Игра окончена, отправляем уведомление всем игрокам
                         logger.info(f"Game {game_id} is over or has no players, sending game over notification")
@@ -151,14 +151,14 @@ class GameCoordinator:
             logger.warning(f"Game {game_id} not found for input")
 
 
-    async def game_apply_weapon(self, **kwargs) -> dict:
+    async def game_place_weapon(self, **kwargs) -> dict:
         """Применить оружие игрока (новый универсальный метод)"""
         game_id = kwargs.get("game_id")
         player_id = kwargs.get("player_id")
         weapon_type_str = kwargs.get("weapon_type", "bomb")  # По умолчанию бомба для совместимости
 
         if not game_id in self.games:
-            logger.warning(f"Game {game_id} not found for apply_weapon")
+            logger.warning(f"Game {game_id} not found for place_weapon")
             return {
                 "success": False,
                 "message": "Game not found"
@@ -173,13 +173,13 @@ class GameCoordinator:
             except ValueError:
                 weapon_type = player.primary_weapon  # Используем основное оружие игрока
 
-            result = game.apply_weapon(player_id=player_id, weapon_type=weapon_type)
+            result = game.place_weapon(player_id=player_id, weapon_type=weapon_type)
 
             logger.info(f"Weapon {weapon_type.value} applied by player {player_id} in game {game_id}, result: {result}")
             return result
 
         else:
-            logger.warning(f"Player {player_id} not found in game {game_id} for apply_weapon")
+            logger.warning(f"Player {player_id} not found in game {game_id} for place_weapon")
             return {
                 "success": False,
                 "message": "Player not found"
@@ -192,20 +192,11 @@ class GameCoordinator:
         if game_id in self.games:
             game_service = self.games[game_id]
             game_state = game_service.get_state()
-
-            if game_service.game_mode.map:
-                full_map = game_service.game_mode.map.get_map()
-            else:
-                return {
-                    "success": False,
-                    "message": "Map not found"
-                }
                 
             logger.debug(f"State requested for game {game_id}")
             return {
                 "success": True,
                 "game_state": game_state,
-                "full_map": full_map
             }
         else:
             logger.warning(f"Game {game_id} not found for get_game_state")

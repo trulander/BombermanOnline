@@ -1,8 +1,16 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Tuple, Any, TYPE_CHECKING
 from datetime import datetime
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, Integer, String, Text, JSON, Boolean, DateTime, Float
 from sqlalchemy.ext.declarative import declarative_base
+
+from app.entities import EnemyType, PowerUpType, CellType
+from app.entities.game_status import GameStatus
+from app.entities.player import UnitType
+from app.entities.weapon import WeaponType
+
+if TYPE_CHECKING:
+    from app.models.game_models import GameTeamInfo
 
 Base = declarative_base()
 
@@ -226,4 +234,70 @@ class MapChainFilter(BaseModel):
     created_by: Optional[str] = None
     is_active: Optional[bool] = True
     limit: int = Field(20, ge=1, le=100)
-    offset: int = Field(0, ge=0) 
+    offset: int = Field(0, ge=0)
+
+
+class PlayerState(BaseModel):
+    x: float
+    y: float
+    lives: int
+    primary_weapon: WeaponType
+    primary_weapon_max_count: int
+    primary_weapon_power: int
+    secondary_weapon: Optional[WeaponType] = None
+    secondary_weapon_max_count: Optional[int] = None
+    secondary_weapon_power: Optional[int] = None
+    invulnerable: bool
+    color: str
+    unit_type: UnitType
+
+
+class EnemyState(BaseModel):
+    x: float
+    y: float
+    type: EnemyType
+    lives: int
+    invulnerable: bool
+    destroyed: bool
+
+
+class WeaponState(BaseModel):
+    x: float
+    y: float
+    type: WeaponType
+    direction: Optional[tuple[float, float]] = None
+    activated: bool
+    exploded: bool
+    explosion_cells: list[tuple[int, int]]
+    owner_id: str
+
+
+class PowerUpState(BaseModel):
+    x: float
+    y: float
+    type: PowerUpType
+
+
+class MapData(BaseModel):
+    grid: list[int, int]
+    width: int
+    height: int
+
+
+class MapState(BaseModel):
+    players: dict[str, PlayerState]
+    enemies: list[EnemyState]
+    weapons: list[WeaponState]
+    power_ups: list[PowerUpState]
+    map: MapData
+    level: int
+    error: Optional[bool] = None
+    is_active: Optional[bool] = None
+    status: GameStatus = None
+    teams: dict[str, "GameTeamInfo"] = None
+
+
+class MapUpdate(BaseModel):
+    x: int
+    y: int
+    type: CellType

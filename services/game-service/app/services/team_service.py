@@ -177,9 +177,9 @@ class TeamService:
         
         return errors
     
-    def get_teams_state(self) -> dict:
+    def get_teams_state(self) -> dict[str, dict]:
         """Возвращает состояние всех команд."""
         return {
-            team.id: team.to_dict() 
+            team.id: team.to_dict()
             for team in self.teams.values()
-        } 
+        }

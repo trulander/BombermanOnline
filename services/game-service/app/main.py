@@ -1,5 +1,7 @@
 import asyncio
 import logging
+import os
+
 import uvicorn
 import traceback
 from contextlib import asynccontextmanager
@@ -26,7 +28,7 @@ async def lifespan(app: FastAPI):
     # Startup
     try:
         logger.info("Starting Game service")
-        
+        logger.info(f"Hostname: {settings.HOSTNAME}")
         # Инициализируем подключения к базам данных
         await nats_repository.get_nc()
         await redis_repository.get_redis()

@@ -94,15 +94,14 @@ class NatsRepository:
         logger.error(f"Failed to publish to NATS subject: {subject} after {max_retries} retries.")
         return False
 
-    async def publish_event(self, subject_base: str, payload: dict, game_id: Optional[str] = None, specific_suffix: Optional[str] = None) -> bool:
+    async def publish_event(self, subject_base: str, payload: dict, specific_suffix: Optional[str] = None) -> bool:
         """
         Publishes a JSON payload to a NATS subject.
         Constructs subject like: {subject_base}.{game_id}[.{specific_suffix}]
         Example: game.update.game123 or achievement.unlocked.game123.player456
         """
         subject_parts = [subject_base]
-        if game_id:
-            subject_parts.append(game_id)
+        subject_parts.append(settings.WEBAPI_SERVICE_HOSTNAME) # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
         if specific_suffix:
             subject_parts.append(specific_suffix)
         
@@ -128,4 +127,6 @@ class NatsRepository:
         Подписка на события NATS
         """
         nc = await self.get_nc()
-        await nc.subscribe(subject, cb=callback) 
+        #шардируем евенты с HOSTNAME для распределения по инстансам сервиса
+        sharded_subject = f"{subject}.{settings.HOSTNAME}"
+        await nc.subscribe(sharded_subject, cb=callback)

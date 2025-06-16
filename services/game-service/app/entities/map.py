@@ -2,6 +2,7 @@ import logging
 from typing import List, Dict, Tuple
 import numpy as np
 from .cell_type import CellType
+from ..models.map_models import MapData, MapUpdate
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ class Map:
             # Initialize grid with empty cells using numpy array
             self.grid: np.ndarray = np.zeros((height, width), dtype=np.int8)
             # Для отслеживания изменений на карте
-            self.changed_cells: List[Dict[str, int]] = []
+            self.changed_cells: list[MapUpdate] = []
             
             logger.info(f"Map initialized with dimensions {width}x{height}")
         except Exception as e:
@@ -63,11 +64,13 @@ class Map:
             
             # Отслеживаем изменения если тип действительно изменился
             if old_type != int(cell_type):
-                self.changed_cells.append({
-                    'x': x,
-                    'y': y,
-                    'type': int(cell_type)
-                })
+                self.changed_cells.append(
+                    MapUpdate(
+                        x = x,
+                        y = y,
+                        type = cell_type
+                    )
+                )
                 logger.debug(f"Cell type changed at ({x}, {y}): {CellType(old_type).name} -> {cell_type.name}")
             
         except Exception as e:
@@ -89,14 +92,7 @@ class Map:
     def is_empty(self, x: int, y: int) -> bool:
         """Проверяет, является ли ячейка пустой"""
         return self.get_cell_type(x, y) == CellType.EMPTY
-    
-    def is_player_spawn(self, x: int, y: int) -> bool:
-        """Проверяет, является ли ячейка точкой спавна игрока"""
-        return self.get_cell_type(x, y) == CellType.PLAYER_SPAWN
-    
-    def is_enemy_spawn(self, x: int, y: int) -> bool:
-        """Проверяет, является ли ячейка точкой спавна врага"""
-        return self.get_cell_type(x, y) == CellType.ENEMY_SPAWN
+
     
     def destroy_block(self, x: int, y: int) -> bool:
         """Разрушает разрушаемый блок и отслеживает изменения"""
@@ -117,7 +113,11 @@ class Map:
             logger.error(f"Error destroying block at ({x}, {y}): {e}", exc_info=True)
             return False
     
-    def get_empty_cells(self, exclude_near_players: bool = False, min_distance_from_players: int = 3) -> List[Tuple[int, int]]:
+    def get_empty_cells(
+            self,
+            exclude_near_players: bool = False,
+            min_distance_from_players: int = 3
+    ) -> List[Tuple[int, int]]:
         """Получить список пустых клеток на карте с возможностью исключения клеток рядом с игроками"""
         try:
             # Находим все пустые клетки с помощью numpy
@@ -164,7 +164,11 @@ class Map:
             logger.error(f"Error getting player spawn positions: {e}", exc_info=True)
             return []
     
-    def get_enemy_spawn_positions(self, exclude_near_players: bool = True, min_distance_from_players: int = 3) -> List[Tuple[int, int]]:
+    def get_enemy_spawn_positions(
+            self,
+            exclude_near_players: bool = True,
+            min_distance_from_players: int = 3
+    ) -> List[Tuple[int, int]]:
         """Получить позиции спавна врагов с возможностью исключения позиций рядом с игроками"""
         try:
             spawn_mask = (self.grid == CellType.ENEMY_SPAWN)
@@ -196,45 +200,23 @@ class Map:
             logger.error(f"Error getting enemy spawn positions: {e}", exc_info=True)
             return []
 
-    
-    def is_position_in_player_start_area(self, x: int, y: int, corner_size: int = 3) -> bool:
-        """Проверить, находится ли позиция в стартовой зоне игрока (углы карты)"""
-        try:
-            # Верхний левый угол
-            if x < corner_size and y < corner_size:
-                return True
-            # Верхний правый угол
-            if x >= self.width - corner_size and y < corner_size:
-                return True
-            # Нижний левый угол
-            if x < corner_size and y >= self.height - corner_size:
-                return True
-            # Нижний правый угол
-            if x >= self.width - corner_size and y >= self.height - corner_size:
-                return True
             
-            return False
-            
-        except Exception as e:
-            logger.error(f"Error checking player start area at ({x}, {y}): {e}", exc_info=True)
-            return True  # В случае ошибки считаем зоной старта для безопасности
-            
-    def get_map(self) -> Dict:
+    def get_map(self) -> MapData:
         """Получает данные карты"""
         try:
-            return {
-                'grid': self.grid.tolist(),
-                'width': self.width,
-                'height': self.height
-            }
+            return MapData(
+                grid = self.grid.tolist(),
+                width = self.width,
+                height = self.height
+            )
         except Exception as e:
             logger.error(f"Error getting map data: {e}", exc_info=True)
             # Return empty grid in case of error
-            return {
-                'grid': [],
-                'width': self.width,
-                'height': self.height
-            }
+            return MapData(
+                grid = [],
+                width = self.width,
+                height = self.height
+            )
         
     def clear_changes(self) -> None:
         """Очищает список отслеживаемых изменений"""
@@ -246,7 +228,7 @@ class Map:
             logger.error(f"Error clearing map changes: {e}", exc_info=True)
             self.changed_cells = []
         
-    def get_changes(self) -> List[Dict[str, int]]:
+    def get_changes(self) -> list[MapUpdate]:
         """Возвращает список изменённых ячеек и очищает его"""
         try:
             changes = self.changed_cells.copy()

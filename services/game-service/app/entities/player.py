@@ -1,22 +1,15 @@
 from abc import ABC
 from enum import Enum
-from typing import TypedDict
+from typing import TYPE_CHECKING
+
 from .entity import Entity
 from .weapon import WeaponType
 import logging
 
+if TYPE_CHECKING:
+    from . import Inputs
 
 logger = logging.getLogger(__name__)
-
-
-class PlayerInputs(TypedDict):
-    up: bool
-    down: bool
-    left: bool
-    right: bool
-    weapon1: bool  # Основное оружие
-    action1: bool  # дополнительное действие для оружия 1
-    weapon2: bool  # Вторичное оружие
 
 
 class UnitType(Enum):
@@ -29,15 +22,7 @@ class Player(Entity, ABC):
     # Colors for different players
     COLORS: list[str] = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12']
     # Input state
-    inputs: PlayerInputs = {
-        'up': False,
-        'down': False,
-        'left': False,
-        'right': False,
-        'weapon1': False,
-        'action1': False,
-        'weapon2': False
-    }
+
     scale_size = 0.8
     unit_type: UnitType = None
 
@@ -52,7 +37,7 @@ class Player(Entity, ABC):
                 color=self.COLORS[0] # Default color, will be assigned later
             )
             self.team_id: str = ""  # ID команды
-            self.direction: tuple[float, float] = (0, 1)  # Направление для танка
+
 
             # Настройки оружия в зависимости от типа юнита
 
@@ -63,13 +48,23 @@ class Player(Entity, ABC):
             self.secondary_weapon: WeaponType = None
             self.secondary_weapon_max_count: int = 1
             self.secondary_weapon_power: int = 1
+
+            self.inputs: "Inputs" = {
+                'up': False,
+                'down': False,
+                'left': False,
+                'right': False,
+                'weapon1': False,
+                'action1': False,
+                'weapon2': False
+            }
             
             logger.info(f"Player created: id={player_id}, unit_type={self.unit_type.value}")
         except Exception as e:
             logger.error(f"Error creating player {player_id}: {e}", exc_info=True)
             raise
     
-    def set_inputs(self, inputs: PlayerInputs) -> None:
+    def set_inputs(self, inputs: "Inputs") -> None:
         """Update player inputs"""
         try:
             changed_inputs = []
@@ -93,10 +88,46 @@ class Player(Entity, ABC):
                 logger.debug(f"Player {self.id} inputs updated: {', '.join(changed_inputs)}")
         except Exception as e:
             logger.error(f"Error setting inputs for player {self.id}: {e}", exc_info=True)
-    
+
+
+    def get_direction(self) -> tuple[float, float]:
+        # Обработка движения
+        dx: float = 0
+        dy: float = 0
+        # рассчет движения игрока
+        if self.inputs.get('up'):
+            dy = -1
+        if self.inputs.get('down'):
+            dy = 1
+        if self.inputs.get('left'):
+            dx = -1
+        if self.inputs.get('right'):
+            dx = 1
+
+        return (dx, dy)
+
+
     def set_team(self, team_id: str) -> None:
         """Назначить игрока в команду"""
         self.team_id = team_id
         logger.info(f"Player {self.id} assigned to team {team_id}")
+
+
+    def update_player_weapon(self, weapon_type: WeaponType, count: int, power: float):
+        if self.primary_weapon == weapon_type:
+            self.primary_weapon_max_count += count
+            self.primary_weapon_power += power
+        elif self.secondary_weapon == weapon_type:
+            self.secondary_weapon_max_count += count
+            self.secondary_weapon_power += power
+
+
+    def update_player_params(self, speed: float = 0, lives: int = 0):
+        self.speed += speed
+        if self.speed>= self.settings.player_max_speed:
+            self.speed = self.settings.player_max_speed
+        self.lives += lives
+        if self.lives >= self.settings.player_max_lives:
+            self.lives = self.settings.player_max_lives
 
 

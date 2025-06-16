@@ -39,10 +39,10 @@ class SocketIOService:
         """Register Socket.IO event handlers"""
         self.sio.on("connect", self.io_handle_connect)
         self.sio.on("disconnect", self.io_handle_disconnect)
-        self.sio.on("create_game", self.io_handle_create_game)
+        # self.sio.on("create_game", self.io_handle_create_game)
         self.sio.on("join_game", self.io_handle_join_game)
         self.sio.on("input", self.io_handle_input)
-        self.sio.on("apply_weapon", self.io_handle_apply_weapon)
+        self.sio.on("place_weapon", self.io_handle_place_weapon)
         self.sio.on("get_game_state", self.io_handle_get_game_state)
 
     async def io_handle_connect(self, sid: str, environ: Dict[str, Any]) -> None:
@@ -104,17 +104,17 @@ class SocketIOService:
             logger.error(f"Error handling input: {e}", exc_info=True)
 
 
-    async def io_handle_apply_weapon(self, sid_user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    async def io_handle_place_weapon(self, sid_user_id: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Handle weapon application"""
         try:
             game_id = data.get('game_id')
             weapon_type = data.get('weapon_type', 'bomb')  # По умолчанию бомба для совместимости
             
             # Отправляем запрос на применение оружия в game-service через NATS
-            response = await self.game_service.apply_weapon(game_id=game_id, sid_user_id=sid_user_id, weapon_type=weapon_type)
+            response = await self.game_service.place_weapon(game_id=game_id, sid_user_id=sid_user_id, weapon_type=weapon_type)
             return response
         except Exception as e:
-            logger.error(f"Error applying weapon: {e}", exc_info=True)
+            logger.error(f"Error placing weapon: {e}", exc_info=True)
             return {"success": False, "message": str(e)}
 
     async def io_handle_get_game_state(self, sid: str, data: Dict[str, Any]) -> Dict[str, Any]:

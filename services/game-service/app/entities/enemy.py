@@ -39,28 +39,5 @@ class Enemy(Entity):
         self.type: EnemyType = enemy_type
         self.lives: int = self.ENEMY_LIVES[enemy_type]
 
-        # Movement
-        self.move_timer: float = 0
-        self.change_direction_interval: float = 1.0 + random.random() * 2.0
-        
-        # Initial random direction (normalized)
-        self.direction: tuple[float, float] = self.get_random_direction()
-        
-        # State
-        self.destroyed: bool = False
-        self.destroy_animation_timer: float = 0
-        
-        logger.debug(f"Enemy created: type={enemy_type.value}, position=({x}, {y}), speed={speed}, lives={self.lives}")
 
-    def get_random_direction(self) -> tuple[float, float]:
-        """Get a random normalized direction vector"""
-        try:
-            # Choose one of four cardinal directions
-            choices = [(0, 1), (1, 0), (0, -1), (-1, 0)]
-            direction = random.choice(choices)
-            logger.debug(f"Enemy new direction: {direction}")
-            return direction
-        except Exception as e:
-            logger.error(f"Error generating random direction: {e}", exc_info=True)
-            # Fallback to a default direction
-            return (0, 1)
+        logger.debug(f"Enemy created: type={enemy_type.value}, position=({x}, {y}), speed={speed}, lives={self.lives}")

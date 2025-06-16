@@ -7,7 +7,7 @@
 Основным способом для игрока передать свои намерения в игру являются NATS-сообщения. Два ключевых события обрабатывают большую часть действий:
 
 -   **`game.input`**: Передает состояние кнопок движения и основных/вторичных действий (обычно использование оружия).
--   **`game.apply_weapon`**: Явная команда на использование определенного типа оружия. (Событие `game.place_bomb` является устаревшим синонимом для применения бомбы).
+-   **`game.place_weapon`**: Явная команда на использование определенного типа оружия.
 
 Эти события подробно описаны в разделе [NATS События](./nats_events.md).
 
@@ -15,7 +15,7 @@
 
 Событие `game.input` несет в себе информацию о текущем состоянии нажатых клавиш игрока.
 
--   **Payload**: Содержит `game_id`, `player_id` и словарь `inputs` (типа `PlayerInputs` из `app/entities/player.py`):
+-   **Payload**: Содержит `game_id`, `player_id` и словарь `inputs` (типа `Inputs` из `app/entities/player.py`):
     ```json
     {
       "up": false, "down": false, "left": true, "right": false, // Движение
@@ -37,10 +37,10 @@
     -   **Движение**: На основе флагов `up`, `down`, `left`, `right` и `player.speed` рассчитывается новая позиция игрока. Применяется проверка столкновений с границами карты, стенами (`CellType.SOLID_WALL`), разрушаемыми блоками (`CellType.BREAKABLE_BLOCK`) и другими сущностями.
     -   **Использование оружия (из `weapon1`, `weapon2`)**:
         -   Если в `player.inputs` флаг `weapon1` или `weapon2` установлен в `True`, `GameModeService` инициирует логику применения соответствующего оружия (`player.primary_weapon` или `player.secondary_weapon`).
-        -   Это обычно включает вызов метода `game_mode_service.apply_weapon(player_id, weapon_type)`, который проверяет, может ли игрок использовать это оружие (например, не превышено ли `player.max_weapons` для бомб, нет ли кулдауна).
+        -   Это обычно включает вызов метода `game_mode_service.place_weapon(player_id, weapon_type)`, который проверяет, может ли игрок использовать это оружие (например, не превышено ли `player.max_weapons` для бомб, нет ли кулдауна).
         -   При успешной проверке создается объект оружия (например, `Bomb`, `Mine`) и размещается на карте, или, в случае `Bullet`, создается и начинает движение.
 
-## 3. Обработка Явной Команды Применения Оружия (`game.apply_weapon`)
+## 3. Обработка Явной Команды Применения Оружия (`game.place_weapon`)
 
 Это событие позволяет игроку явно указать, какой тип оружия он хочет использовать.
 
@@ -54,9 +54,9 @@
     ```
 -   **Обработка**:
     1.  `EventService` -> `GameCoordinator`.
-    2.  `GameCoordinator` вызывает `game_service.apply_weapon(player_id, weapon_type)`.
-    3.  `GameService` делегирует вызов `game_mode_service.apply_weapon(player_id, weapon_type)`.
-    4.  В `GameModeService.apply_weapon()`:
+    2.  `GameCoordinator` вызывает `game_service.place_weapon(player_id, weapon_type)`.
+    3.  `GameService` делегирует вызов `game_mode_service.place_weapon(player_id, weapon_type)`.
+    4.  В `GameModeService.place_weapon()`:
         -   Определяется тип оружия, которое нужно применить. Если `weapon_type` не указан в payload, может использоваться `player.primary_weapon` по умолчанию.
         -   **Проверки**:
             -   Достаточно ли у игрока "зарядов" или не превышен ли лимит (например, `active_bombs_count < player.max_weapons` для бомб).

@@ -26,11 +26,11 @@ class NatsService:
             if self._nc is None or self._nc.is_closed:
                 logger.info(f"Connecting to NATS server at {settings.NATS_URL}")
                 self._nc = await nats.connect(settings.NATS_URL)
-
+                # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
                 # Подписываемся на обновления игры
-                await self._nc.subscribe("game.update.*", cb=self.handle_game_update)
-                await self._nc.subscribe("game.over.*", cb=self.handle_game_over)
-                await self._nc.subscribe("game.player_disconnected.*", cb=self.handle_player_disconnected)
+                await self._nc.subscribe(f"game.update.{settings.HOSTNAME}", cb=self.handle_game_update)
+                await self._nc.subscribe(f"game.over.{settings.HOSTNAME}", cb=self.handle_game_over)
+                await self._nc.subscribe(f"game.player_disconnected.{settings.HOSTNAME}", cb=self.handle_player_disconnected)
 
                 logger.info(f"Connected to NATS: {settings.NATS_URL}")
             return self._nc
@@ -130,8 +130,10 @@ class NatsService:
         """Отправка запроса на создание игры"""
         try:
             nc = await self.get_nc()
+            # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
+            sharded_subject = f"game.create.{settings.GAME_SERVICE_HOSTNAME}"
             response = await nc.request(
-                "game.create",
+                sharded_subject,
                 json.dumps({"game_id": game_id}).encode(),
                 timeout=5.0
             )
@@ -151,8 +153,10 @@ class NatsService:
         """Отправка запроса на присоединение к игре"""
         try:
             nc = await self.get_nc()
+            # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
+            sharded_subject = f"game.join.{settings.GAME_SERVICE_HOSTNAME}"
             response = await nc.request(
-                "game.join",
+                sharded_subject,
                 json.dumps({"game_id": game_id, "player_id": player_id}).encode(),
                 timeout=5.0
             )
@@ -173,8 +177,10 @@ class NatsService:
         logger.debug(f"Sending input for player {player_id} in game {game_id}: {inputs}")
         try:
             nc = await self.get_nc()
+            # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
+            sharded_subject = f"game.input.{settings.GAME_SERVICE_HOSTNAME}"
             await nc.publish(
-                "game.input",
+                sharded_subject,
                 json.dumps({
                     "game_id": game_id,
                     "player_id": player_id,
@@ -184,37 +190,17 @@ class NatsService:
         except Exception as e:
             logger.error(f"Error sending input: {e}", exc_info=True)
 
-    
-    async def place_bomb(self, game_id: str, player_id: str) -> Dict[str, Any]:
-        """Отправка запроса на установку бомбы"""
-        logger.info(f"Player {player_id} placing bomb in game {game_id}")
 
-        try:
-            nc = await self.get_nc()
-            response = await nc.request(
-                "game.place_bomb",
-                json.dumps({"game_id": game_id, "player_id": player_id}).encode(),
-                timeout=5.0
-            )
-            result = json.loads(response.data.decode())
-            if result.get('success'):
-                logger.info(f"Bomb placed successfully by player {player_id} in game {game_id}")
-            else:
-                logger.debug(f"Failed to place bomb for player {player_id} in game {game_id}: {result.get('message')}")
-            return result
-        except Exception as e:
-            error_msg = f"Error placing bomb: {e}"
-            logger.error(error_msg, exc_info=True)
-            return {"success": False, "message": error_msg}
-
-    async def apply_weapon(self, game_id: str, player_id: str, weapon_type: str = "bomb") -> Dict[str, Any]:
+    async def place_weapon(self, game_id: str, player_id: str, weapon_type: str = "bomb") -> Dict[str, Any]:
         """Отправка запроса на применение оружия"""
-        logger.info(f"Player {player_id} applying weapon {weapon_type} in game {game_id}")
+        logger.info(f"Player {player_id} placing weapon {weapon_type} in game {game_id}")
 
         try:
             nc = await self.get_nc()
+            # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
+            sharded_subject = f"game.place_weapon.{settings.GAME_SERVICE_HOSTNAME}"
             response = await nc.request(
-                "game.apply_weapon",
+                sharded_subject,
                 json.dumps({
                     "game_id": game_id,
                     "player_id": player_id,
@@ -226,10 +212,10 @@ class NatsService:
             if result.get('success'):
                 logger.info(f"Weapon {weapon_type} applied successfully by player {player_id} in game {game_id}")
             else:
-                logger.debug(f"Failed to apply weapon {weapon_type} for player {player_id} in game {game_id}: {result.get('message')}")
+                logger.debug(f"Failed to place weapon {weapon_type} for player {player_id} in game {game_id}: {result.get('message')}")
             return result
         except Exception as e:
-            error_msg = f"Error applying weapon: {e}"
+            error_msg = f"Error placeing weapon: {e}"
             logger.error(error_msg, exc_info=True)
             return {"success": False, "message": error_msg}
 
@@ -240,8 +226,10 @@ class NatsService:
 
         try:
             nc = await self.get_nc()
+            # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
+            sharded_subject = f"game.get_state.{settings.GAME_SERVICE_HOSTNAME}"
             response = await nc.request(
-                "game.get_state",
+                sharded_subject,
                 json.dumps({"game_id": game_id}).encode(),
                 timeout=5.0
             )
@@ -263,8 +251,10 @@ class NatsService:
             
         try:
             nc = await self.get_nc()
+            # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
+            sharded_subject = f"game.disconnect.{settings.GAME_SERVICE_HOSTNAME}"
             response = await nc.request(
-                "game.disconnect",
+                sharded_subject,
                 json.dumps({"game_id": game_id, "player_id": player_id}).encode(),
                 timeout=5.0
             )

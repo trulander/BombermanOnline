@@ -113,7 +113,7 @@ async def get_game(
         # Формируем информацию о командах
         teams_info = []
         teams_state = game_service.team_service.get_teams_state()
-        for team_data in teams_state:
+        for team_data in teams_state.values():
             team_info = GameTeamInfo(
                 id=team_data['id'],
                 name=team_data['name'],

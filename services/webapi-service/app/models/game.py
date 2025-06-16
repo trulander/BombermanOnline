@@ -29,11 +29,7 @@ class InputRequest(BaseModel):
     game_id: str = Field(..., description="Идентификатор игры")
     inputs: PlayerInput = Field(..., description="Ввод игрока")
 
-class PlaceBombRequest(BaseModel):
-    """Модель запроса на установку бомбы"""
-    game_id: str = Field(..., description="Идентификатор игры")
-
-class ApplyWeaponRequest(BaseModel):
+class PlaceWeaponRequest(BaseModel):
     """Модель запроса на применение оружия"""
     game_id: str = Field(..., description="Идентификатор игры")
     weapon_type: str = Field("bomb", description="Тип оружия (bomb, bullet, mine)")

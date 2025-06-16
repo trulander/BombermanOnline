@@ -23,7 +23,7 @@ classDiagram
         +draw() dict
     }
 
-    class PlayerInputs {
+    class Inputs {
         <<TypedDict>>
         +bool up
         +bool down
@@ -41,7 +41,7 @@ classDiagram
         +WeaponType secondary_weapon
         +int max_weapons
         +int weapon_power
-        +PlayerInputs inputs
+        +Inputs inputs
         +set_inputs(dict inputs)
         +set_team(str team_id)
         +max_bombs: int
@@ -169,7 +169,7 @@ classDiagram
     Weapon <|-- Bullet
     Weapon <|-- Mine
 
-    Player ..> PlayerInputs : uses
+    Player ..> Inputs : uses
     Player ..> UnitType : has a
     Player ..> WeaponType : uses (primary_weapon, secondary_weapon)
     
@@ -188,7 +188,7 @@ classDiagram
 
 **Условные обозначения:**
 - `<|--`: Наследование (например, `Player` наследуется от `Entity`).
-- `..>`: Ассоциация или зависимость (например, `Player` использует `PlayerInputs`).
+- `..>`: Ассоциация или зависимость (например, `Player` использует `Inputs`).
 - `<<Abstract>>`: Абстрактный класс.
 - `<<Enumeration>>`: Перечисление.
 - `<<TypedDict>>`: Типизированный словарь.

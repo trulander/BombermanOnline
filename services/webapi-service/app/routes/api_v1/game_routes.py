@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 import logging
 
-from ...models.game import GameCreate, JoinGameRequest, JoinGameResponse, InputRequest, PlaceBombRequest, ApplyWeaponRequest
+from ...models.game import GameCreate, JoinGameRequest, JoinGameResponse, InputRequest, PlaceWeaponRequest
 from ...services.game_service import GameService
 from ...dependencies import get_game_service
 
@@ -102,49 +102,9 @@ async def send_input(
             detail="An error occurred while sending input"
         )
 
-@router.post("/place-bomb")
-async def place_bomb(
-    request: PlaceBombRequest,
-    game_service: GameService = Depends(get_game_service)
-) -> dict:
-    """
-    Установить бомбу
-    
-    Эта функция используется для установки бомбы в игре.
-    """
-    try:
-        # В реальном приложении здесь нужно было бы получить player_id из JWT токена
-        player_id = "player123"  # Заглушка, обычно получаем из токена
-        
-        logger.debug(f"Player {player_id} requesting to place bomb in game {request.game_id}")
-        
-        result = await game_service.place_bomb(
-            game_id=request.game_id,
-            sid_user_id=player_id
-        )
-        
-        if not result.get("success"):
-            logger.warning(f"Failed to place bomb in game {request.game_id}: {result.get('message')}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result.get("message", "Failed to place bomb")
-            )
-        
-        logger.debug(f"Bomb placed successfully by player {player_id} in game {request.game_id}")
-        return result
-    except HTTPException:
-        # Re-raise HTTPException to maintain FastAPI's error handling
-        raise
-    except Exception as e:
-        logger.error(f"Unexpected error placing bomb in game {request.game_id}: {e}", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred"
-        )
-
-@router.post("/apply-weapon")
-async def apply_weapon(
-    request: ApplyWeaponRequest,
+@router.post("/place-weapon")
+async def place_weapon(
+    request: PlaceWeaponRequest,
     game_service: GameService = Depends(get_game_service)
 ) -> dict:
     """
@@ -156,19 +116,19 @@ async def apply_weapon(
         # В реальном приложении здесь нужно было бы получить player_id из JWT токена
         player_id = "player123"  # Заглушка, обычно получаем из токена
         
-        logger.debug(f"Player {player_id} requesting to apply weapon {request.weapon_type} in game {request.game_id}")
+        logger.debug(f"Player {player_id} requesting to place weapon {request.weapon_type} in game {request.game_id}")
         
-        result = await game_service.apply_weapon(
+        result = await game_service.place_weapon(
             game_id=request.game_id,
             sid_user_id=player_id,
             weapon_type=request.weapon_type
         )
         
         if not result.get("success"):
-            logger.warning(f"Failed to apply weapon {request.weapon_type} in game {request.game_id}: {result.get('message')}")
+            logger.warning(f"Failed to place weapon {request.weapon_type} in game {request.game_id}: {result.get('message')}")
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=result.get("message", "Failed to apply weapon")
+                detail=result.get("message", "Failed to place weapon")
             )
         
         logger.debug(f"Weapon {request.weapon_type} applied successfully by player {player_id} in game {request.game_id}")
@@ -177,7 +137,7 @@ async def apply_weapon(
         # Re-raise HTTPException to maintain FastAPI's error handling
         raise
     except Exception as e:
-        logger.error(f"Unexpected error applying weapon in game {request.game_id}: {e}", exc_info=True)
+        logger.error(f"Unexpected error placing weapon in game {request.game_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred"

@@ -4,10 +4,11 @@ from typing import Dict, Optional, Any
 from ..entities.bomberman import Bomberman
 from ..entities.player import Player, UnitType
 from ..entities.tank import Tank
-from ..models.game_models import GameSettings
+from ..models.game_models import GameSettings, GameTeamInfo, GameUpdate
 from ..entities.game_mode import GameModeType
 from ..entities.weapon import WeaponType
 from ..entities.game_status import GameStatus
+from ..models.map_models import MapState, MapData, MapUpdate
 from ..services.map_service import MapService
 from ..services.game_mode_service import GameModeService
 from ..services.team_service import TeamService
@@ -16,6 +17,7 @@ from ..services.modes.free_for_all_mode import FreeForAllMode
 from ..services.modes.capture_flag_mode import CaptureFlagMode
 from ..config import settings
 from datetime import datetime
+
 
 logger = logging.getLogger(__name__)
 
@@ -254,15 +256,33 @@ class GameService:
             logger.error(message, exc_info=True)
             return {"success": False, "message": message}
 
-    async def update(self) -> Dict[str, Any]:
+    async def update(self) -> GameUpdate:
         """Обновить состояние игры"""
         try:
-            if self.status != GameStatus.ACTIVE:
-                return self.get_state()
+            if not self.is_active():
+                logger.debug("game is not actice yet.")
+                return GameUpdate(
+                    game_id=self.settings.game_id,
+                    status=self.status,
+                    is_active=False,
+                )
             
             # Делегируем обновление игровому режиму
-            state = await self.game_mode.update()
-            
+            status_update = await self.game_mode.update()
+            if status_update:
+                state = GameUpdate(
+                    game_id=self.settings.game_id,
+                    map_update=self.game_mode.map.get_changes(),
+                    status=self.status,
+                    is_active=True,
+                )
+            else:
+                state = GameUpdate(
+                    game_id=self.settings.game_id,
+                    status=self.status,
+                    is_active=False,
+                    message=f"Game is finished"
+                )
             # Проверяем завершение игры
             if self.game_mode.game_over:
                 self.status = GameStatus.FINISHED
@@ -273,9 +293,15 @@ class GameService:
             return state
         except Exception as e:
             logger.error(f"Error in game update: {e}", exc_info=True)
-            return self.get_state()
+            return GameUpdate(
+                game_id=self.settings.game_id,
+                status=self.status,
+                is_active=False,
+                error=True,
+                message=f"Error in game update: {e}"
+            )
     
-    def apply_weapon(self, player_id: str, weapon_type: WeaponType) -> dict:
+    def place_weapon(self, player_id: str, weapon_type: WeaponType) -> dict:
         """Применить оружие игрока"""
         try:
             if self.status != GameStatus.ACTIVE:
@@ -289,7 +315,7 @@ class GameService:
                 logger.warning(message)
                 return {"success": False, "message": message}
             
-            result = self.game_mode.apply_weapon(player, weapon_type)
+            result = self.game_mode.place_weapon(player, weapon_type)
             if result:
                 self.updated_at = datetime.utcnow()
                 return {"success": True, "message": "Weapon applied successfully"}
@@ -306,7 +332,7 @@ class GameService:
     def is_active(self) -> bool:
         """Проверить активность игры"""
         try:
-            if self.status == GameStatus.FINISHED:
+            if self.status == [GameStatus.FINISHED, GameStatus.PAUSED, GameStatus.PENDING]:
                 return False
             
             return self.game_mode.is_active()
@@ -314,29 +340,25 @@ class GameService:
             logger.error(f"Error checking if game is active: {e}", exc_info=True)
             return False
     
-    def get_state(self) -> Dict[str, Any]:
+    def get_state(self) -> MapState:
         """Получить состояние игры"""
         try:
             state = self.game_mode.get_state()
             state['status'] = self.status.value
+            state['is_active'] = self.is_active()
 
             # Добавляем состояние команд из TeamService
-            state['teams'] = self.team_service.get_teams_state()
+            state['teams'] = {id: GameTeamInfo(**team) for id, team in self.team_service.get_teams_state()}
             return state
         except Exception as e:
             logger.error(f"Error getting game state: {e}", exc_info=True)
-            return {
-                'error': True,
-                'status': self.status.value,
-                'players': {},
-                'teams': {},
-                'enemies': [],
-                'weapons': [],
-                'powerUps': [],
-                'map': {
-                    'changedCells': [],
-                },
-                'score': 0,
-                'level': 1,
-                'gameOver': True
-            }
+            return MapState(
+                players={},
+                enemies=[],
+                weapons=[],
+                power_ups=[],
+                map=MapData(grid=[], width=0, height=0),
+                level=0,
+                error=True,
+                is_active=False
+            )

@@ -12,8 +12,8 @@ class PowerUpType(Enum):
     BULLET_UP = 'BULLET_UP'
     MINE_UP = 'MINE_UP'
     BOMB_POWER_UP = 'BOMB_POWER_UP'
-    BULLET_POWER_UP = 'BULLET_POWER_UP'
-    MINE_POWER_UP = 'MINE_POWER_UP'
+    BULLET_POWER_UP = 'BULLET_POWER_UP'# bullet speed up
+    # MINE_POWER_UP = 'MINE_POWER_UP'
     SPEED_UP = 'SPEED_UP'
     LIFE_UP = 'LIFE_UP'
 
@@ -36,36 +36,27 @@ class PowerUp(Entity):
             logger.error(f"Error creating PowerUp at ({x}, {y}): {e}", exc_info=True)
             raise
 
-    def _update_player_weapon(self, player: Player, weapon_type, count, power):
-        if player.primary_weapon == weapon_type:
-            player.primary_weapon_max_count += count
-            player.primary_weapon_power += power
-        elif player.secondary_weapon == weapon_type:
-            player.secondary_weapon_max_count += count
-            player.secondary_weapon_power += power
 
     def apply_to_player(self, player: Player) -> None:
         try:
             match self.type:
                 case PowerUpType.BOMB_UP:
-                    self._update_player_weapon(player=player, weapon_type=WeaponType.BOMB, count=1, power=0)
+                    player.update_player_weapon(weapon_type=WeaponType.BOMB, count=1, power=0)
                 case PowerUpType.BULLET_UP:
-                    self._update_player_weapon(player=player, weapon_type=WeaponType.BULLET, count=1, power=0)
+                    player.update_player_weapon(weapon_type=WeaponType.BULLET, count=1, power=0)
                 case PowerUpType.MINE_UP:
-                    self._update_player_weapon(player=player, weapon_type=WeaponType.MINE, count=1, power=0)
+                    player.update_player_weapon(weapon_type=WeaponType.MINE, count=1, power=0)
                 case PowerUpType.BOMB_POWER_UP:
-                    self._update_player_weapon(player=player, weapon_type=WeaponType.BOMB, count=0, power=1)
+                    player.update_player_weapon(weapon_type=WeaponType.BOMB, count=0, power=1)
                 case PowerUpType.BULLET_POWER_UP:
-                    self._update_player_weapon(player=player, weapon_type=WeaponType.BULLET, count=0, power=1)
-                case PowerUpType.MINE_POWER_UP:
-                    self._update_player_weapon(player=player, weapon_type=WeaponType.MINE, count=0, power=1)
+                    player.update_player_weapon(weapon_type=WeaponType.BULLET, count=0, power=1)
+                # case PowerUpType.MINE_POWER_UP:
+                #     player.update_player_weapon(weapon_type=WeaponType.MINE, count=0, power=1)
                 case PowerUpType.SPEED_UP:
-                    player.speed += 0.5
-                    if player.speed > 6:
-                        player.speed = 6
+                    player.update_player_params(speed=0.5)
                     logger.info(f"Player {player.id} received SPEED_UP. New speed: {player.speed}")
                 case PowerUpType.LIFE_UP:
-                    player.lives += 1
+                    player.update_player_params(lives=1)
                     logger.info(f"Player {player.id} received LIFE_UP. New lives: {player.lives}")
 
         except Exception as e:

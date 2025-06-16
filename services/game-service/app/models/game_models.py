@@ -8,7 +8,17 @@ from pydantic import BaseModel, Field
 from app.entities.game_status import GameStatus
 from app.entities.game_mode import GameModeType
 from app.entities.player import UnitType
+from app.models.map_models import MapUpdate
 from app.models.team_models import TeamModeSettings
+
+
+class GameUpdate(BaseModel):
+    status: GameStatus
+    is_active: bool
+    error: bool = False
+    message: Optional[str] = None
+    map_update: list[MapUpdate] = None
+    game_id: str = None
 
 
 class GamePlayerInfo(BaseModel):
@@ -140,14 +150,17 @@ class GameSettings(BaseModel):
     cell_size: int = 40
     default_map_width: int = 23
     default_map_height: int = 23
+    destroy_animation_time: float = 0.5
 
     # Настройки игрока
     player_default_speed: float = 3.0
     player_invulnerable_time: float = 2.0
+    player_max_speed: float = 6.0
+    player_max_lives: int = 10
 
     # Настройки оружия
-    bomb_timer: float = 2.0
-    bomb_explosion_duration: float = 0.5
+    bomb_timer: float = 2.0 #таймер для автоматического взрыва установленной бомбы
+    bomb_explosion_duration: float = 0.5# таймер продолжительности взрыва
     default_bomb_power: int = 1
     default_max_bombs: int = 1
     bullet_speed: float = 5.0
@@ -155,12 +168,12 @@ class GameSettings(BaseModel):
 
     # Настройки врагов
     enemy_count_multiplier: float = 1.0
-    enemy_destroy_animation_time: float = 0.5
     enemy_invulnerable_time: float = 2.0
 
     # Настройки очков
     block_destroy_score: int = 10
     enemy_destroy_score: int = 100
+    player_destroy_score: int = 300
     powerup_collect_score: int = 25
     level_complete_score: int = 500
 

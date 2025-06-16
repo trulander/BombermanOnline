@@ -147,44 +147,9 @@ class GameService:
             logger.debug(f"Input sent successfully for player {player_id} in game {game_id}")
         except Exception as e:
             logger.error(f"Error sending input for SID {sid_user_id} in game {game_id}: {e}", exc_info=True)
-    
-    async def place_bomb(self, game_id: str, sid_user_id: str) -> Dict[str, Any]:
-        """
-        Команда: Установить бомбу
-        
-        Args:
-            game_id: Идентификатор игры
-            player_id: Идентификатор игрока
-            
-        Returns:
-            Dict[str, Any]: Результат установки бомбы
-        """
-        try:
-            if not game_id:
-                logger.warning("Cannot place bomb: missing game_id")
-                return {"success": False, "message": "Missing game_id"}
-                
-            if sid_user_id not in self.sid_user_id_to_player:
-                logger.warning(f"Cannot place bomb in game {game_id}: SID {sid_user_id} not associated with any player")
-                return {"success": False, "message": "Invalid player"}
 
-            player_id = self.sid_user_id_to_player[sid_user_id]
-            logger.debug(f"Player {player_id} is placing a bomb in game {game_id}")
 
-            result = await self.nats_service.place_bomb(game_id, player_id)
-            
-            if result.get('success'):
-                logger.debug(f"Bomb placed successfully by player {player_id} in game {game_id}")
-            else:
-                logger.debug(f"Failed to place bomb for player {player_id} in game {game_id}: {result.get('message')}")
-                
-            return result
-        except Exception as e:
-            error_msg = f"Error placing bomb for SID {sid_user_id} in game {game_id}: {e}"
-            logger.error(error_msg, exc_info=True)
-            return {"success": False, "message": error_msg}
-
-    async def apply_weapon(self, game_id: str, sid_user_id: str, weapon_type: str = "bomb") -> Dict[str, Any]:
+    async def place_weapon(self, game_id: str, sid_user_id: str, weapon_type: str = "bomb") -> Dict[str, Any]:
         """
         Команда: Применить оружие
         
@@ -198,26 +163,26 @@ class GameService:
         """
         try:
             if not game_id:
-                logger.warning("Cannot apply weapon: missing game_id")
+                logger.warning("Cannot place weapon: missing game_id")
                 return {"success": False, "message": "Missing game_id"}
                 
             if sid_user_id not in self.sid_user_id_to_player:
-                logger.warning(f"Cannot apply weapon in game {game_id}: SID {sid_user_id} not associated with any player")
+                logger.warning(f"Cannot place weapon in game {game_id}: SID {sid_user_id} not associated with any player")
                 return {"success": False, "message": "Invalid player"}
 
             player_id = self.sid_user_id_to_player[sid_user_id]
-            logger.debug(f"Player {player_id} is applying weapon {weapon_type} in game {game_id}")
+            logger.debug(f"Player {player_id} is placing weapon {weapon_type} in game {game_id}")
 
-            result = await self.nats_service.apply_weapon(game_id, player_id, weapon_type)
+            result = await self.nats_service.place_weapon(game_id, player_id, weapon_type)
             
             if result.get('success'):
                 logger.debug(f"Weapon {weapon_type} applied successfully by player {player_id} in game {game_id}")
             else:
-                logger.debug(f"Failed to apply weapon {weapon_type} for player {player_id} in game {game_id}: {result.get('message')}")
+                logger.debug(f"Failed to place weapon {weapon_type} for player {player_id} in game {game_id}: {result.get('message')}")
                 
             return result
         except Exception as e:
-            error_msg = f"Error applying weapon for SID {sid_user_id} in game {game_id}: {e}"
+            error_msg = f"Error placing weapon for SID {sid_user_id} in game {game_id}: {e}"
             logger.error(error_msg, exc_info=True)
             return {"success": False, "message": error_msg}
 

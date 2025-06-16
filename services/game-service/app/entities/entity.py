@@ -1,5 +1,15 @@
+import math
+import random
+import time
 import uuid
 import logging
+from typing import Any, TYPE_CHECKING
+
+
+if TYPE_CHECKING:
+    from app.entities import Map
+    from app.models.game_models import GameSettings
+
 
 logger = logging.getLogger(__name__)
 
@@ -9,6 +19,8 @@ class Entity:
 
     def __init__(
         self,
+        map: "Map",
+        settings: "GameSettings",
         x: float = 0.0,
         y: float = 0.0,
         width: float = 0.0,
@@ -19,29 +31,111 @@ class Entity:
         speed: float = 0.0,
         lives: int = 1,
         invulnerable: bool = False,
-        invulnerable_timer: float = 0.0,
         color: str = "#FFFFFF"  # Белый цвет по умолчанию
     ):
         try:
+            self.map = map
+            self.settings = settings
+
             self.x: float = x
             self.y: float = y
             self.width: float = width
             self.height: float = height
             self.id: str = entity_id if entity_id is not None else str(uuid.uuid4())
             self.name: str = name
+            self.destroyed: bool = False
+            # State
+            self.destroy_animation_timer: float = 0
+
             self.ai: bool = ai
+            self.move_timer = 0
+
             self.speed: float = speed
             self.lives: int = lives
             self.invulnerable: bool = invulnerable
-            self.invulnerable_timer: float = invulnerable_timer
             self.color: str = color
-            
+
+            # таймер бессмертия после получения урона, по умолчанию таймер для enemy должен быть переопределен для других типов
+            self.invulnerable_timer: float = self.settings.enemy_invulnerable_time
+
+            self.direction: tuple[float, float] = (0, 1)  # Направление
+
             logger.debug(f"Entity created: id={self.id}, name={name}, position=({x}, {y})")
         except Exception as e:
             logger.error(f"Error creating entity: {e}", exc_info=True)
             raise
 
-    def update(self, delta_time: float) -> None:
+
+    def get_direction(self) -> tuple[float, float]:
+        """Get a random normalized direction vector"""
+        try:
+            # рассчет движерия ботов
+
+            # Обновление таймера движения
+            delta_time: float = time.time() - self.move_timer
+            # Смена направления периодически или при столкновении со стеной
+            change_direction_interval: float = 1.0 + random.random() * 2.0
+            if delta_time >= change_direction_interval:
+                # Choose one of four cardinal directions
+                choices = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+                direction = random.choice(choices)
+                self.direction = direction
+                self.move_timer = time.time()
+            else:
+                return self.direction
+            logger.debug(f"Enemy new direction: {direction}")
+            return direction
+        except Exception as e:
+            logger.error(f"Error generating random direction: {e}", exc_info=True)
+            # Fallback to a default direction
+            return (0, 1)
+
+
+    def set_hit(self) -> bool:
+        if self.invulnerable:
+            return False
+        self.lives -= 1
+        self.invulnerable = True
+        self.invulnerable_timer = self.settings.enemy_invulnerable_time
+        if self.lives <= 0:
+            self.destroyed = True
+        return True
+
+
+    def move(self, delta_time: float) -> bool:
+        # Обработка движения
+
+        dx, dy = self.get_direction()
+        # Попытка движения в текущем направлении
+        dx: float = dx * self.speed
+        dy: float = dy * self.speed
+
+        # Нормализация диагонального движения
+        if dx != 0 and dy != 0:
+            normalize: float = 1 / math.sqrt(2)
+            dx *= normalize
+            dy *= normalize
+
+        # Применяем delta time
+        dx *= delta_time * 60
+        dy *= delta_time * 60
+
+        # Движение с проверкой коллизий (ось X)
+        # Движение с проверкой коллизий (ось Y)
+        if dx != 0 or dy != 0:
+            new_x: float = self.x + dx
+            new_y: float = self.y + dy
+            if not self.check_collision(
+                    x=new_x,
+                    y=new_y,
+            ):
+                self.x = new_x
+                self.y = new_y
+                return True
+        return False
+
+
+    def update(self, delta_time: float = None) -> None:
         """Обновляет состояние сущности. Должен быть расширен в дочерних классах."""
         try:
             # Update invulnerability
@@ -51,24 +145,34 @@ class Entity:
                     logger.debug(f"Entity {self.id} ({self.name}) is no longer invulnerable")
                     self.invulnerable = False
                     self.invulnerable_timer = 0
+
+            #Update moving
+            self.move(delta_time=delta_time)
+
         except Exception as e:
             logger.error(f"Error updating entity {self.id} ({self.name}): {e}", exc_info=True)
 
-    def draw(self) -> dict:
-        """Возвращает данные для отрисовки сущности. Может быть переопределен."""
+
+    def check_collision(
+            self,
+            x: float,
+            y: float,
+    ) -> bool:
+        """Проверить коллизию сущности"""
         try:
-            return {
-                'id': self.id,
-                'x': self.x,
-                'y': self.y,
-                'width': self.width,
-                'height': self.height,
-                'color': self.color,
-                'name': self.name,
-                'lives': self.lives,
-                'invulnerable': self.invulnerable
-            }
+            # Вычисляем клетки сетки, с которыми пересекается сущность
+            grid_left: int = int(x / self.settings.cell_size)
+            grid_right: int = int((x + self.width - 1) / self.settings.cell_size)
+            grid_top: int = int(y / self.settings.cell_size)
+            grid_bottom: int = int((y + self.height - 1) / self.settings.cell_size)
+
+            # Проверка коллизии с клетками карты
+            for grid_y in range(grid_top, grid_bottom + 1):
+                for grid_x in range(grid_left, grid_right + 1):
+                    if self.map.is_solid(grid_x, grid_y):
+                        return True
+            return False
+
         except Exception as e:
-            logger.error(f"Error drawing entity {self.id} ({self.name}): {e}", exc_info=True)
-            # Return minimal data on error
-            return {'id': self.id, 'error': True}
+            logger.error(f"Error updating entity {self.id} ({self.name}): {e}", exc_info=True)
+            return False

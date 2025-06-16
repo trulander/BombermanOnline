@@ -10,6 +10,10 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     RELOAD: bool = True
     SWAGGER_URL: str = "/webapi/docs"
+    HOSTNAME: str = "localhost"
+
+    #TODO доработать логику получения хоста через консул динамически
+    GAME_SERVICE_HOSTNAME: str = "localhost"
     
     # CORS settings
     CORS_ORIGINS: str = "*"
