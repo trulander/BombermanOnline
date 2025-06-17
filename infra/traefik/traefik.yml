@@ -13,7 +13,15 @@ providers:
     network: bombermanonline-infra_default
   file:
     directory: "/etc/traefik"
-    watch: true
+#    watch: true
+  consulCatalog:
+    endpoint:
+      address: "consul:8500"
+    exposedByDefault: true
+
+#    connectByDefault: true
+#    prefix: "traefik.enable=true"
+
 
 log:
   level: INFO

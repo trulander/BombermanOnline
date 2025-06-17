@@ -1,7 +1,15 @@
 import random
 from enum import Enum
+from typing import TYPE_CHECKING
+
 from .entity import Entity
 import logging
+
+if TYPE_CHECKING:
+    from . import Map
+    from ..models.game_models import GameSettings
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -24,7 +32,9 @@ class Enemy(Entity):
             y: float,
             size: float,
             speed: float,
-            enemy_type: EnemyType
+            enemy_type: EnemyType,
+            map: "Map",
+            settings: "GameSettings",
     ):
         super().__init__(
             x=x,
@@ -33,7 +43,9 @@ class Enemy(Entity):
             height=size * self.scale_size,
             speed=speed,
             ai=True,
-            name=f"Enemy_{enemy_type.value}"
+            name=f"Enemy_{enemy_type.value}",
+            map=map,
+            settings=settings
         )
         
         self.type: EnemyType = enemy_type

@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
 from fastapi import APIRouter, HTTPException, Depends, Query
@@ -16,6 +17,7 @@ from app.entities.player import UnitType
 if TYPE_CHECKING:
     from app.coordinators.game_coordinator import GameCoordinator
 
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/games", tags=["games"])
 
@@ -29,17 +31,18 @@ def get_game_coordinator() -> "GameCoordinator":
 @router.get("/", response_model=List[GameListItem])
 async def get_games(
     filter: GameFilter = Depends(GameFilter),
-    current_user: dict = Depends(get_current_user)
+    # current_user: dict = Depends(get_current_user)
 ):
     """Получить список игр с фильтрацией"""
     coordinator = get_game_coordinator()
     
     # Получаем все активные игры
     all_games = []
+    logger.info(f"coordinator.games: {coordinator.games}")
     for game_id, game_service in coordinator.games.items():
         try:
             game_state = game_service.get_state()
-            
+            logger.info(f"game {game_id} state: {game_state}")
             # Применяем фильтры
             if filter.status and game_service.status != filter.status:
                 continue
@@ -47,7 +50,7 @@ async def get_games(
             if filter.game_mode and game_service.settings.game_mode != filter.game_mode:
                 continue
                 
-            current_players = len(game_state.get('players', {}))
+            current_players = len(game_state.players)
             max_game_players = game_service.settings.max_players
             
             if filter.has_free_slots and current_players >= max_game_players:
@@ -65,15 +68,16 @@ async def get_games(
                 game_mode=game_service.settings.game_mode,
                 current_players_count=current_players,
                 max_players=max_game_players,
-                level=game_state.get('level', 1),
+                level=game_state.level,
                 created_at=datetime.utcnow()  # TODO: добавить created_at в GameService
             )
             all_games.append(game_item)
             
         except Exception as e:
             # Пропускаем игры с ошибками
+            logger.error(f"Exception: {e}")
             continue
-    
+    logger.info(f"all_games: {all_games}")
     # Применяем пагинацию
     total_games = all_games[filter.offset:filter.offset + filter.limit]
     return total_games
@@ -82,7 +86,7 @@ async def get_games(
 @router.get("/{game_id}", response_model=GameInfo)
 async def get_game(
     game_id: str,
-    current_user: dict = Depends(get_current_user)
+    # current_user: dict = Depends(get_current_user)
 ):
     """Получить подробную информацию об игре"""
     coordinator = get_game_coordinator()
@@ -152,15 +156,18 @@ async def get_game(
 @router.post("/", response_model=GameCreateResponse)
 async def create_game(
     game_settings: GameCreateSettings,
-    current_user: dict = Depends(get_current_user)
+    # current_user: dict = Depends(get_current_user)
 ):
     """Создать новую игру"""
     coordinator = get_game_coordinator()
-    
+
     try:
         # Вызываем метод создания игры через GameCoordinator
+        new_game_settings = game_settings.model_dump()
+        import uuid
+        new_game_settings['game_id'] = str(uuid.uuid4())
         result = await coordinator.game_create(new_game_settings=game_settings)
-        
+
         if result.get('success'):
             return GameCreateResponse(
                 success=True,
@@ -172,7 +179,7 @@ async def create_game(
                 success=False,
                 message=result.get('message', 'Failed to create game')
             )
-            
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error creating game: {str(e)}")
 

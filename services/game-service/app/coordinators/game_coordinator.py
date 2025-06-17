@@ -49,8 +49,8 @@ class GameCoordinator:
                         active_games += 1
                         updated_state = await game.update()
                         # Отправляем обновление через NATS всем подключенным клиентам
-                        await self.notification_service.send_game_update(data=updated_state)
-                    else:
+                        await self.notification_service.send_game_update(data=updated_state.model_dump(mode="json"))
+                    elif game.is_active() and not game.game_mode.is_game_over():
                         # Игра окончена, отправляем уведомление всем игрокам
                         logger.info(f"Game {game_id} is over or has no players, sending game over notification")
                         await self.notification_service.send_game_over(game_id=game_id)
@@ -69,7 +69,7 @@ class GameCoordinator:
     async def game_create(self, **kwargs) -> dict:
         """Создать новую игру с настройками"""
         try:
-            game_id = str(uuid4())
+            game_id = kwargs.get("game_id")
             logger.info(f"Creating new game settings for game {game_id}, kwargs: {kwargs}")
 
             new_game_settings = kwargs.get("new_game_settings")

@@ -1,3 +1,7 @@
+import os
+import socket
+
+import consul
 import uvicorn
 import logging
 import traceback
@@ -18,6 +22,24 @@ from .auth import get_current_user, get_current_admin
 # Настройка логирования
 configure_logging()
 logger = logging.getLogger(__name__)
+
+def register_service():
+    logger.info(f"registering in the consul service")
+    service_name = settings.SERVICE_NAME
+    c = consul.Consul(host=settings.CONSUL_HOST, port=8500)
+    service_id = f"{service_name}-{socket.gethostname()}"
+    c.agent.service.register(
+        name=service_name,
+        service_id=service_id,
+        address=socket.gethostname(),  # Имя сервиса в Docker сети
+        port=settings.PORT,
+        tags=["traefik"],
+        check=consul.Check.http(
+            url=f"http://{socket.gethostname()}:{settings.PORT}/health",
+            interval="10s",
+            timeout="1s"
+        )
+    )
 
 try:
     # Инициализация FastAPI
@@ -56,7 +78,7 @@ try:
     
     # Подключаем маршруты
     app.include_router(root_router)
-    # app.include_router(api_router, prefix=settings.API_V1_STR)
+    app.include_router(api_router, prefix=settings.API_V1_STR)
 
     # Инициализация Socket.IO
     try:
@@ -102,6 +124,8 @@ try:
         """Действия при запуске приложения"""
         try:
             logger.info("Starting WebAPI service")
+            logger.info(f"Hostname: {settings.HOSTNAME}")
+            register_service()
             await redis_repository.connect()
             logger.info("Connected to Redis successfully")
             # await nats_service.connect()
@@ -124,6 +148,11 @@ try:
             logger.info("WebAPI service stopped successfully")
         except Exception as e:
             logger.error(f"Error during WebAPI service shutdown: {e}", exc_info=True)
+
+
+    @app.get("/health")
+    async def health_check():
+        return {"status": "healthy"}
 
 except Exception as e:
     logger.critical(f"Failed to initialize application: {str(e)}\n{traceback.format_exc()}")

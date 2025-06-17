@@ -1,7 +1,9 @@
 import asyncio
 import logging
 import os
+import socket
 
+import consul
 import uvicorn
 import traceback
 from contextlib import asynccontextmanager
@@ -23,12 +25,31 @@ configure_logging()
 logger = logging.getLogger(__name__)
 
 
+def register_service():
+    logger.info(f"registering in the consul service")
+    service_name = settings.SERVICE_NAME
+    c = consul.Consul(host=settings.CONSUL_HOST, port=8500)
+    service_id = f"{service_name}-{socket.gethostname()}"
+    c.agent.service.register(
+        name=service_name,
+        service_id=service_id,
+        address=socket.gethostname(),  # Имя сервиса в Docker сети
+        port=settings.PORT,
+        tags=["traefik"],
+        check=consul.Check.http(
+            url=f"http://{socket.gethostname()}:{settings.PORT}/health",
+            interval="10s",
+            timeout="1s"
+        )
+    )
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
     try:
         logger.info("Starting Game service")
         logger.info(f"Hostname: {settings.HOSTNAME}")
+        register_service()
         # Инициализируем подключения к базам данных
         await nats_repository.get_nc()
         await redis_repository.get_redis()
@@ -131,9 +152,12 @@ try:
     @app.get("/health")
     async def health_check() -> dict:
         try:
-            # В реальном приложении здесь можно было бы проверить подключение к NATS и базам данных
+            #TODO здесь можно было бы проверить подключение к NATS и базам данных
             # и вернуть соответствующий статус
-            return {"status": "ok", "service": "game-service"}
+            return {
+                "status": "healthy",
+                "service": "game-service"
+            }
         except Exception as e:
             logger.error(f"Health check failed: {e}", exc_info=True)
             return {"status": "error", "service": "game-service", "message": str(e)}

@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     RELOAD: bool = True
     SWAGGER_URL: str = "/auth/docs"
+
+    SERVICE_NAME: str = "auth-service"
+
+    CONSUL_HOST: str = "localhost"
     
     # CORS settings
     CORS_ORIGINS: list[str] = ["*"]

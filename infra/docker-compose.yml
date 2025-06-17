@@ -1,10 +1,45 @@
 version: "3.9"
 name: bombermanonline-infra
 services:
+  consul:
+    image: hashicorp/consul:1.21
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+#    volumes:
+#      - consul_data:/consul/data
+    command: "agent -server -bootstrap-expect=1 -ui -client=0.0.0.0"
+
+  game-allocator-service:
+      build:
+        context: ../services/game-allocator-service
+        dockerfile: Dockerfile
+      environment:
+        - PYTHONUNBUFFERED=1
+        - REDIS_HOST=redis
+        - CONSUL_HTTP_ADDR=consul:8500
+        - PROMETHEUS_URL=http://prometheus:9090
+        - NATS_URL=nats://nats:4222
+        - CONSUL_HOST=consul
+        - LOG_LEVEL=DEBUG
+        - LOG_FORMAT=json
+      volumes:
+        - ../services/game-allocator-service/app:/app/game-allocator-service/app
+      depends_on:
+        - consul
+        - prometheus
+        - nats
+      labels:
+        - "traefik.enable=true"
+#        - "traefik.http.routers.allocator.rule=Host(`allocator.localhost`)"
+
   webapi-service:
     build:
       context: ../services/webapi-service
       dockerfile: Dockerfile
+    deploy:
+      mode: replicated
+      replicas: 2
 #    command: uv run uvicorn webapi-service.app.main:app --host 0.0.0.0 --port 5001
     volumes:
       - ../services/webapi-service/app:/app/webapi-service/app
@@ -14,13 +49,16 @@ services:
       - REDIS_HOST=redis
       - NATS_URL=nats://nats:4222
       - AUTH_SERVICE_URL=http://auth-service:5003
+      - CONSUL_HOST=consul
     depends_on:
       - postgres
       - redis
       - nats
       - auth-service
-    ports:
-      - "5001:5001"
+#    ports:
+#      - "5001:5001"
+    expose:
+      - "5001"
     labels:
       - "traefik.enable=true"
     logging:
@@ -34,6 +72,9 @@ services:
       context: ../services/game-service
       dockerfile: Dockerfile
 #    command: uv run --host 0.0.0.0 --port 8001
+    deploy:
+      mode: replicated
+      replicas: 2
     volumes:
       - ../services/game-service/app:/app/game-service/app
       - game_logs:/var/log/game-service
@@ -48,12 +89,15 @@ services:
       - POSTGRES_USER=bomberman
       - POSTGRES_PASSWORD=bomberman
       - LOG_FORMAT=json
+      - CONSUL_HOST=consul
     depends_on:
       - redis
       - nats
       - auth-service
-    ports:
-      - "5002:5002"
+#    ports:
+#      - "5002:5002"
+    expose:
+      - "5002"
     labels:
       - "traefik.enable=true"
     logging:
@@ -66,6 +110,9 @@ services:
     build:
       context: ../services/auth-service
       dockerfile: Dockerfile
+    deploy:
+      mode: replicated
+      replicas: 2
     volumes:
       - ../services/auth-service/app:/app/auth-service/app
       - auth_logs:/var/log/auth-service
@@ -78,11 +125,14 @@ services:
       - POSTGRES_USER=bomberman
       - POSTGRES_PASSWORD=bomberman
       - SECRET_KEY=${AUTH_SECRET_KEY:-your_secret_key_here}
+      - CONSUL_HOST=consul
     depends_on:
       - postgres
       - redis
-    ports:
-      - "5003:5003"
+#    ports:
+#      - "5003:5003"
+    expose:
+      - "5003"
     labels:
       - "traefik.enable=true"
     logging:
@@ -295,4 +345,5 @@ volumes:
   grafana_data:
   webapi_logs:
   game_logs:
-  auth_logs: 
+  auth_logs:
+  consul_data:

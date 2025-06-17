@@ -7,6 +7,7 @@ from nats.aio.client import Client as NATS
 from nats.aio.msg import Msg
 
 from ..config import settings
+from ..models.game import GameCreateSettings
 
 logger = logging.getLogger(__name__)
 
@@ -125,16 +126,40 @@ class NatsService:
             logger.debug(f"Player disconnected event for {player_id} in game {game_id} forwarded to {handler} handler")
         except Exception as e:
             logger.error(f"Error handling player disconnect: {e}", exc_info=True)
-    
-    async def create_game(self, game_id: str) -> Dict[str, Any]:
+
+    async def request_game_assignment(self, game_id: str, settings: dict) -> str:
+        nc = await self.get_nc()
+        response = await nc.request(
+            subject="game.assign.request",
+            payload=json.dumps({
+                "game_id": game_id,
+                "settings": settings  # Например, {"resource_level": "low", "game_type": "intensive"}
+            }).encode())
+        result = json.loads(response.data.decode())
+        if result.get('success'):
+            logger.info(f"Game: {game_id} successfully assigned to game-service: {result['instance_id']}")
+        else:
+            logger.warning(f"Failed to create game: {result.get('message')}")
+        return result["instance_id"]
+
+    async def create_game(self, game_id: str, init_params: GameCreateSettings) -> Dict[str, Any]:
         """Отправка запроса на создание игры"""
         try:
             nc = await self.get_nc()
             # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
-            sharded_subject = f"game.create.{settings.GAME_SERVICE_HOSTNAME}"
+            shard_id = await self.request_game_assignment(
+                game_id=game_id,
+                settings={
+                    "resource_level": "low"
+                }
+            )
+            logger.info(f"assigned game-service shard {shard_id} to game {game_id}")
+            sharded_subject = f"game.create.{shard_id}"
+            payload = init_params.model_dump(mode="json")
+            payload["game_id"] = game_id
             response = await nc.request(
                 sharded_subject,
-                json.dumps({"game_id": game_id}).encode(),
+                json.dumps(payload).encode(),
                 timeout=5.0
             )
             result = json.loads(response.data.decode())

@@ -22,6 +22,8 @@ from datetime import datetime
 logger = logging.getLogger(__name__)
 
 
+MapState.model_rebuild()
+
 class GameService:
     """Сервис оркестрации игры"""
     
@@ -93,16 +95,22 @@ class GameService:
                     player = Bomberman(
                         player_id=player_id,
                         size=self.settings.cell_size,
+                        map=self.game_mode.map,
+                        settings=self.settings
                     )
                 case UnitType.TANK:
                     player = Tank(
                         player_id=player_id,
                         size=self.settings.cell_size,
+                        map=self.game_mode.map,
+                        settings=self.settings
                     )
                 case _:
                     player = Bomberman(
                         player_id=player_id,
                         size=self.settings.cell_size,
+                        map=self.game_mode.map,
+                        settings=self.settings
                     )
             success = self.game_mode.add_player(player)
             
@@ -332,7 +340,7 @@ class GameService:
     def is_active(self) -> bool:
         """Проверить активность игры"""
         try:
-            if self.status == [GameStatus.FINISHED, GameStatus.PAUSED, GameStatus.PENDING]:
+            if self.status in [GameStatus.FINISHED, GameStatus.PAUSED, GameStatus.PENDING]:
                 return False
             
             return self.game_mode.is_active()
@@ -344,11 +352,11 @@ class GameService:
         """Получить состояние игры"""
         try:
             state = self.game_mode.get_state()
-            state['status'] = self.status.value
-            state['is_active'] = self.is_active()
+            state.status = self.status.value
+            state.is_active = self.is_active()
 
             # Добавляем состояние команд из TeamService
-            state['teams'] = {id: GameTeamInfo(**team) for id, team in self.team_service.get_teams_state()}
+            state.teams = {id: GameTeamInfo(**team) for id, team in self.team_service.get_teams_state().items()}
             return state
         except Exception as e:
             logger.error(f"Error getting game state: {e}", exc_info=True)
@@ -357,7 +365,7 @@ class GameService:
                 enemies=[],
                 weapons=[],
                 power_ups=[],
-                map=MapData(grid=[], width=0, height=0),
+                map=MapData(grid=None, width=0, height=0),
                 level=0,
                 error=True,
                 is_active=False

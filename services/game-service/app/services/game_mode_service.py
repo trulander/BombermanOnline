@@ -287,7 +287,9 @@ class GameModeService(ABC):
                     y=player.y,
                     size=self.settings.cell_size,
                     power=weapon_power,
-                    owner_id=player.id
+                    owner_id=player.id,
+                    map=self.map,
+                    settings=self.settings
                 )
             elif weapon_type == WeaponType.BULLET:
                 weapon = Bullet(
@@ -296,14 +298,18 @@ class GameModeService(ABC):
                     size=self.settings.cell_size,
                     direction=player.direction,
                     speed=weapon_power,
-                    owner_id=player.id
+                    owner_id=player.id,
+                    map=self.map,
+                    settings=self.settings
                 )
             elif weapon_type == WeaponType.MINE:
                 weapon = Mine(
                     x=player.x,
                     y=player.y,
                     size=self.settings.cell_size,
-                    owner_id=player.id
+                    owner_id=player.id,
+                    map=self.map,
+                    settings=self.settings
                 )
             else:
                 return False
@@ -407,7 +413,14 @@ class GameModeService(ABC):
         """Создать усиление в указанной позиции"""
         try:
             power_type: PowerUpType = random.choice(list(PowerUpType))
-            power_up = PowerUp(x, y, self.settings.cell_size, power_type)
+            power_up = PowerUp(
+                x=x,
+                y=y,
+                size=self.settings.cell_size,
+                power_type=power_type,
+                map=self.map,
+                settings=self.settings
+            )
             self.power_ups[power_up.id] = power_up
         except Exception as e:
             logger.error(f"Error spawning power-up at ({x}, {y}): {e}", exc_info=True)
@@ -440,7 +453,9 @@ class GameModeService(ABC):
                     y=enemy_data['y'],
                     size=self.settings.cell_size,
                     speed=enemy_data['speed'],
-                    enemy_type=enemy_data['type']
+                    enemy_type=enemy_data['type'],
+                    map=self.map,
+                    settings=self.settings
                 )
                 self.enemies.append(enemy)
             
@@ -460,8 +475,8 @@ class GameModeService(ABC):
     def get_state(self) -> MapState:
         """Получить полное состояние игры"""
         try:
-            map_data = self.map.get_map() if self.map else {'grid': [], 'width': 0, 'height': 0}
-            map_model = MapData(**map_data)
+            map_data = self.map.get_map() if self.map else {'grid': None, 'width': 0, 'height': 0}
+            map_model = MapData(**map_data.model_dump())
 
             players_data: dict[str, PlayerState] = {}
             for player_id, player in self.players.items():
@@ -519,7 +534,8 @@ class GameModeService(ABC):
                 weapons=weapons_data,
                 power_ups=power_ups_data,
                 map=map_model,
-                level=self.level
+                level=self.level,
+                teams=None
             )
         except Exception as e:
             logger.error(f"Error getting game state: {e}", exc_info=True)
@@ -528,10 +544,11 @@ class GameModeService(ABC):
                 enemies=[],
                 weapons=[],
                 power_ups=[],
-                map=MapData(grid=[], width=0, height=0),
+                map=MapData(grid=None, width=0, height=0),
                 level=self.level,
                 error=True,
-                is_active=False
+                is_active=False,
+                teams=None
             )
     
     # Абстрактные методы для переопределения в конкретных режимах

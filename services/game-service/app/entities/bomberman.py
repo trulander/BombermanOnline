@@ -3,6 +3,11 @@ from app.entities.player import UnitType
 from app.entities.weapon import WeaponType
 import logging
 
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from . import Map
+    from ..models.game_models import GameSettings
+
 logger = logging.getLogger(__name__)
 
 class Bomberman(Player):
@@ -10,9 +15,20 @@ class Bomberman(Player):
     scale_size = 0.8
     unit_type: UnitType = UnitType.BOMBERMAN
 
-    def __init__(self, player_id: str, size: float):
+    def __init__(
+            self,
+            player_id: str,
+            size: float,
+            map: "Map",
+            settings: "GameSettings",
+    ):
         try:
-            super().__init__(player_id =player_id, size = size)
+            super().__init__(
+                player_id =player_id,
+                size = size,
+                map=map,
+                settings=settings
+            )
             self.team_id: str | None = None
             self.direction: tuple[float, float] = (0, 1)
 

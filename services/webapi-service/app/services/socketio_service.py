@@ -57,17 +57,17 @@ class SocketIOService:
         # Уведомляем game-service об отключении игрока
         await self.game_service.disconnect_player(sid_user_id=sid_user_id)
 
-    async def io_handle_create_game(self, sid: str, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a new game"""
-        try:
-            response = await self.game_service.create_game()
-            if response.get('success'):
-                # Инкрементируем счетчик игр
-                self.sio.increment_games()
-            return response
-        except Exception as e:
-            logger.error(f"Error creating game: {e}", exc_info=True)
-            return {"success": False, "message": str(e)}
+    # async def io_handle_create_game(self, sid: str, data: Dict[str, Any]) -> Dict[str, Any]:
+    #     """Create a new game"""
+    #     try:
+    #         response = await self.game_service.create_game()
+    #         if response.get('success'):
+    #             # Инкрементируем счетчик игр
+    #             self.sio.increment_games()
+    #         return response
+    #     except Exception as e:
+    #         logger.error(f"Error creating game: {e}", exc_info=True)
+    #         return {"success": False, "message": str(e)}
 
     async def io_handle_join_game(self, sid: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Join an existing game"""

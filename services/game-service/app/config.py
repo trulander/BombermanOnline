@@ -5,6 +5,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
     # FastAPI settings
+    SERVICE_NAME: str = "game-service"
     API_V1_STR: str = "/games/api/v1"
     APP_TITLE: str = "Bomberman Game Service"
     HOST: str = "0.0.0.0"
@@ -12,8 +13,10 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     RELOAD: bool = True
     SWAGGER_URL: str = "/games/docs"
-    HOSTNAME: str = "localhost"
 
+    CONSUL_HOST: str = "localhost"
+
+    HOSTNAME: str = "localhost"
     #TODO доработать логику получения хоста через консул динамически
     WEBAPI_SERVICE_HOSTNAME: str = "localhost"
 

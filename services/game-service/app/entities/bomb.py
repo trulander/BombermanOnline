@@ -1,8 +1,16 @@
 import random
 import time
 
+
 from .weapon import Weapon, WeaponType
 import logging
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from . import Map
+    from ..models.game_models import GameSettings
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -11,8 +19,24 @@ class Bomb(Weapon):
     scale_size = 0.8
 
 
-    def __init__(self, x: float, y: float, size: float, power: int, owner_id: str):
-        super().__init__(x=x, y=y, size=size, owner_id=owner_id)
+    def __init__(
+            self,
+            x: float,
+            y: float,
+            size: float,
+            power: int,
+            owner_id: str,
+            map: "Map",
+            settings: "GameSettings",
+    ):
+        super().__init__(
+            x=x,
+            y=y,
+            size=size,
+            owner_id=owner_id,
+            map=map,
+            settings=settings
+        )
         self.power: int = power
         
         logger.debug(f"Bomb created: position=({x}, {y}), power={power}, owner={owner_id}, timer={self.time_created}")

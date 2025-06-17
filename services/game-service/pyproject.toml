@@ -26,4 +26,5 @@ dependencies = [
     "quantile-python>=1.1",
     "python-json-logger>=3.3.0",
     "typer>=0.16.0",
+    "py-consul>=1.6.0",
 ]

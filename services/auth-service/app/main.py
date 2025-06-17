@@ -1,3 +1,6 @@
+import socket
+
+import consul
 import uvicorn
 import logging
 import traceback
@@ -22,6 +25,25 @@ from .dependencies import db, redis_client
 # Настройка логирования
 configure_logging()
 logger = logging.getLogger(__name__)
+
+
+def register_service():
+    logger.info(f"registering in the consul service")
+    service_name = settings.SERVICE_NAME
+    c = consul.Consul(host=settings.CONSUL_HOST, port=8500)
+    service_id = f"{service_name}-{socket.gethostname()}"
+    c.agent.service.register(
+        name=service_name,
+        service_id=service_id,
+        address=socket.gethostname(),  # Имя сервиса в Docker сети
+        port=settings.PORT,
+        tags=["traefik"],
+        check=consul.Check.http(
+            url=f"http://{socket.gethostname()}:{settings.PORT}/health",
+            interval="10s",
+            timeout="1s"
+        )
+    )
 
 # try:
 # Инициализация FastAPI
@@ -102,6 +124,7 @@ async def startup_event() -> None:
     """Действия при запуске приложения"""
     try:
         logger.info("Starting Auth service")
+        register_service()
         await db.connect()
         logger.info("Connected to PostgreSQL successfully")
         await redis_client.connect()

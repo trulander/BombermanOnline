@@ -5,7 +5,7 @@ http:
       rule: "PathPrefix(`/auth`)"
       entryPoints:
         - web
-      service: auth
+      service: auth-service@consulcatalog
       middlewares:
         - compress
         - security-headers
@@ -16,18 +16,18 @@ http:
       rule: "PathPrefix(`/webapi`)"
       entryPoints:
         - web
-      service: webapi
+      service: webapi-service@consulcatalog
       middlewares:
         - compress
         - security-headers
-        - auth-check
+#        - auth-check
 
     # WebAPI WebSocket
     webapi-ws:
       rule: "PathPrefix(`/webapi/socket.io`)"
       entryPoints:
         - web
-      service: webapi
+      service: webapi-service@consulcatalog
       middlewares:
         - extract-cookie-ws_auth_token
         - websocket
@@ -39,11 +39,11 @@ http:
       rule: "PathPrefix(`/games`)"
       entryPoints:
         - web
-      service: game
+      service: game-service@consulcatalog
       middlewares:
         - compress
         - security-headers
-        - auth-check
+#        - auth-check
 
     # Logger API
     logger:
@@ -59,7 +59,7 @@ http:
       rule: "PathPrefix(`/`)"
       entryPoints:
         - web
-      service: frontend
+      service: web-frontend
       middlewares:
         - compress
         - security-headers
@@ -76,22 +76,22 @@ http:
 
   services:
     # Определение сервисов
-    auth:
+    auth-service:
       loadBalancer:
         servers:
           - url: "http://auth-service:5003"
 
-    webapi:
+    webapi-service:
       loadBalancer:
         servers:
           - url: "http://webapi-service:5001"
 
-    game:
+    game-service:
       loadBalancer:
         servers:
           - url: "http://game-service:5002"
 
-    frontend:
+    web-frontend:
       loadBalancer:
         servers:
           - url: "http://web-frontend:3000"

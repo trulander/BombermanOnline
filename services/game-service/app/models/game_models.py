@@ -4,7 +4,7 @@ from uuid import uuid4
 
 from pydantic import BaseModel, Field
 
-
+from app.entities import EnemyType
 from app.entities.game_status import GameStatus
 from app.entities.game_mode import GameModeType
 from app.entities.player import UnitType
@@ -242,3 +242,10 @@ class GameSettings(BaseModel):
                     allow_uneven_teams=True,
                     default_team_names=["Heroes"]
                 )
+
+class EnemyModel(BaseModel):
+    x: float
+    y: float
+    size: int
+    speed: float
+    enemy_type: EnemyType

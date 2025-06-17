@@ -1,6 +1,8 @@
 import uuid
 import logging
 from typing import Dict, Any, Callable
+
+from ..models.game import GameCreateSettings
 from ..services.nats_service import NatsService
 
 logger = logging.getLogger(__name__)
@@ -36,7 +38,7 @@ class GameService:
     
     # Commands - изменяют состояние системы
     
-    async def create_game(self) -> Dict[str, Any]:
+    async def create_game(self, init_params: GameCreateSettings) -> Dict[str, Any]:
         """
         Команда: Создать новую игру
         
@@ -47,7 +49,7 @@ class GameService:
             logger.info("Creating new game")
             game_id = str(uuid.uuid4())
             logger.info(f"Creating new game with ID: {game_id}")
-            result = await self.nats_service.create_game(game_id=game_id)
+            result = await self.nats_service.create_game(game_id=game_id, init_params=init_params)
             if result.get('success'):
                 logger.info(f"Game created successfully with ID: {result.get('game_id')}")
             else:

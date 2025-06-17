@@ -213,7 +213,7 @@ class Map:
             logger.error(f"Error getting map data: {e}", exc_info=True)
             # Return empty grid in case of error
             return MapData(
-                grid = [],
+                grid = None,
                 width = self.width,
                 height = self.height
             )

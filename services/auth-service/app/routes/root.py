@@ -28,7 +28,7 @@ async def root():
 async def health_check() -> dict:
     """Маршрут для проверки работоспособности сервиса"""
     return {
-        "status": "ok",
+        "status": "healthy",
         "service": "auth-service"
     }
 

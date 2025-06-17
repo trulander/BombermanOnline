@@ -1,12 +1,15 @@
 import time
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Callable
-
-from sqlalchemy import Executable
-
+from typing import Callable, TYPE_CHECKING
 from .entity import Entity
 import logging
+
+if TYPE_CHECKING:
+    from . import Map
+    from ..models.game_models import GameSettings
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +26,24 @@ class Weapon(Entity, ABC):
     scale_size = 0.8
 
 
-    def __init__(self, x: float, y: float, size: float, owner_id: str, direction: tuple[float, float] = None):
+    def __init__(
+            self,
+            x: float,
+            y: float,
+            size: float,
+            owner_id: str,
+            map: "Map",
+            settings: "GameSettings",
+            direction: tuple[float, float] = None
+    ):
         super().__init__(
             x=x,
             y=y,
             width=size * self.scale_size,
             height=size * self.scale_size,
-            name=f"Weapon_{self.weapon_type.value}"
+            name=f"Weapon_{self.weapon_type.value}",
+            map=map,
+            settings=settings
         )
         self.power: int = 1 # значение по умолчанию
 

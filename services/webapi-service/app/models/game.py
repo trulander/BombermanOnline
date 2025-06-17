@@ -2,9 +2,30 @@ from uuid import uuid4
 from pydantic import BaseModel, Field, field_validator
 from typing import Dict, List, Any
 
-class GameCreate(BaseModel):
-    """Модель для создания новой игры"""
-    pass
+from ..entities.game_mode import GameModeType
+
+
+class GameCreateSettings(BaseModel):
+    # game_id: str = str(uuid4())
+    # Режим игры
+    game_mode: GameModeType = GameModeType.CAMPAIGN
+    # Настройки игроков и команд
+    max_players: int = 4
+    player_start_lives: int = 3
+
+    # Настройки врагов
+    enable_enemies: bool = True
+
+    # Настройки карт
+    map_chain_id: str | None = None
+    map_template_id: str | None = None
+
+    # Игровые настройки
+    respawn_enabled: bool = False
+    friendly_fire: bool = False
+    time_limit: int | None = 300  # в секундах
+    score_limit: int | None = 10
+    rounds_count: int | None = 15
 
 class JoinGameRequest(BaseModel):
     """Модель для присоединения к игре"""

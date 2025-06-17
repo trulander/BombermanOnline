@@ -8,6 +8,8 @@ import logging
 
 if TYPE_CHECKING:
     from . import Inputs
+    from . import Map
+    from ..models.game_models import GameSettings
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +28,13 @@ class Player(Entity, ABC):
     scale_size = 0.8
     unit_type: UnitType = None
 
-    def __init__(self, player_id: str, size: float):
+    def __init__(
+            self,
+            player_id: str,
+            size: float,
+            map: "Map",
+            settings: "GameSettings",
+    ):
         try:
             super().__init__(
                 entity_id=player_id,
@@ -34,7 +42,9 @@ class Player(Entity, ABC):
                 height=size * self.scale_size,
                 speed=3.0,
                 lives=3,
-                color=self.COLORS[0] # Default color, will be assigned later
+                color=self.COLORS[0], # Default color, will be assigned later
+                map = map,
+                settings = settings
             )
             self.team_id: str = ""  # ID команды
 

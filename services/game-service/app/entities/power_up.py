@@ -1,11 +1,20 @@
 from enum import Enum
+from typing import TYPE_CHECKING
+
 from .entity import Entity
 from .player import Player # Keep for type hinting in apply_to_player
 import logging
 
 from .weapon import WeaponType
 
+if TYPE_CHECKING:
+    from . import Map
+    from ..models.game_models import GameSettings
+
+
+
 logger = logging.getLogger(__name__)
+
 
 class PowerUpType(Enum):
     BOMB_UP = 'BOMB_UP'
@@ -17,9 +26,18 @@ class PowerUpType(Enum):
     SPEED_UP = 'SPEED_UP'
     LIFE_UP = 'LIFE_UP'
 
+
 class PowerUp(Entity):
     scale_size = 0.7
-    def __init__(self, x: float, y: float, size: float, power_type: PowerUpType):
+    def __init__(
+            self,
+            x: float,
+            y: float,
+            size: float,
+            power_type: PowerUpType,
+            map: "Map",
+            settings: "GameSettings",
+    ):
         try:
             width = size * self.scale_size
             height = size * self.scale_size
@@ -28,14 +46,15 @@ class PowerUp(Entity):
                 y=y + (size - height) / 2,
                 width=width,
                 height=height,
-                name=f"PowerUp_{power_type.name}"
+                name=f"PowerUp_{power_type.name}",
+                map=map,
+                settings=settings
             )
             self.type: PowerUpType = power_type
             logger.debug(f"PowerUp created: type={power_type.name}, position=({self.x}, {self.y})")
         except Exception as e:
             logger.error(f"Error creating PowerUp at ({x}, {y}): {e}", exc_info=True)
             raise
-
 
     def apply_to_player(self, player: Player) -> None:
         try:

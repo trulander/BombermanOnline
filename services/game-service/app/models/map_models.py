@@ -127,7 +127,7 @@ class MapTemplate(MapTemplateBase):
 class MapGroupBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
-    map_ids: List[str] = Field(..., min_items=1)
+    map_ids: List[str] = Field(min_length=1)
 
 
 class MapGroupCreate(MapGroupBase):
@@ -137,7 +137,7 @@ class MapGroupCreate(MapGroupBase):
 class MapGroupUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
-    map_ids: Optional[List[str]] = Field(None, min_items=1)
+    map_ids: Optional[List[str]] = Field(min_length=1)
 
 
 class MapGroup(MapGroupBase):
@@ -167,7 +167,7 @@ class MapGroup(MapGroupBase):
 class MapChainBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     description: Optional[str] = None
-    map_ids: List[str] = Field(..., min_items=1)
+    map_ids: List[str] = Field(min_length=1)
     difficulty_progression: float = Field(1.0, ge=0.1, le=5.0)
 
 
@@ -178,7 +178,7 @@ class MapChainCreate(MapChainBase):
 class MapChainUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     description: Optional[str] = None
-    map_ids: Optional[List[str]] = Field(None, min_items=1)
+    map_ids: Optional[List[str]] = Field(min_length=1)
     difficulty_progression: Optional[float] = Field(None, ge=0.1, le=5.0)
 
 
@@ -279,7 +279,7 @@ class PowerUpState(BaseModel):
 
 
 class MapData(BaseModel):
-    grid: list[int, int]
+    grid: list | None
     width: int
     height: int
 
@@ -294,7 +294,7 @@ class MapState(BaseModel):
     error: Optional[bool] = None
     is_active: Optional[bool] = None
     status: GameStatus = None
-    teams: dict[str, "GameTeamInfo"] = None
+    teams: Optional[dict[str, "GameTeamInfo"]] = None
 
 
 class MapUpdate(BaseModel):
