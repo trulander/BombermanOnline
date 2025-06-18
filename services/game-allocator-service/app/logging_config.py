@@ -28,7 +28,7 @@ class CustomJsonFormatter(jsonlogger.JsonFormatter):
     def add_fields(self, log_record, record, message_dict):
         super().add_fields(log_record, record, message_dict)
         # Основные поля
-        log_record["service"] = "game-service"
+        log_record["service"] = settings.SERVICE_NAME
         log_record["service_type"] = "backend"
         log_record["level"] = record.levelname
         log_record["logger"] = record.name
