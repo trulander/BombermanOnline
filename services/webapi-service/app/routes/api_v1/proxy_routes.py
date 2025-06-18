@@ -15,8 +15,8 @@ proxy_router = APIRouter()
 
 @proxy_router.api_route(
     "/{path:path}",
-    methods=["GET"]
-# methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH", "TRACE"]
+    # methods=["GET"]
+    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH", "TRACE"]
 )
 async def proxy_to_game_service(
         game_id: str,

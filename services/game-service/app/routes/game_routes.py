@@ -1,4 +1,5 @@
 import logging
+import uuid
 from datetime import datetime
 from typing import List, Optional, TYPE_CHECKING
 from fastapi import APIRouter, HTTPException, Depends, Query
@@ -164,7 +165,7 @@ async def create_game(
     try:
         # Вызываем метод создания игры через GameCoordinator
         new_game_settings = game_settings.model_dump()
-        import uuid
+
         new_game_settings['game_id'] = str(uuid.uuid4())
         result = await coordinator.game_create(new_game_settings=game_settings)
 

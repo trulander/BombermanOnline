@@ -32,6 +32,11 @@ services:
       labels:
         - "traefik.enable=true"
 #        - "traefik.http.routers.allocator.rule=Host(`allocator.localhost`)"
+      logging:
+        driver: "fluentd"
+        options:
+          fluentd-address: localhost:24224
+          tag: docker.game-allocator-service
 
   webapi-service:
     build:
