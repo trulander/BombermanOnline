@@ -13,11 +13,11 @@ logger = logging.getLogger(__name__)
 
 proxy_router = APIRouter()
 
-@proxy_router.api_route(
-    "/{path:path}",
-    # methods=["GET"]
-    methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH", "TRACE"]
-)
+# @proxy_router.api_route(
+#     "/{path:path}",
+#     # methods=["GET"]
+#     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH", "TRACE"]
+# )
 async def proxy_to_game_service(
         game_id: str,
         path: str,
@@ -74,3 +74,11 @@ async def proxy_to_game_service(
     )
     logger.debug(f"response: {result}")
     return result
+
+for method in ["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH", "TRACE"]:
+    proxy_router.add_api_route(
+        "/{path:path}",
+        proxy_to_game_service,
+        methods=[method],
+        name=f"proxy_{method.lower()}"
+    )
