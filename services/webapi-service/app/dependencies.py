@@ -14,9 +14,10 @@ logger = logging.getLogger(__name__)
 try:
     logger.debug("Initializing singleton instances")
     redis_repository = RedisRepository()
-    nats_service = NatsService()
-    game_service = GameService(nats_service)
     game_cache = GameInstanceCache(redis_repository=redis_repository)
+    nats_service = NatsService(game_cache=game_cache)
+    game_service = GameService(nats_service)
+
     logger.info("Singleton instances initialized successfully")
 except Exception as e:
     logger.critical(f"Failed to initialize dependency services: {e}", exc_info=True)

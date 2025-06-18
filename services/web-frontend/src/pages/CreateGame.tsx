@@ -13,13 +13,18 @@ import {
   FormControl
 } from '@mui/material';
 import GameLayout from '../components/GameLayout';
-import { gameApi } from '../services/api';
+import { gameApi, webApi } from '../services/api';
 import { Formik, Form, Field } from 'formik';
 import * as Yup from 'yup';
 
 interface EntitiesInfo {
   game_modes: { [key: string]: string };
   // Add other entity types if needed for future features
+}
+
+interface MapTemplate {
+  id: string;
+  name: string;
 }
 
 interface GameCreateSettings {
@@ -42,23 +47,28 @@ const validationSchema = Yup.object().shape({
 const CreateGame: React.FC = () => {
   const navigate = useNavigate();
   const [entitiesInfo, setEntitiesInfo] = useState<EntitiesInfo | null>(null);
+  const [mapTemplates, setMapTemplates] = useState<MapTemplate[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchEntitiesInfo = async () => {
+    const fetchInitialData = async () => {
       try {
-        const response = await gameApi.get<EntitiesInfo>('/entities/info');
-        setEntitiesInfo(response.data);
+        const [entitiesResponse, mapsResponse] = await Promise.all([
+          gameApi.get<EntitiesInfo>('/entities/info'),
+          gameApi.get<MapTemplate[]>('/maps/templates')
+        ]);
+        setEntitiesInfo(entitiesResponse.data);
+        setMapTemplates(mapsResponse.data);
         setLoading(false);
       } catch (err) {
-        console.error('Error fetching entities info:', err);
-        setError('Не удалось загрузить информацию о сущностях. Пожалуйста, попробуйте позже.');
+        console.error('Error fetching initial data:', err);
+        setError('Не удалось загрузить необходимые данные (режимы игры, карты). Пожалуйста, попробуйте позже.');
         setLoading(false);
       }
     };
-    fetchEntitiesInfo();
+    fetchInitialData();
   }, []);
 
   const handleSubmit = async (values: GameCreateSettings) => {
@@ -69,11 +79,11 @@ const CreateGame: React.FC = () => {
     console.log('Attempting to create game with values:', values);
 
     try {
-      const response = await gameApi.post('/games', values);
-      if (response.data && response.data.success) {
+      const response = await webApi.post('/games', values);
+      if (response.data && response.data.game_id) {
         setSuccess('Игра успешно создана!');
-        // Redirect to the game management page
-        navigate(`/account/games/${response.data.game_id}/manage`);
+        // Redirect to the actual game page to join it
+        navigate(`/account/game/${response.data.game_id}`);
       } else {
         setError(response.data?.message || 'Не удалось создать игру.');
       }
@@ -85,7 +95,7 @@ const CreateGame: React.FC = () => {
     }
   };
 
-  if (loading && !entitiesInfo) {
+  if (loading && (!entitiesInfo || mapTemplates.length === 0)) {
     return (
       <GameLayout>
         <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
@@ -163,16 +173,28 @@ const CreateGame: React.FC = () => {
                 helperText={touched.name && errors.name}
               />
               
-              <Field
-                as={TextField}
-                name="map_template_id"
-                label="ID шаблона карты (опционально)"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                error={touched.map_template_id && Boolean(errors.map_template_id)}
-                helperText={touched.map_template_id && errors.map_template_id}
-              />
+              <FormControl fullWidth margin="normal" error={touched.map_template_id && Boolean(errors.map_template_id)}>
+                <InputLabel id="map-template-label">Шаблон карты (опционально)</InputLabel>
+                <Field
+                  as={Select}
+                  labelId="map-template-label"
+                  id="map_template_id"
+                  name="map_template_id"
+                  label="Шаблон карты (опционально)"
+                  value={values.map_template_id}
+                  onChange={handleChange}
+                >
+                  <MenuItem value=""><em>Без выбора</em></MenuItem>
+                  {mapTemplates.map((map) => (
+                    <MenuItem key={map.id} value={map.id}>
+                      {map.name}
+                    </MenuItem>
+                  ))}
+                </Field>
+                {touched.map_template_id && errors.map_template_id && (
+                  <Typography variant="caption" color="error">{errors.map_template_id}</Typography>
+                )}
+              </FormControl>
 
               <Button
                 type="submit"

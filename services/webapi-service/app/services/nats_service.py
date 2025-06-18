@@ -1,19 +1,25 @@
 import json
 import logging
-from typing import Dict, Any, Callable
+from typing import Dict, Any, Callable, TYPE_CHECKING
 
 import nats
 from nats.aio.client import Client as NATS
 from nats.aio.msg import Msg
-
 from ..config import settings
 from ..models.game import GameCreateSettings
+
+if TYPE_CHECKING:
+    from game_cache import GameInstanceCache
 
 logger = logging.getLogger(__name__)
 
 class NatsService:
-    def __init__(self) -> None:
+    def __init__(
+            self,
+            game_cache: "GameInstanceCache"
+    ) -> None:
         try:
+            self.game_cache: "GameInstanceCache" = game_cache
             self._nc: NATS | None = None
             self.socket_event_handlers: Dict[str, Dict[str, Callable]] = {}
             logger.info("NatsService initialized")
@@ -147,14 +153,16 @@ class NatsService:
         try:
             nc = await self.get_nc()
             # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
-            shard_id = await self.request_game_assignment(
+            game_service_address = await self.request_game_assignment(
                 game_id=game_id,
                 settings={
                     "resource_level": "low"
                 }
             )
-            logger.info(f"assigned game-service shard {shard_id} to game {game_id}")
-            sharded_subject = f"game.create.{shard_id}"
+            await self.game_cache.set_instance(game_id=game_id, instance_id=game_service_address)
+
+            logger.info(f"assigned game-service shard {game_service_address} to game {game_id}")
+            sharded_subject = f"game.create.{game_service_address}"
             payload = init_params.model_dump(mode="json")
             payload["game_id"] = game_id
             response = await nc.request(
@@ -177,9 +185,12 @@ class NatsService:
     async def join_game(self, game_id: str, player_id: str) -> Dict[str, Any]:
         """Отправка запроса на присоединение к игре"""
         try:
+            game_service_address = await self.game_cache.get_instance(game_id=game_id)
+            if not game_service_address:
+                logger.critical(f"Game service address not found: {game_id}")
             nc = await self.get_nc()
             # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
-            sharded_subject = f"game.join.{settings.GAME_SERVICE_HOSTNAME}"
+            sharded_subject = f"game.join.{game_service_address}"
             response = await nc.request(
                 sharded_subject,
                 json.dumps({"game_id": game_id, "player_id": player_id}).encode(),
@@ -221,9 +232,12 @@ class NatsService:
         logger.info(f"Player {player_id} placing weapon {weapon_type} in game {game_id}")
 
         try:
+            game_service_address = await self.game_cache.get_instance(game_id=game_id)
+            if not game_service_address:
+                logger.critical(f"Game service address not found: {game_id}")
             nc = await self.get_nc()
             # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
-            sharded_subject = f"game.place_weapon.{settings.GAME_SERVICE_HOSTNAME}"
+            sharded_subject = f"game.place_weapon.{game_service_address}"
             response = await nc.request(
                 sharded_subject,
                 json.dumps({
@@ -250,9 +264,12 @@ class NatsService:
         logger.debug(f"Getting state for game {game_id}")
 
         try:
+            game_service_address = await self.game_cache.get_instance(game_id=game_id)
+            if not game_service_address:
+                logger.critical(f"Game service address not found: {game_id}")
             nc = await self.get_nc()
             # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
-            sharded_subject = f"game.get_state.{settings.GAME_SERVICE_HOSTNAME}"
+            sharded_subject = f"game.get_state.{game_service_address}"
             response = await nc.request(
                 sharded_subject,
                 json.dumps({"game_id": game_id}).encode(),
@@ -275,9 +292,12 @@ class NatsService:
         logger.info(f"Disconnecting player {player_id} from game {game_id}")
             
         try:
+            game_service_address = await self.game_cache.get_instance(game_id=game_id)
+            if not game_service_address:
+                logger.critical(f"Game service address not found: {game_id}")
             nc = await self.get_nc()
             # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
-            sharded_subject = f"game.disconnect.{settings.GAME_SERVICE_HOSTNAME}"
+            sharded_subject = f"game.disconnect.{game_service_address}"
             response = await nc.request(
                 sharded_subject,
                 json.dumps({"game_id": game_id, "player_id": player_id}).encode(),

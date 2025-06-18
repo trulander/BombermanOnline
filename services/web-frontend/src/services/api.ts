@@ -76,4 +76,15 @@ const createAxiosInstance = (baseURL: string) => {
 
 export const authApi = createAxiosInstance('/auth/api/v1');
 export const gameApi = createAxiosInstance('/games/api/v1');
-export const webApi = createAxiosInstance('/webapi/api/v1'); 
+export const webApi = createAxiosInstance('/webapi/api/v1');
+
+export const getProxiedGameApi = (gameId: string) => {
+  if (!gameId) {
+    console.error("gameId is required for proxied game API");
+    throw new Error("gameId is required for proxied game API");
+  }
+  // The full path will be /webapi/api/v1/game-service/{gameId}/games/api/v1
+  // This matches the proxy router setup in webapi-service/app/routes/api.py
+  // and the prefix in game-service/app/main.py
+  return createAxiosInstance(`/webapi/api/v1/game-service/${gameId}/games/api/v1`);
+}; 

@@ -17,6 +17,7 @@ import Game from './pages/Game';
 import CreateGame from './pages/CreateGame';
 import ManageGame from './pages/ManageGame';
 import MapEditor from './pages/MapEditor';
+import GameList from './pages/GameList';
 
 // Layout components
 import Layout from './components/Layout';
@@ -104,6 +105,11 @@ const App: React.FC = () => {
           <Route path="maps/editor" element={
             <ProtectedRoute>
               <MapEditor />
+            </ProtectedRoute>
+          } />
+          <Route path="games" element={
+            <ProtectedRoute>
+              <GameList />
             </ProtectedRoute>
           } />
           

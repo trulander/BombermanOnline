@@ -93,6 +93,51 @@ const Dashboard: React.FC = () => {
           <Card>
             <CardContent>
               <Typography variant="h6" gutterBottom>
+                Список игр
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Просмотрите доступные игры и присоединяйтесь к ним.
+              </Typography>
+              <Button 
+                component={Link} 
+                to="/account/games" 
+                variant="contained" 
+                color="secondary"
+                startIcon={<SportsEsports />}
+                fullWidth
+              >
+                Посмотреть игры
+              </Button>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Редактор карт
+              </Typography>
+              <Typography variant="body2" color="text.secondary" paragraph>
+                Создавайте и управляйте своими собственными игровыми картами.
+              </Typography>
+              <Button 
+                component={Link} 
+                to="/account/maps/editor" 
+                variant="outlined"
+                startIcon={<Settings />}
+                fullWidth
+              >
+                Открыть редактор
+              </Button>
+            </CardContent>
+          </Card>
+        </Grid>
+        
+        <Grid item xs={12} md={6}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
                 Статистика
               </Typography>
               <Typography variant="body2" color="text.secondary" paragraph>

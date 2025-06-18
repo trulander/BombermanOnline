@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     NATS_URL: str = "nats://localhost:4222"
 
     # Logging settings
-    LOG_LEVEL: str = "INFO"
+    LOG_LEVEL: str = "DEBUG"
     LOG_FORMAT: str = "text" #json
     TRACE_CALLER: bool = True
 

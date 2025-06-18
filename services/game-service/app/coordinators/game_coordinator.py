@@ -70,7 +70,7 @@ class GameCoordinator:
         """Создать новую игру с настройками"""
         try:
             new_game_settings = kwargs.get("new_game_settings")
-            game_id = new_game_settings.get("game_id")
+            game_id = kwargs.get("game_id")
             logger.info(f"Creating new game settings for game {game_id}, kwargs: {kwargs}")
 
 
@@ -193,12 +193,13 @@ class GameCoordinator:
         if game_id in self.games:
             game_service = self.games[game_id]
             game_state = game_service.get_state()
-                
-            logger.debug(f"State requested for game {game_id}")
-            return {
+
+            result = {
                 "success": True,
-                "game_state": game_state,
+                "game_state": game_state.model_dump(mode="json"),
             }
+            logger.debug(f"State requested for game game_id: {game_id}, result: {result}")
+            return result
         else:
             logger.warning(f"Game {game_id} not found for get_game_state")
             return {

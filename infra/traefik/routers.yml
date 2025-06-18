@@ -1,5 +1,35 @@
 http:
   routers:
+    # отключаем авторизацию для страниц документаций, для локальной разработки.
+    auth-api_docs:
+      rule: "PathPrefix(`/auth/docs`)"
+      entryPoints:
+        - web
+      service: auth-service@consulcatalog
+      middlewares:
+        - compress
+        - security-headers
+
+    webapi-docs:
+      rule: "PathPrefix(`/webapi/docs`)"
+      entryPoints:
+        - web
+      service: webapi-service@consulcatalog
+      middlewares:
+        - compress
+        - security-headers
+
+    # Game сервис - с проверкой авторизации
+    game-docs:
+      rule: "PathPrefix(`/games/docs`)"
+      entryPoints:
+        - web
+      service: game-service@consulcatalog
+      middlewares:
+        - compress
+        - security-headers
+
+
     # Auth сервис - API
     auth-api:
       rule: "PathPrefix(`/auth`)"
@@ -20,7 +50,7 @@ http:
       middlewares:
         - compress
         - security-headers
-#        - auth-check
+        - auth-check
 
     # WebAPI WebSocket
     webapi-ws:
@@ -43,7 +73,7 @@ http:
       middlewares:
         - compress
         - security-headers
-#        - auth-check
+        - auth-check
 
     # Logger API
     logger:
