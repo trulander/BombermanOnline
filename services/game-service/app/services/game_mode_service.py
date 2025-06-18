@@ -481,6 +481,8 @@ class GameModeService(ABC):
             players_data: dict[str, PlayerState] = {}
             for player_id, player in self.players.items():
                 players_data[player_id] = PlayerState(
+                    team_id=player.team_id,
+                    player_id=player_id,
                     x=player.x,
                     y=player.y,
                     lives=player.lives,

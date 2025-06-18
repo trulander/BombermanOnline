@@ -26,6 +26,10 @@ export class GameClient {
     private isConnected: boolean = false;
     private lastUpdateTime: number = 0;
     
+    // Новые свойства для URL и пути сокета
+    private socketUrl: string | undefined;
+    private socketPath: string | undefined;
+
     // Кеш полной карты для обновлений с изменениями
     private cachedMapGrid: number[][] | null = null;
 
@@ -45,17 +49,17 @@ export class GameClient {
     constructor(canvas: HTMLCanvasElement) {
         this.canvas = canvas;
         
-        // Получаем URL и путь из переменных окружения
-        const socketUrl = process.env.REACT_APP_SOCKET_URL;
-        const socketPath = process.env.REACT_APP_SOCKET_PATH;
+        // Получаем URL и путь из переменных окружения и сохраняем как свойства экземпляра
+        this.socketUrl = process.env.REACT_APP_SOCKET_URL;
+        this.socketPath = process.env.REACT_APP_SOCKET_PATH;
         
         const accessToken = tokenService.getAccessToken();
 
         // Initialize socket connection to Python backend
         // Теперь НЕ передаем auth параметр, полагаемся на cookie
-        this.socket = io(socketUrl, {
+        this.socket = io(this.socketUrl, {
             transports: ['websocket'],
-            path: socketPath ? socketPath : undefined
+            path: this.socketPath ? this.socketPath : undefined
             // auth параметр удален - используем cookie
         });
         
@@ -68,8 +72,8 @@ export class GameClient {
         this.setupSocketEvents();
         
         logger.info('GameClient initialized', {
-            socketUrl,
-            socketPath,
+            socketUrl: this.socketUrl,
+            socketPath: this.socketPath,
             hasToken: !!accessToken,
             canvasWidth: canvas.width,
             canvasHeight: canvas.height
@@ -113,8 +117,8 @@ export class GameClient {
         // Connection events
         this.socket.on('connect', () => {
             logger.info('Connected to server', {
-                socketUrl: window.SOCKET_URL,
-                socketPath: window.SOCKET_PATH
+                socketUrl: this.socketUrl,
+                socketPath: this.socketPath
             });
             this.isConnected = true;
             this.showMenu();
@@ -441,13 +445,8 @@ export class GameClient {
         ctx.fillText('BOMBERMAN ONLINE', this.canvas.width / 2, this.canvas.height / 2 - 80);
         
         if (this.isConnected) {
-            // Create game button
-            this.drawButton(ctx, 'CREATE GAME', this.canvas.width / 2, this.canvas.height / 2, 200, 50, () => {
-                this.createGame();
-            });
-            
-            // Join game button
-            this.drawButton(ctx, 'JOIN GAME', this.canvas.width / 2, this.canvas.height / 2 + 70, 200, 50, () => {
+            // Join game button (no create game here)
+            this.drawButton(ctx, 'JOIN GAME', this.canvas.width / 2, this.canvas.height / 2, 200, 50, () => {
                 this.promptGameId();
             });
         } else {
@@ -485,15 +484,6 @@ export class GameClient {
         this.buttons.push({ x, y, width, height, onClick });
     }
 
-    private createGame(): void {
-        logger.info('Создание новой игры');
-        this.socket?.emit('create_game', {}, (response: { game_id: string }) => {
-            this.gameId = response.game_id;
-            logger.info('Игра успешно создана', {gameId: this.gameId});
-            this.joinGame(this.gameId);
-        });
-    }
-
     private promptGameId(): void {
         const gameId = prompt('Enter Game ID:');
         if (gameId) {
@@ -504,7 +494,7 @@ export class GameClient {
         }
     }
 
-    private joinGame(gameId: string): void {
+    public joinGame(gameId: string): void {
         this.socket?.emit('join_game', { game_id: gameId }, (response: any) => {
             if (response.success) {
                 this.gameId = gameId;
@@ -553,7 +543,8 @@ export class GameClient {
                     message: response.message
                 });
                 alert(`Failed to join game: ${response.message}`);
-                this.showMenu();
+                // No longer show menu here, as joinGame is called from GameCanvas
+                // this.showMenu(); // Removed
             }
         });
     }

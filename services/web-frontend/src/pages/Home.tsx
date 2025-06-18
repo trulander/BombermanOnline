@@ -47,7 +47,7 @@ const Home: React.FC = () => {
               <CardActions sx={{ justifyContent: 'center' }}>
                 <Button 
                   component={Link} 
-                  to={isAuthenticated ? "/account/game" : "/account/login"}
+                  to={isAuthenticated ? "/account/games/create" : "/account/login"}
                   variant="contained" 
                   color="primary"
                 >
@@ -135,7 +135,7 @@ const Home: React.FC = () => {
           <Box sx={{ mt: 6 }}>
             <Button 
               component={Link} 
-              to="/account/game" 
+              to="/account/games/create" 
               variant="contained" 
               color="primary" 
               size="large"

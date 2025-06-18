@@ -52,7 +52,6 @@ class GameInfo(BaseModel):
     current_players_count: int
     team_count: int
     level: int
-    score: int
     game_over: bool
     players: List[GamePlayerInfo]
     teams: List[GameTeamInfo]

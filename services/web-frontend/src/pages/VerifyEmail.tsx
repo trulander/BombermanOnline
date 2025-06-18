@@ -7,7 +7,7 @@ import {
   CircularProgress,
   Button
 } from '@mui/material';
-import { api } from '../services/api';
+import { authApi } from '../services/api';
 
 const VerifyEmail: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -25,7 +25,7 @@ const VerifyEmail: React.FC = () => {
       }
       
       try {
-        const response = await api.get(`/auth/verify-email?token=${token}`);
+        const response = await authApi.get(`/auth/verify-email?token=${token}`);
         
         if (response.data && response.data.success) {
           setSuccess('Email успешно подтвержден! Теперь вы можете войти в систему.');

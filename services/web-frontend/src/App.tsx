@@ -14,6 +14,9 @@ import Profile from './pages/Profile';
 import Stats from './pages/Stats';
 import NotFound from './pages/NotFound';
 import Game from './pages/Game';
+import CreateGame from './pages/CreateGame';
+import ManageGame from './pages/ManageGame';
+import MapEditor from './pages/MapEditor';
 
 // Layout components
 import Layout from './components/Layout';
@@ -40,7 +43,7 @@ const App: React.FC = () => {
         <Route path="/" element={<Home />} />
         
         {/* Игровая страница - отдельно от основного Layout */}
-        <Route path="/account/game" element={
+        <Route path="/account/game/:gameId" element={
           <ProtectedRoute>
             <Game />
           </ProtectedRoute>
@@ -86,6 +89,21 @@ const App: React.FC = () => {
           <Route path="stats" element={
             <ProtectedRoute>
               <Stats />
+            </ProtectedRoute>
+          } />
+          <Route path="games/create" element={
+            <ProtectedRoute>
+              <CreateGame />
+            </ProtectedRoute>
+          } />
+          <Route path="games/:gameId/manage" element={
+            <ProtectedRoute>
+              <ManageGame />
+            </ProtectedRoute>
+          } />
+          <Route path="maps/editor" element={
+            <ProtectedRoute>
+              <MapEditor />
             </ProtectedRoute>
           } />
           

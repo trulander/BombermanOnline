@@ -42,9 +42,9 @@ services:
     build:
       context: ../services/webapi-service
       dockerfile: Dockerfile
-    deploy:
-      mode: replicated
-      replicas: 2
+#    deploy:
+#      mode: replicated
+#      replicas: 2
 #    command: uv run uvicorn webapi-service.app.main:app --host 0.0.0.0 --port 5001
     volumes:
       - ../services/webapi-service/app:/app/webapi-service/app
@@ -77,9 +77,9 @@ services:
       context: ../services/game-service
       dockerfile: Dockerfile
 #    command: uv run --host 0.0.0.0 --port 8001
-    deploy:
-      mode: replicated
-      replicas: 2
+#    deploy:
+#      mode: replicated
+#      replicas: 2
     volumes:
       - ../services/game-service/app:/app/game-service/app
       - game_logs:/var/log/game-service
@@ -115,9 +115,9 @@ services:
     build:
       context: ../services/auth-service
       dockerfile: Dockerfile
-    deploy:
-      mode: replicated
-      replicas: 2
+#    deploy:
+#      mode: replicated
+#      replicas: 2
     volumes:
       - ../services/auth-service/app:/app/auth-service/app
       - auth_logs:/var/log/auth-service

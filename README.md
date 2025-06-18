@@ -25,8 +25,8 @@
 Frontend приложение, написанное на TypeScript с использованием:
 - React + Material-UI для пользовательского интерфейса
 - Canvas API для отрисовки игрового поля
-- Socket.IO для коммуникации с сервером в реальном времени (с авторизацией через JWT токены)
 - Axios для HTTP запросов с автоматическим обновлением токенов
+- **REST API** для создания и управления играми (взамен Socket.IO)
 
 ### WebAPI Service
 
@@ -41,6 +41,7 @@ REST API сервис для обработки запросов от клиен
 - Создание и управление игровыми сессиями
 - Обработка игровых событий
 - Расчет игровой физики и логики
+- Предоставление REST API для создания, управления и получения информации об играх, командах, сущностях и картах.
 
 ### Auth Service
 
@@ -64,13 +65,19 @@ REST API сервис для обработки запросов от клиен
 - **/account/dashboard** - личный кабинет пользователя
 - **/account/profile** - редактирование профиля
 - **/account/stats** - игровая статистика пользователя
-- **/account/game** - игровая страница
+- **/account/games/create** - страница создания новой игры
+- **/account/games/:gameId/manage** - страница управления созданной игрой
+- **/account/maps/editor** - страница редактора карт
+- **/account/game/:gameId** - игровая страница (для присоединения к активной игре)
 
 ### API маршруты
 
 - **/auth/api/v1/auth/** - эндпоинты авторизации
 - **/auth/api/v1/users/** - управление пользователями
-- **/auth/api/v1/games/** - игровые эндпоинты
+- **/auth/api/v1/games/** - игровые эндпоинты (для управления играми)
+- **/auth/api/v1/teams/** - эндпоинты для управления командами
+- **/auth/api/v1/maps/** - эндпоинты для управления картами
+- **/auth/api/v1/entities/** - эндпоинты для получения информации о сущностях
 
 ## Безопасность
 
@@ -113,8 +120,8 @@ REST API сервис для обработки запросов от клиен
 git clone https://github.com/yourusername/BombermanOnline.git
 cd BombermanOnline
 
-# Запуск всех сервисов
-docker-compose -f infra/docker-compose.yml up -d
+# Запуск всех сервисов (включая фронтенд)
+docker-compose up -d
 ```
 
 ### Установка зависимостей
@@ -122,6 +129,11 @@ docker-compose -f infra/docker-compose.yml up -d
 ```bash
 # Установка зависимостей для всех Python сервисов с помощью uv
 uv sync
+
+# Установка зависимостей для Web Frontend
+cd services/web-frontend
+npm install
+cd ../..
 ```
 
 ### Запуск отдельных сервисов (для разработки)
@@ -144,11 +156,22 @@ uv sync
 
     Повторите для `auth-service` и `webapi-service`, изменив порт и путь к `app.main:app` соответственно.
 
+3.  **Запуск Web Frontend в режиме разработки**:
+
+    ```bash
+    cd services/web-frontend
+    npm start
+    cd ../..
+    ```
+
 ### Доступ к сервисам
 
 После запуска сервисы доступны по следующим адресам:
 
-- **Игра**: http://localhost/game
+- **Игра**: http://localhost/game/:gameId
+- **Создание игры**: http://localhost/account/games/create
+- **Управление игрой**: http://localhost/account/games/:gameId/manage
+- **Редактор карт**: http://localhost/account/maps/editor
 - **Личный кабинет**: http://localhost/account/dashboard
 - **API**: http://localhost/api/
 - **Документация API**: http://localhost/api/docs
@@ -177,13 +200,14 @@ BombermanOnline/
 │   ├── game-service/          # Game Service
 │   └── auth-service/          # Auth Service
 ├── infra/                     # Инфраструктура
-│   ├── docker-compose.yml     # Docker Compose файл
+│   ├── docker-compose.yml     # Docker Compose файл инфраструктуры
 │   ├── traefik/               # Конфигурация Traefik
 │   ├── prometheus/            # Конфигурация Prometheus
 │   ├── grafana/               # Конфигурация Grafana
 │   ├── loki/                  # Конфигурация Loki
 │   └── fluent-bit/            # Конфигурация Fluent Bit
 └── README.md                  # Документация
+└── docker-compose.yml         # Основной Docker Compose файл
 ```
 
 ### Локальная разработка
@@ -191,22 +215,24 @@ BombermanOnline/
 Для локальной разработки можно использовать Docker Compose:
 
 ```bash
-# Запуск всех сервисов
-docker-compose -f infra/docker-compose.yml up -d
+# Запуск всех сервисов (включая фронтенд в режиме разработки)
+docker-compose up -d
 
-# Запуск отдельного сервиса
-docker-compose -f infra/docker-compose.yml up -d webapi-service
+# Запуск отдельного сервиса (пример: только фронтенд в режиме разработки)
+docker-compose up -d web-frontend
 
 # Остановка всех сервисов
-docker-compose -f infra/docker-compose.yml down
+docker-compose down
 ```
 
 ### Разработка Frontend
 
 ```bash
+# Для запуска в режиме разработки через Docker Compose, используйте команду выше `docker-compose up -d web-frontend`
+# Если вы хотите запустить фронтенд без Docker Compose:
 cd services/web-frontend
 
-# Установка зависимостей
+# Установка зависимостей (если еще не установлены)
 npm install
 
 # Запуск в режиме разработки
@@ -220,10 +246,12 @@ npm run build
 
 ### Игровые возможности
 
-- Создание и присоединение к игровым комнатам
+- Создание и присоединение к игровым комнатам через REST API
+- Управление созданными игровыми сессиями (старт, пауза, возобновление, удаление, управление игроками и командами)
 - Многопользовательская игра в реальном времени
 - Система статистики игроков
 - Профили пользователей с настройками
+- Редактор карт для создания и управления шаблонами карт
 
 ### Особенности реализации
 
@@ -231,6 +259,7 @@ npm run build
 - Оптимизированная передача изменений карты вместо полного состояния
 - Автоматическое переподключение при проблемах с сетью
 - Система логирования с отправкой на сервер
+- Переход от Socket.IO к REST API для управления играми
 
 ## Роли пользователей
 
@@ -246,10 +275,9 @@ npm run build
 ### Frontend
 - React 18 + TypeScript
 - Material-UI для компонентов интерфейса
-- Socket.IO Client для реального времени
+- Socket.IO Client для реального времени (только для игрового процесса)
+- Axios для HTTP запросов с автоматическим обновлением токенов
 - Canvas API для игровой графики
-- Axios для HTTP запросов
-- Formik + Yup для форм и валидации
 
 ### Backend
 - FastAPI для API сервисов

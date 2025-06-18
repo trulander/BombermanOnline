@@ -34,6 +34,7 @@ class Player(Entity, ABC):
             size: float,
             map: "Map",
             settings: "GameSettings",
+            name: str = None,
     ):
         try:
             super().__init__(

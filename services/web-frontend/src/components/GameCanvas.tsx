@@ -6,12 +6,14 @@ interface GameCanvasProps {
   socketUrl?: string;
   socketPath?: string;
   onGameClientReady?: (gameClient: GameClient | null) => void;
+  gameId?: string;
 }
 
 const GameCanvas: React.FC<GameCanvasProps> = ({ 
   socketUrl = 'http://localhost', 
   socketPath = '/socket.io',
-  onGameClientReady
+  onGameClientReady,
+  gameId
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameClientRef = useRef<GameClient | null>(null);
@@ -26,8 +28,13 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       // Уведомляем родительский компонент
       onGameClientReady?.(gameClientRef.current);
       
-      // Запуск игры
-      gameClientRef.current.start();
+      // Если есть gameId, пытаемся присоединиться к игре
+      if (gameId) {
+        gameClientRef.current.joinGame(gameId);
+      } else {
+        // Запускаем игровое меню, если нет gameId
+        gameClientRef.current.start();
+      }
       
       // Очистка при размонтировании компонента
       return () => {
@@ -37,7 +44,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       };
     }
-  }, [onGameClientReady]);
+  }, [gameId, onGameClientReady]);
   
   return (
     <Box sx={{ 

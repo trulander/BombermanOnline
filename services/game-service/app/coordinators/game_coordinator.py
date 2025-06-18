@@ -69,10 +69,11 @@ class GameCoordinator:
     async def game_create(self, **kwargs) -> dict:
         """Создать новую игру с настройками"""
         try:
-            game_id = kwargs.get("game_id")
+            new_game_settings = kwargs.get("new_game_settings")
+            game_id = new_game_settings.get("game_id")
             logger.info(f"Creating new game settings for game {game_id}, kwargs: {kwargs}")
 
-            new_game_settings = kwargs.get("new_game_settings")
+
             if new_game_settings and isinstance(new_game_settings, GameCreateSettings):
                 game_settings = GameSettings(**new_game_settings.model_dump())
             else:

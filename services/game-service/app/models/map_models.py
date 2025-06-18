@@ -238,6 +238,9 @@ class MapChainFilter(BaseModel):
 
 
 class PlayerState(BaseModel):
+    name: str | None = None
+    team_id: str
+    player_id: str
     x: float
     y: float
     lives: int

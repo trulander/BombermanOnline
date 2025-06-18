@@ -101,17 +101,22 @@ async def get_game(
         
         # Формируем информацию об игроках
         players_info = []
-        for player_id, player_data in game_state.get('players', {}).items():
+        for player_id, player_state_data in game_state.players.items():
+
+            if not player_state_data:
+                logger.warning(f"Player entity {player_id} not found in game_service.players for game {game_id}")
+                continue # Пропускаем этого игрока, если не найден
+
             player_info = GamePlayerInfo(
                 id=player_id,
-                name=player_data.get('name', f'Player {player_id}'),
-                unit_type=UnitType(player_data.get('unit_type', 'bomberman')),
-                team_id=player_data.get('team_id'),
-                lives=player_data.get('lives', 0),
-                x=player_data.get('x', 0.0),
-                y=player_data.get('y', 0.0),
-                color=player_data.get('color', '#FFFFFF'),
-                invulnerable=player_data.get('invulnerable', False)
+                name=player_state_data.name, # Получаем name из Player entity
+                unit_type=player_state_data.unit_type,
+                team_id=player_state_data.team_id, # Получаем team_id из Player entity
+                lives=player_state_data.lives,
+                x=player_state_data.x,
+                y=player_state_data.y,
+                color=player_state_data.color,
+                invulnerable=player_state_data.invulnerable
             )
             players_info.append(player_info)
         
@@ -138,9 +143,8 @@ async def get_game(
             max_players=game_service.settings.max_players,
             current_players_count=len(players_info),
             team_count=len(teams_info),
-            level=game_state.get('level', 1),
-            score=game_state.get('score', 0),
-            game_over=game_state.get('gameOver', False),
+            level=game_state.level,
+            game_over=game_service.game_mode.game_over,
             players=players_info,
             teams=teams_info,
             settings=settings_dict,
@@ -167,7 +171,7 @@ async def create_game(
         new_game_settings = game_settings.model_dump()
 
         new_game_settings['game_id'] = str(uuid.uuid4())
-        result = await coordinator.game_create(new_game_settings=game_settings)
+        result = await coordinator.game_create(new_game_settings=new_game_settings)
 
         if result.get('success'):
             return GameCreateResponse(

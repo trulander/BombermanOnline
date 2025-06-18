@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import axios from 'axios';
 import { User } from '../types/User';
 import { LoginCredentials, RegisterData } from '../types/Auth';
-import { api } from '../services/api';
+import { authApi } from '../services/api';
 import { tokenService, TokenData } from '../services/tokenService';
 
 interface AuthContextType {
@@ -52,7 +52,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
 
       try {
-        const response = await api.get('/users/me');
+        const response = await authApi.get('/users/me');
         setUser(response.data);
         setIsAuthenticated(true);
       } catch (error) {
@@ -62,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const tokenData = await tokenService.refreshToken();
             if (tokenData) {
               // После обновления токена, пробуем получить данные пользователя снова
-              const userResponse = await api.get('/users/me');
+              const userResponse = await authApi.get('/users/me');
               setUser(userResponse.data);
               setIsAuthenticated(true);
             } else {
@@ -91,14 +91,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Функция авторизации
   const login = async (credentials: LoginCredentials): Promise<boolean> => {
     try {
-      const response = await api.post('/auth/login', credentials);
+      const response = await authApi.post('/auth/login', credentials);
       
       if (response.data) {
         // Сохраняем токены через сервис
         tokenService.saveTokens(response.data);
         
         // Получаем данные пользователя
-        const userResponse = await api.get('/users/me');
+        const userResponse = await authApi.get('/users/me');
         setUser(userResponse.data);
         setIsAuthenticated(true);
         
@@ -115,7 +115,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Функция регистрации
   const register = async (data: RegisterData): Promise<boolean> => {
     try {
-      const response = await api.post('/users', data);
+      const response = await authApi.post('/users', data);
       
       if (response.data) {
         return true;
@@ -131,7 +131,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Функция выхода из системы
   const logout = async (): Promise<void> => {
     try {
-      await api.post('/auth/logout');
+      await authApi.post('/auth/logout');
       
       // Очищаем токены через сервис
       tokenService.clearTokens();
@@ -148,7 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Функция сброса пароля
   const resetPassword = async (email: string): Promise<boolean> => {
     try {
-      const response = await api.post('/auth/reset-password', { email });
+      const response = await authApi.post('/auth/reset-password', { email });
       
       if (response.data) {
         return true;
@@ -164,7 +164,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Функция подтверждения сброса пароля
   const confirmResetPassword = async (token: string, new_password: string): Promise<boolean> => {
     try {
-      const response = await api.post('/auth/confirm-reset-password', {
+      const response = await authApi.post('/auth/confirm-reset-password', {
         token,
         new_password
       });
@@ -183,7 +183,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Функция обновления профиля
   const updateProfile = async (data: Partial<User>): Promise<boolean> => {
     try {
-      const response = await api.put('/users/me', data);
+      const response = await authApi.put('/users/me', data);
       
       if (response.data) {
         setUser(response.data);

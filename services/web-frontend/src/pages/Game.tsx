@@ -1,11 +1,12 @@
 import React, { useRef, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import GameCanvas from '../components/GameCanvas';
 import GameLayout from '../components/GameLayout';
 import { GameClient } from '../components/GameClient';
 
 const Game: React.FC = () => {
   const navigate = useNavigate();
+  const { gameId } = useParams<{ gameId: string }>();
   const gameClientRef = useRef<GameClient | null>(null);
   
   const handleAuthenticationFailed = () => {
@@ -22,7 +23,7 @@ const Game: React.FC = () => {
   
   return (
     <GameLayout>
-      <GameCanvas onGameClientReady={setGameClientRef} />
+      <GameCanvas onGameClientReady={setGameClientRef} gameId={gameId} />
     </GameLayout>
   );
 };

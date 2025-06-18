@@ -18,7 +18,7 @@ const Dashboard: React.FC = () => {
   const navigate = useNavigate();
 
   const handlePlayGame = () => {
-    navigate('/account/game');
+    navigate('/account/games/create');
   };
 
   return (
