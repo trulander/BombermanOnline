@@ -3,10 +3,10 @@ import {GameClient} from "../components/GameClient";
 import React from "react";
 
 export enum GameStatus {
-    PENDING = 'PENDING',
-    ACTIVE = 'ACTIVE',
-    PAUSED = 'PAUSED',
-    FINISHED = 'FINISHED',
+    PENDING = 'pending',
+    ACTIVE = 'active',
+    PAUSED = 'paused',
+    FINISHED = 'finished',
 }
 
 export enum GameModeType {

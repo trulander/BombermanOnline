@@ -74,12 +74,13 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
   const [newTeamName, setNewTeamName] = useState<string>('');
   const [createTeamError, setCreateTeamError] = useState<string | null>(null);
 
-  const [openEditTeamDialog, setOpenEditTeamDialog] = useState(false);
+  const [openEditTeamDialog, setOpenEditTeamDialog] = useState<boolean>(false);
   const [editTeamId, setEditTeamId] = useState<string | null>(null);
   const [editTeamName, setEditTeamName] = useState<string>('');
   const [editTeamError, setEditTeamError] = useState<string | null>(null);
 
   const [selectedMapTemplateId, setSelectedMapTemplateId] = useState<string>('');
+  const [displayedMapGrid, setDisplayedMapGrid] = useState<number[][] | null>(null); // New state for map preview
 
   const fetchGameDetails = useCallback(async () => {
     console.log('ManageGame: fetchGameDetails called'); // Log every time fetchGameDetails is called
@@ -102,6 +103,13 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
 
       if (gameResponse.data.settings.map_template_id) {
         setSelectedMapTemplateId(gameResponse.data.settings.map_template_id);
+        const map = mapsResponse.data.find(m => m.id === gameResponse.data.settings.map_template_id);
+        if (map) {
+          setDisplayedMapGrid(map.grid_data);
+        }
+      } else {
+        setSelectedMapTemplateId(''); // Clear selection if no template is set
+        setDisplayedMapGrid(null); // Clear map preview
       }
 
       setError(null);
@@ -541,7 +549,8 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
                 <Box>
                   {isPlayerInThisGame ? (
                     <Box>
-                      <Typography variant="body1">Вы в игре как <Chip label={playerUnitType.toUpperCase()} color="primary" size="small" /></Typography>
+                      <Typography variant="body1">Вы в игре как <Chip label={playerUnitType.toUpperCase()} color="primary" size="small" />
+                      </Typography>
                       <FormControl fullWidth margin="normal">
                         <InputLabel id="change-unit-type-label">Сменить тип юнита</InputLabel>
                         <Select
@@ -650,6 +659,47 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
                       ))}
                     </Select>
                   </FormControl>
+                </Box>
+              )}
+
+              {displayedMapGrid && (
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="body1" sx={{ mb: 1 }}><strong>Предпросмотр карты:</strong></Typography>
+                  <Box
+                    sx={{
+                      display: 'grid',
+                      gridTemplateColumns: `repeat(${game?.settings.default_map_width || 15}, 20px)`,
+                      gap: '1px',
+                      border: '1px solid #ccc',
+                      width: (game?.settings.default_map_width || 15) * 20 + (game?.settings.default_map_width || 15) - 1,
+                      height: (game?.settings.default_map_height || 11) * 20 + (game?.settings.default_map_height || 11) - 1,
+                      margin: '0 auto',
+                    }}
+                  >
+                    {displayedMapGrid.map((row: number[], rowIndex: number) => (
+                      row.map((cell: number, colIndex: number) => {
+                        const cellTypeColors: { [key: number]: string } = {
+                          0: "#8CBF26", // Empty (Green grass)
+                          1: "#6B6B6B", // Solid wall (Dark gray)
+                          2: "#B97A57", // Breakable block (Brown)
+                          3: "#FFCC00", // Player Spawn (Yellow)
+                          4: "#FF0000", // Enemy Spawn (Red)
+                          5: "#00FF00", // Level Exit (Bright Green)
+                        };
+                        return (
+                          <Box
+                            key={`${rowIndex}-${colIndex}`}
+                            sx={{
+                              width: '20px',
+                              height: '20px',
+                              backgroundColor: cellTypeColors[cell] || '#FF00FF', // Magenta for unknown
+                              border: '0.5px solid #ccc',
+                            }}
+                          />
+                        );
+                      })
+                    ))}
+                  </Box>
                 </Box>
               )}
 
@@ -764,6 +814,7 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
                                 label={game?.teams.find(t => t.id === player.team_id)?.name || 'Неизвестная команда'}
                                 size="small"
                                 sx={{ ml: 1, backgroundColor: player.color || '#ccc', color: '#fff' }}
+                                onDelete={() => handleRemovePlayerFromTeam(player.team_id!, player.id)}
                               />
                             )}
                           </Box>
@@ -783,85 +834,80 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
         </Grid>
 
         {/* Блок: Команды */}
-        {game?.game_mode === GameModeType.CAPTURE_THE_FLAG && (
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  <GroupAdd sx={{ verticalAlign: 'middle', mr: 1 }} /> Команды ({game?.teams.length})
-                </Typography>
-                <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
-                  <Button
-                    variant="contained"
-                    onClick={() => setOpenCreateTeamDialog(true)}
-                    startIcon={<Add />}
-                    disabled={game?.status !== GameStatus.PENDING}
-                  >
-                    Создать команду
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<People />}
-                    onClick={() => handleDistributePlayers(false)}
-                    disabled={game?.status !== GameStatus.PENDING || game?.players.length === 0 || game?.teams.length === 0}
-                  >
-                    Распределить игроков
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Refresh />}
-                    onClick={() => handleDistributePlayers(true)}
-                    disabled={game?.status !== GameStatus.PENDING || game?.players.length === 0 || game?.teams.length === 0}
-                  >
-                    Перераспределить игроков
-                  </Button>
-                  <Button
-                    variant="outlined"
-                    startIcon={<Done />}
-                    onClick={handleValidateTeams}
-                    disabled={game?.status !== GameStatus.PENDING}
-                  >
-                    Проверить команды
-                  </Button>
-                </Box>
-                <List>
-                  {game?.teams.length === 0 ? (
-                    <Typography variant="body2" color="text.secondary">В этой игре пока нет команд.</Typography>
-                  ) : (
-                    game?.teams.map(team => (
-                      <ListItem
-                        key={team.id}
-                        secondaryAction={
-                          <Box>
-                            <IconButton
-                              edge="end"
-                              aria-label="edit"
-                              onClick={() => handleEditTeamClick(team)}
-                              sx={{ mr: 1 }}
-                              disabled={game?.status !== GameStatus.PENDING}
-                            >
-                              <Edit />
-                            </IconButton>
-                            <IconButton
-                              edge="end"
-                              aria-label="delete"
-                              onClick={() => handleDeleteTeam(team.id)}
-                              disabled={game?.status !== GameStatus.PENDING}
-                            >
-                              <Delete />
-                            </IconButton>
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                <GroupAdd sx={{ verticalAlign: 'middle', mr: 1 }} /> Команды ({game?.teams.length})
+              </Typography>
+              <Box sx={{ mb: 2, display: 'flex', gap: 1 }}>
+                <Button
+                  variant="contained"
+                  onClick={() => setOpenCreateTeamDialog(true)}
+                  startIcon={<Add />}
+                >
+                  Создать команду
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<People />}
+                  onClick={() => handleDistributePlayers(false)}
+                >
+                  Распределить игроков
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Refresh />}
+                  onClick={() => handleDistributePlayers(true)}
+                >
+                  Перераспределить игроков
+                </Button>
+                <Button
+                  variant="outlined"
+                  startIcon={<Done />}
+                  onClick={handleValidateTeams}
+                >
+                  Проверить команды
+                </Button>
+              </Box>
+              <List>
+                {game?.teams.length === 0 ? (
+                  <Typography variant="body2" color="text.secondary">В этой игре пока нет команд.</Typography>
+                ) : (
+                  game?.teams.map(team => (
+                    <ListItem
+                      key={team.id}
+                      secondaryAction={
+                        <Box>
+                          <IconButton
+                            edge="end"
+                            aria-label="edit"
+                            onClick={() => handleEditTeamClick(team)}
+                            sx={{ mr: 1 }}
+                          >
+                            <Edit />
+                          </IconButton>
+                          <IconButton
+                            edge="end"
+                            aria-label="delete"
+                            onClick={() => handleDeleteTeam(team.id)}
+                          >
+                            <Delete />
+                          </IconButton>
+                        </Box>
+                      }
+                    >
+                      <ListItemText
+                        primary={
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            {team.name} ({team.player_count} игроков)
                           </Box>
                         }
-                      >
-                        <ListItemText
-                          primary={
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              {team.name} ({team.player_count} игроков)
-                            </Box>
-                          }
-                          secondary={
-                            <Box>
-                              {team.player_ids.map(playerId => (
+                        secondary={
+                          <Box>
+                            {team.player_ids.map(playerId => {
+                              const currentTeamId = team.id; // Assign to a local constant
+                              return (
                                 <Chip
                                   key={playerId}
                                   label={game?.players.find(p => p.id === playerId)?.name || `Неизвестный игрок (${playerId.substring(0, 4)}...)`}
@@ -870,18 +916,18 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
                                   onDelete={() => handleRemovePlayerFromTeam(team.id, playerId)}
                                   disabled={game?.status !== GameStatus.PENDING}
                                 />
-                              ))}
-                            </Box>
-                          }
-                        />
-                      </ListItem>
-                    ))
-                  )}
-                </List>
-              </CardContent>
-            </Card>
-          </Grid>
-        )}
+                              );
+                            })}
+                          </Box>
+                        }
+                      />
+                    </ListItem>
+                  ))
+                )}
+              </List>
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
 
       {/* Add Player Dialog */}

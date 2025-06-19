@@ -16,6 +16,7 @@ class GameInstanceCache:
         # Проверяем Redis
         instance_id = await self.redis_repository.get(key=f"games:{game_id}")
         if instance_id:
+            await self.redis_repository.set(key=f"games:{game_id}", expire=self.ttl + 10, value=instance_id)
             self.local_cache[game_id] = {
                 "instance_id": instance_id,
                 "timestamp": time.time()
