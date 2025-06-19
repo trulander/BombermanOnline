@@ -1,21 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import { User } from '../types/User';
-import { LoginCredentials, RegisterData } from '../types/Auth';
-import { authApi } from '../services/api';
-import { tokenService, TokenData } from '../services/tokenService';
-
-interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  loading: boolean;
-  login: (credentials: LoginCredentials) => Promise<boolean>;
-  register: (data: RegisterData) => Promise<boolean>;
-  logout: () => Promise<void>;
-  resetPassword: (email: string) => Promise<boolean>;
-  confirmResetPassword: (token: string, newPassword: string) => Promise<boolean>;
-  updateProfile: (data: Partial<User>) => Promise<boolean>;
-}
+import React, {createContext, useContext, useEffect, useState} from 'react';
+import {User} from '../types/User';
+import {AuthContextType, LoginCredentials, RegisterData} from '../types/Auth';
+import {authApi} from '../services/api';
+import {tokenService} from '../services/tokenService';
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 

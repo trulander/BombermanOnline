@@ -158,35 +158,36 @@ async def get_game(
         raise HTTPException(status_code=500, detail=f"Error getting game info: {str(e)}")
 
 
-@router.post("/", response_model=GameCreateResponse)
-async def create_game(
-    game_settings: GameCreateSettings,
-    # current_user: dict = Depends(get_current_user)
-):
-    """Создать новую игру"""
-    coordinator = get_game_coordinator()
+#the endpoint is deprecated, need to use another andpoint in the webapi-service co create game
+# @router.post("/", response_model=GameCreateResponse)
+# async def create_game(
+#     game_settings: GameCreateSettings,
+#     # current_user: dict = Depends(get_current_user)
+# ):
+#     """Создать новую игру"""
+#     coordinator = get_game_coordinator()
 
-    try:
-        # Вызываем метод создания игры через GameCoordinator
-        new_game_settings = game_settings.model_dump()
+#     try:
+#         # Вызываем метод создания игры через GameCoordinator
+#         new_game_settings = game_settings.model_dump()
 
-        new_game_settings['game_id'] = str(uuid.uuid4())
-        result = await coordinator.game_create(new_game_settings=new_game_settings)
+#         new_game_settings['game_id'] = str(uuid.uuid4())
+#         result = await coordinator.game_create(new_game_settings=new_game_settings)
 
-        if result.get('success'):
-            return GameCreateResponse(
-                success=True,
-                game_id=result.get('game_id'),
-                message="Game created successfully"
-            )
-        else:
-            return GameCreateResponse(
-                success=False,
-                message=result.get('message', 'Failed to create game')
-            )
+#         if result.get('success'):
+#             return GameCreateResponse(
+#                 success=True,
+#                 game_id=result.get('game_id'),
+#                 message="Game created successfully"
+#             )
+#         else:
+#             return GameCreateResponse(
+#                 success=False,
+#                 message=result.get('message', 'Failed to create game')
+#             )
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error creating game: {str(e)}")
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Error creating game: {str(e)}")
 
 
 @router.put("/{game_id}/settings", response_model=StandardResponse)

@@ -1,30 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Box,
-  Typography,
-  CircularProgress,
-  Alert,
-  Button,
-  Grid,
-  Card,
-  CardContent,
-  Chip
-} from '@mui/material';
-import { PlayArrow } from '@mui/icons-material';
+import React, {useEffect, useState} from 'react';
+import {useNavigate} from 'react-router-dom';
+import {Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Grid, Typography} from '@mui/material';
+import {PlayArrow} from '@mui/icons-material';
 // import Layout from '../components/Layout'; // Using the general layout
-import { gameApi } from '../services/api';
-import { GameStatus, GameModeType } from './ManageGame'; // Reusing types from ManageGame
+import {gameApi} from '../services/api';
 
-interface GameListItem {
-  game_id: string;
-  status: GameStatus;
-  game_mode: GameModeType;
-  current_players_count: number;
-  max_players: number;
-  level: number;
-  created_at: string;
-}
+import {GameListItem, GameStatus} from "../types/Game"; // Reusing types from ManageGame
 
 const GameList: React.FC = () => {
   const navigate = useNavigate();

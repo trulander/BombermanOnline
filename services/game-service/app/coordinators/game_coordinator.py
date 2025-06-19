@@ -117,7 +117,7 @@ class GameCoordinator:
     async def game_join(self, **kwargs) -> dict:
         player_id = kwargs.get("player_id")
         game_id = kwargs.get("game_id")
-        unit_type_str = kwargs.get("unit_type", UnitType.BOMBERMAN.value)
+        # unit_type_str = kwargs.get("unit_type", UnitType.BOMBERMAN.value)
         
         if game_id not in self.games:
             logger.warning(f"Failed to join game: Game {game_id} not found")
@@ -125,13 +125,21 @@ class GameCoordinator:
                 "success": False,
                 "message": "Game not found"
             }
+        return {
+            "success": True,
+            "message": f"Player {player_id} joined game {game_id}"
+        }
 
-        try:
-            unit_type = UnitType(unit_type_str)
-        except ValueError:
-            unit_type = UnitType.BOMBERMAN
-            
-        return self.games[game_id].add_player(player_id, unit_type)
+        #Старая логика подключения игрока к игре через nats event с webapi-service , теперь это только уведопление
+        #TODO добавить обработку счетчика для игрока, если он отключился от игры, по счетчику считать его выбывшым, если он
+        # не вернется в игру до окончания счетчика
+
+        # try:
+        #     unit_type = UnitType(unit_type_str)
+        # except ValueError:
+        #     unit_type = UnitType.BOMBERMAN
+        #
+        # return self.games[game_id].add_player(player_id, unit_type)
 
 
     async def game_input(self, **kwargs) -> None:

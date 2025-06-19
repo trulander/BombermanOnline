@@ -1,21 +1,11 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  AppBar, 
-  Box, 
-  Toolbar, 
-  Typography, 
-  Button, 
-  IconButton
-} from '@mui/material';
-import { ArrowBack, Home } from '@mui/icons-material';
-import { useAuth } from '../context/AuthContext';
+import React, {useEffect, useState} from 'react';
+import {useNavigate} from 'react-router-dom';
+import {AppBar, Box, IconButton, Toolbar, Typography} from '@mui/material';
+import {ArrowBack, Home, Settings} from '@mui/icons-material';
+import {useAuth} from '../context/AuthContext';
+import {GameLayoutProps} from "../types/Game";
 
-interface GameLayoutProps {
-  children: React.ReactNode;
-}
-
-const GameLayout: React.FC<GameLayoutProps> = ({ children }) => {
+const GameLayout: React.FC<GameLayoutProps> = ({ children, onOpenSettings }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [gameId, setGameId] = useState<string>('');
@@ -96,6 +86,18 @@ const GameLayout: React.FC<GameLayoutProps> = ({ children }) => {
           >
             <Home />
           </IconButton>
+          
+          {onOpenSettings && (
+            <IconButton
+              edge="end"
+              color="inherit"
+              aria-label="settings"
+              onClick={onOpenSettings}
+              sx={{ ml: 1 }}
+            >
+              <Settings />
+            </IconButton>
+          )}
         </Toolbar>
       </AppBar>
       

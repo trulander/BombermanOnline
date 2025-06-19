@@ -1,19 +1,14 @@
-import React, { useEffect, useRef } from 'react';
-import { GameClient } from './GameClient';
-import { Box, Typography } from '@mui/material';
+import React, {useEffect, useRef} from 'react';
+import {GameClient} from './GameClient';
+import {Box, Typography} from '@mui/material';
+import {GameCanvasProps} from "../types/Game";
 
-interface GameCanvasProps {
-  socketUrl?: string;
-  socketPath?: string;
-  onGameClientReady?: (gameClient: GameClient | null) => void;
-  gameId?: string;
-}
-
-const GameCanvas: React.FC<GameCanvasProps> = ({ 
+const GameCanvas: React.FC<GameCanvasProps> = ({
   socketUrl = 'http://localhost', 
   socketPath = '/socket.io',
   onGameClientReady,
-  gameId
+  gameId,
+  userId
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameClientRef = useRef<GameClient | null>(null);
@@ -22,7 +17,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
     if (canvasRef.current) {
       // Инициализация игрового клиента
       gameClientRef.current = new GameClient(
-        canvasRef.current
+        canvasRef.current,
+        userId
       );
       
       // Уведомляем родительский компонент
@@ -30,7 +26,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       
       // Если есть gameId, пытаемся присоединиться к игре
       if (gameId) {
-        gameClientRef.current.joinGame(gameId);
+        gameClientRef.current.joinGame(gameId, userId || '');
       } else {
         // Запускаем игровое меню, если нет gameId
         gameClientRef.current.start();
@@ -44,7 +40,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       };
     }
-  }, [gameId, onGameClientReady]);
+  }, [gameId, onGameClientReady, userId]);
   
   return (
     <Box sx={{ 

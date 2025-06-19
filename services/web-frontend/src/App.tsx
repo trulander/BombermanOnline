@@ -1,5 +1,5 @@
 import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 
 // Pages
@@ -99,7 +99,7 @@ const App: React.FC = () => {
           } />
           <Route path="games/:gameId/manage" element={
             <ProtectedRoute>
-              <ManageGame />
+              <GameManagementWrapper />
             </ProtectedRoute>
           } />
           <Route path="maps/editor" element={
@@ -122,6 +122,11 @@ const App: React.FC = () => {
       </Routes>
     </ThemeProvider>
   );
+};
+
+const GameManagementWrapper: React.FC = () => {
+  const { gameId } = useParams<{ gameId: string }>();
+  return gameId ? <ManageGame gameId={gameId} /> : null;
 };
 
 export default App; 

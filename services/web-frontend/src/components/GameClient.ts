@@ -20,7 +20,7 @@ export class GameClient {
     private inputHandler: InputHandler;
     private renderer: Renderer;
     private gameId: string | null = null;
-    private playerId: string | null = null;
+    private playerId: string | null;
     private gameState: GameState | null = null;
     private animationFrameId: number = 0;
     private isConnected: boolean = false;
@@ -36,6 +36,9 @@ export class GameClient {
     // Колбек для уведомления о проблемах с авторизацией
     private onAuthenticationFailed?: () => void;
 
+    // Новый колбек для уведомления о присоединении к игре
+    private onGameJoined?: (success: boolean) => void;
+
     // Система управления кнопками
     private buttons: Array<{
         x: number;
@@ -46,8 +49,9 @@ export class GameClient {
     }> = [];
     private clickHandler?: (e: MouseEvent) => void;
 
-    constructor(canvas: HTMLCanvasElement) {
+    constructor(canvas: HTMLCanvasElement, initialPlayerId: string | null = null) {
         this.canvas = canvas;
+        this.playerId = initialPlayerId;
         
         // Получаем URL и путь из переменных окружения и сохраняем как свойства экземпляра
         this.socketUrl = process.env.REACT_APP_SOCKET_URL;
@@ -159,7 +163,7 @@ export class GameClient {
         // Game events
         this.socket.on('game_state', (gameState: GameState) => {
             logger.debug('Получено событие game_state', {
-                hasGrid: !!gameState.map?.grid,
+                hasGrid: !!gameState.map?.grid_data,
                 playersCount: Object.keys(gameState.players).length,
                 mapChangesCount: gameState.map?.changedCells?.length || 0
             });
@@ -169,7 +173,7 @@ export class GameClient {
         // Добавляем обработчик для game_update
         this.socket.on('game_update', (gameState: GameState) => {
             logger.debug('Получено событие game_update', {
-                hasGrid: !!gameState.map?.grid,
+                hasGrid: !!gameState.map?.grid_data,
                 playersCount: Object.keys(gameState.players).length,
                 mapChangesCount: gameState.map?.changedCells?.length || 0
             });
@@ -245,17 +249,17 @@ export class GameClient {
     private handleGetGameStateResponse(response: any): void {
         if (response.success) {
             logger.debug('Получено состояние игры и полная карта', {
-                hasFullMap: !!(response.full_map && response.full_map.grid),
+                hasFullMap: !!(response.full_map && response.full_map.grid_data),
                 hasGameState: !!response.game_state
             });
             
             // Сохраняем полную карту в кеш
-            if (response.full_map && response.full_map.grid) {
+            if (response.full_map && response.full_map.grid_data) {
                 logger.debug('Получена полная карта', {
-                    width: response.full_map.grid[0]?.length,
-                    height: response.full_map.grid.length
+                    width: response.full_map.grid_data[0]?.length,
+                    height: response.full_map.grid_data.length
                 });
-                this.cachedMapGrid = JSON.parse(JSON.stringify(response.full_map.grid));
+                this.cachedMapGrid = JSON.parse(JSON.stringify(response.full_map.grid_data));
             } else {
                 logger.error('Не удалось получить карту из запроса состояния', {
                     message: response.message,
@@ -270,7 +274,7 @@ export class GameClient {
             
             // Убеждаемся, что у состояния игры есть полная карта из кеша
             if (this.gameState && this.gameState.map && this.cachedMapGrid) {
-                this.gameState.map.grid = this.cachedMapGrid;
+                this.gameState.map.grid_data = this.cachedMapGrid;
             }
         } else {
             logger.error('Ошибка получения состояния игры', {
@@ -321,7 +325,7 @@ export class GameClient {
             }
             
             // Добавляем полную карту к игровому состоянию
-            gameState.map.grid = this.cachedMapGrid;
+            gameState.map.grid_data = this.cachedMapGrid;
         } else if (gameState.map?.changedCells && !this.cachedMapGrid) {
             // Если нет кешированной карты, но есть изменения, запрашиваем полное состояние
             logger.warn('Получены изменения, но нет кешированной карты', {
@@ -387,10 +391,10 @@ export class GameClient {
         // Если у нас есть состояние игры и ID игрока, рендерим
         if (this.gameState && this.playerId) {
             // Проверяем, есть ли данные карты
-            if (!this.gameState.map || !this.gameState.map.grid) {
+            if (!this.gameState.map || !this.gameState.map.grid_data) {
                 logger.warn('Нет данных карты для рендеринга', {
                     hasMap: !!this.gameState.map,
-                    hasGrid: !!(this.gameState.map && this.gameState.map.grid),
+                    hasGrid: !!(this.gameState.map && this.gameState.map.grid_data),
                     hasCachedGrid: !!this.cachedMapGrid
                 });
                 
@@ -401,10 +405,10 @@ export class GameClient {
                             width: this.cachedMapGrid[0].length,
                             height: this.cachedMapGrid.length,
                             cellSize: 40, // Значение по умолчанию, если не указано
-                            grid: this.cachedMapGrid
+                            grid_data: this.cachedMapGrid
                         };
                     } else {
-                        this.gameState.map.grid = this.cachedMapGrid;
+                        this.gameState.map.grid_data = this.cachedMapGrid;
                     }
                     logger.debug('Используем кешированную карту для рендеринга', {
                         width: this.cachedMapGrid[0].length,
@@ -488,17 +492,33 @@ export class GameClient {
         const gameId = prompt('Enter Game ID:');
         if (gameId) {
             logger.info('Попытка присоединиться к игре', {gameId});
-            this.joinGame(gameId);
+            this.joinGame(gameId, this.playerId || '');
         } else {
             this.showMenu();
         }
     }
 
-    public joinGame(gameId: string): void {
-        this.socket?.emit('join_game', { game_id: gameId }, (response: any) => {
+    public joinGame(gameId: string, playerId: string): void {
+        if (!this.socket) {
+            logger.error('Socket is not initialized.');
+            return;
+        }
+
+        if (!gameId) {
+            logger.error('Cannot join game: gameId is not provided.');
+            return;
+        }
+
+        if (!playerId) {
+            logger.error('Cannot join game: playerId is not provided.');
+            return;
+        }
+
+        logger.info(`Attempting to join game ${gameId} as player ${playerId}`);
+        this.socket.emit('join_game', { game_id: gameId, player_id: playerId }, (response: any) => {
             if (response.success) {
                 this.gameId = gameId;
-                this.playerId = response.player_id;
+                this.playerId = playerId;
                 
                 // Очищаем кнопки меню, так как игра начинается
                 this.clearButtons();
@@ -511,19 +531,22 @@ export class GameClient {
                     playerId: this.playerId
                 });
                 
+                // Уведомляем родительский компонент, что игра успешно присоединена
+                this.onGameJoined?.(true);
+                
                 // Отправляем Game ID в header через DOM event
                 this.updateGameId(gameId);
                 
                 // Получаем начальное состояние игры
-                if (response.game_state && response.game_state.map && response.game_state.map.grid) {
+                if (response.game_state && response.game_state.map && response.game_state.map.grid_data) {
                     logger.debug('Начальное состояние получено с картой', {
-                        width: response.game_state.map.grid[0].length,
-                        height: response.game_state.map.grid.length
+                        width: response.game_state.map.grid_data[0].length,
+                        height: response.game_state.map.grid_data.length
                     });
                     
                     // Сохраняем состояние и кэшируем карту
                     this.gameState = response.game_state;
-                    this.cachedMapGrid = response.game_state.map.grid;
+                    this.cachedMapGrid = response.game_state.map.grid_data;
                     
                     // Обновляем UI в header
                     this.updateGameInfo();
@@ -531,7 +554,7 @@ export class GameClient {
                     logger.warn('Получено неполное начальное состояние игры', {
                         hasGameState: !!response.game_state,
                         hasMap: !!(response.game_state && response.game_state.map),
-                        hasGrid: !!(response.game_state && response.game_state.map && response.game_state.map.grid)
+                        hasGrid: !!(response.game_state && response.game_state.map && response.game_state.map.grid_data)
                     });
                     
                     // Явно запрашиваем полное состояние игры
@@ -540,6 +563,7 @@ export class GameClient {
             } else {
                 logger.error('Не удалось присоединиться к игре', {
                     gameId,
+                    playerId,
                     message: response.message
                 });
                 alert(`Failed to join game: ${response.message}`);
@@ -661,5 +685,10 @@ export class GameClient {
 
     public setAuthenticationFailedHandler(handler: () => void): void {
         this.onAuthenticationFailed = handler;
+    }
+    
+    // Новый метод для установки обработчика успешного присоединения к игре
+    public setGameJoinedHandler(handler: (success: boolean) => void): void {
+        this.onGameJoined = handler;
     }
 } 

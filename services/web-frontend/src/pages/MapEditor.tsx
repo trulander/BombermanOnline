@@ -1,79 +1,29 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, {useEffect, useState} from 'react';
+import {useNavigate} from 'react-router-dom';
 import {
-  Box,
-  Typography,
-  CircularProgress,
   Alert,
-  List,
-  ListItem,
-  ListItemText,
+  Autocomplete,
+  Box,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
-  Grid,
   Card,
   CardContent,
   Chip,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Grid,
   IconButton,
-  Autocomplete
+  List,
+  TextField,
+  Typography
 } from '@mui/material';
-import { Add, Edit, Delete, Visibility } from '@mui/icons-material';
+import {Add, Delete, Edit, Visibility} from '@mui/icons-material';
 import GameLayout from '../components/GameLayout';
-import { gameApi } from '../services/api';
-import { useAuth } from '../context/AuthContext';
-
-interface MapTemplate {
-  id: string;
-  name: string;
-  description?: string;
-  grid_data: number[][];
-  width: number;
-  height: number;
-  difficulty: number;
-  max_players: number;
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface MapGroup {
-  id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
-}
-
-interface MapChain {
-  id: string;
-  name: string;
-  description?: string;
-  map_template_ids: string[];
-  created_by: string;
-  created_at: string;
-  updated_at: string;
-}
-
-enum CellType {
-  EMPTY = 0,
-  SOLID_WALL = 1,
-  BREAKABLE_BLOCK = 2,
-  PLAYER_SPAWN = 3,
-  ENEMY_SPAWN = 4,
-  LEVEL_EXIT = 5,
-}
-
-const cellTypeColors: Record<CellType, string> = {
-  [CellType.EMPTY]: '#eee',
-  [CellType.SOLID_WALL]: '#555',
-  [CellType.BREAKABLE_BLOCK]: '#aaa',
-  [CellType.PLAYER_SPAWN]: '#00f',
-  [CellType.ENEMY_SPAWN]: '#f00',
-  [CellType.LEVEL_EXIT]: '#0f0',
-};
+import {gameApi} from '../services/api';
+import {useAuth} from '../context/AuthContext';
+import {CellType, cellTypeColors, MapChain, MapGroup, MapTemplate} from "../types/Map";
 
 const MapEditor: React.FC = () => {
   const navigate = useNavigate();
@@ -588,7 +538,7 @@ const MapEditor: React.FC = () => {
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Шаблоны карт: 
-                      {chain.map_template_ids.length > 0 ? (
+                      {chain.map_template_ids && chain.map_template_ids.length > 0 ? (
                         chain.map_template_ids.map(mapId => {
                           const template = mapTemplates.find(t => t.id === mapId);
                           return (
@@ -736,7 +686,7 @@ const MapEditor: React.FC = () => {
               onMouseLeave={handleMouseUp} // Stop drawing if mouse leaves grid
             >
               {currentGrid.map((row, rowIndex) => (
-                row.map((cell, colIndex) => (
+                row && row.map((cell, colIndex) => (
                   <Box
                     key={`${rowIndex}-${colIndex}`}
                     sx={{
@@ -876,7 +826,7 @@ const MapEditor: React.FC = () => {
                   onMouseLeave={handleMouseUp} // Stop drawing if mouse leaves grid
                 >
                   {currentGrid.map((row, rowIndex) => (
-                    row.map((cell, colIndex) => (
+                    row && row.map((cell, colIndex) => (
                       <Box
                         key={`${rowIndex}-${colIndex}`}
                         sx={{

@@ -43,8 +43,8 @@ export class Renderer {
         this.previousFrameTime = currentTime;
         
         // Проверяем наличие необходимых данных
-        if (!gameState.map || !gameState.map.grid) {
-            logger.error('Отсутствует gameState.map.grid', {
+        if (!gameState.map || !gameState.map.grid_data) {
+            logger.error('Отсутствует gameState.map.grid_data', {
                 gameState: gameState,
                 time: currentTime
             });
@@ -71,8 +71,8 @@ export class Renderer {
                 cellSize: this.cellSize,
                 playerPos: { x: currentPlayer.x, y: currentPlayer.y },
                 gridSize: {
-                    width: gameState.map.grid[0].length,
-                    height: gameState.map.grid.length
+                    width: gameState.map.grid_data[0].length,
+                    height: gameState.map.grid_data.length
                 },
                 time: currentTime
             });
@@ -181,7 +181,7 @@ export class Renderer {
     }
     
     private calculateViewOffsetWithDeadZone(playerX: number, playerY: number, map: GameState['map']): { x: number, y: number } {
-        if (!map || !map.width || !map.height || !map.grid) {
+        if (!map || !map.width || !map.height || !map.grid_data) {
             logger.error('Недостаточно данных для расчета смещения вида', {
                 map,
                 playerX,
@@ -286,8 +286,8 @@ export class Renderer {
 
     private renderMapSection(gameState: GameState, offsetX: number, offsetY: number, offsetDiffX: number, offsetDiffY: number): void {
         const map = gameState.map;
-        if (!map || !map.grid) {
-            logger.error('Отсутствует gameState.map.grid при рендеринге карты', {
+        if (!map || !map.grid_data) {
+            logger.error('Отсутствует gameState.map.grid_data при рендеринге карты', {
                 gameState
             });
             return;
@@ -296,15 +296,15 @@ export class Renderer {
         // Вычисляем границы видимой области в координатах сетки
         const startGridX = Math.floor(offsetX / this.cellSize);
         const startGridY = Math.floor(offsetY / this.cellSize);
-        const endGridX = Math.min(map.width || map.grid[0].length, startGridX + (this.viewRadius * 2 + 1) + 1);
-        const endGridY = Math.min(map.height || map.grid.length, startGridY + (this.viewRadius * 2 + 1) + 1);
+        const endGridX = Math.min(map.width || map.grid_data[0].length, startGridX + (this.viewRadius * 2 + 1) + 1);
+        const endGridY = Math.min(map.height || map.grid_data.length, startGridY + (this.viewRadius * 2 + 1) + 1);
 
         // Рендерим только видимую часть карты
         for (let y = startGridY; y < endGridY; y++) {
             for (let x = startGridX; x < endGridX; x++) {
-                if (x < 0 || y < 0 || y >= map.grid.length || x >= map.grid[0].length) continue;
+                if (x < 0 || y < 0 || y >= map.grid_data.length || x >= map.grid_data[0].length) continue;
                 
-                const cellType = map.grid[y] && map.grid[y][x] !== undefined ? map.grid[y][x] : 0;
+                const cellType = map.grid_data[y] && map.grid_data[y][x] !== undefined ? map.grid_data[y][x] : 0;
                 
                 // Вычисляем координаты ячейки с учетом плавного смещения
                 const renderX = (x * this.cellSize) - offsetX + offsetDiffX;

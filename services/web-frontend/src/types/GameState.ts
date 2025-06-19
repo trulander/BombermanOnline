@@ -45,7 +45,7 @@ export interface GameState {
         width: number;
         height: number;
         cellSize: number;
-        grid?: number[][]; // Полная карта при первой загрузке
+        grid_data?: number[][]; // Полная карта при первой загрузке
         changedCells?: { // Изменения в карте при обновлениях
             x: number;
             y: number;

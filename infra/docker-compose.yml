@@ -222,6 +222,7 @@ services:
       - ./traefik/middlewares.yml:/etc/traefik/middlewares.yml
       - ./traefik/routers.yml:/etc/traefik/routers.yml
       - ./traefik/logs:/var/log/traefik
+      - ./traefik/traefik_plugins:/plugins-storage
     command:
       - "--configFile=/etc/traefik/traefik.yml"
     restart: unless-stopped

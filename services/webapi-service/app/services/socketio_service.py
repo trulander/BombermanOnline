@@ -73,10 +73,11 @@ class SocketIOService:
         """Join an existing game"""
         try:
             game_id = data.get('game_id')
+            player_id = data.get('player_id')
             if not game_id:
                 return {"success": False, "message": "Missing game_id"}
 
-            response = await self.game_service.join_game(sid_user_id=sid, game_id=game_id)
+            response = await self.game_service.join_game(sid_user_id=sid, player_id=player_id, game_id=game_id)
 
             if response.get('success'):
                 # Присоединяемся к комнате для этой игры

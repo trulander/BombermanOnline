@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const createAxiosInstance = (baseURL: string) => {
+const createAxiosInstance = (baseURL: string, defaultParams?: Record<string, any>) => {
   const instance = axios.create({
     baseURL,
     headers: {
@@ -9,12 +9,16 @@ const createAxiosInstance = (baseURL: string) => {
     }
   });
 
-  // Добавляем перехватчик запросов для добавления токена авторизации
+  // Добавляем перехватчик запросов для добавления токена авторизации и дефолтных параметров
   instance.interceptors.request.use(
     (config) => {
       const token = localStorage.getItem('access_token');
       if (token) {
         config.headers['Authorization'] = `Bearer ${token}`;
+      }
+      // Объединяем существующие параметры с defaultParams
+      if (defaultParams) {
+        config.params = { ...defaultParams, ...config.params };
       }
       return config;
     },
@@ -86,5 +90,8 @@ export const getProxiedGameApi = (gameId: string) => {
   // The full path will be /webapi/api/v1/game-service/{gameId}/games/api/v1
   // This matches the proxy router setup in webapi-service/app/routes/api.py
   // and the prefix in game-service/app/main.py
-  return createAxiosInstance(`/webapi/api/v1/game-service/${gameId}/games/api/v1`);
+  return createAxiosInstance(
+    `/webapi/api/v1/game-service/games/api/v1`,
+    { game_id: gameId } // Передаем game_id как defaultParam
+  );
 }; 

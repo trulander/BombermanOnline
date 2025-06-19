@@ -1,37 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Box, 
-  Button, 
-  TextField, 
-  Typography, 
-  CircularProgress,
+import React, {useEffect, useState} from 'react';
+import {useNavigate} from 'react-router-dom';
+import {
   Alert,
+  Box,
+  Button,
+  CircularProgress,
+  FormControl,
+  InputLabel,
   MenuItem,
   Select,
-  InputLabel,
-  FormControl
+  TextField,
+  Typography
 } from '@mui/material';
 import GameLayout from '../components/GameLayout';
-import { gameApi, webApi } from '../services/api';
-import { Formik, Form, Field } from 'formik';
+import {gameApi, webApi} from '../services/api';
+import {Field, Form, Formik} from 'formik';
 import * as Yup from 'yup';
+import {MapTemplate} from "../types/Map";
+import {GameCreateSettings, GameModeType} from "../types/Game";
 
 interface EntitiesInfo {
   game_modes: { [key: string]: string };
   // Add other entity types if needed for future features
-}
-
-interface MapTemplate {
-  id: string;
-  name: string;
-}
-
-interface GameCreateSettings {
-  game_mode: string;
-  max_players: number;
-  name?: string;
-  map_template_id?: string;
 }
 
 const validationSchema = Yup.object().shape({
@@ -83,7 +73,7 @@ const CreateGame: React.FC = () => {
       if (response.data && response.data.game_id) {
         setSuccess('Игра успешно создана!');
         // Redirect to the actual game page to join it
-        navigate(`/account/game/${response.data.game_id}`);
+        navigate(`/account/game/${response.data.game_id}?openSettings=true`);
       } else {
         setError(response.data?.message || 'Не удалось создать игру.');
       }
@@ -118,9 +108,8 @@ const CreateGame: React.FC = () => {
 
         <Formik
           initialValues={{
-            game_mode: '',
+            game_mode: GameModeType.CAMPAIGN,
             max_players: 4,
-            name: '',
             map_template_id: '',
           }}
           validationSchema={validationSchema}
@@ -160,17 +149,6 @@ const CreateGame: React.FC = () => {
                 margin="normal"
                 error={touched.max_players && Boolean(errors.max_players)}
                 helperText={touched.max_players && errors.max_players}
-              />
-
-              <Field
-                as={TextField}
-                name="name"
-                label="Название игры (опционально)"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                error={touched.name && Boolean(errors.name)}
-                helperText={touched.name && errors.name}
               />
               
               <FormControl fullWidth margin="normal" error={touched.map_template_id && Boolean(errors.map_template_id)}>

@@ -4,7 +4,7 @@ from typing import Dict, Optional, Any
 from ..entities.bomberman import Bomberman
 from ..entities.player import Player, UnitType
 from ..entities.tank import Tank
-from ..models.game_models import GameSettings, GameTeamInfo, GameUpdate
+from ..models.game_models import GameSettings, GameTeamInfo, GameUpdateEvent
 from ..entities.game_mode import GameModeType
 from ..entities.weapon import WeaponType
 from ..entities.game_status import GameStatus
@@ -82,7 +82,7 @@ class GameService:
     def add_player(self, player_id: str, unit_type: UnitType = UnitType.BOMBERMAN) -> dict:
         """Добавить игрока в игру"""
         try:
-            if self.status not in [GameStatus.PENDING, GameStatus.STARTING]:
+            if self.status not in [GameStatus.PENDING]:
                 message = f"Cannot add player {player_id}: game status is {self.status}"
                 logger.debug(message)
                 return {
@@ -264,12 +264,12 @@ class GameService:
             logger.error(message, exc_info=True)
             return {"success": False, "message": message}
 
-    async def update(self) -> GameUpdate:
+    async def update(self) -> GameUpdateEvent:
         """Обновить состояние игры"""
         try:
             if not self.is_active():
                 logger.debug("game is not actice yet.")
-                return GameUpdate(
+                return GameUpdateEvent(
                     game_id=self.settings.game_id,
                     status=self.status,
                     is_active=False,
@@ -278,14 +278,14 @@ class GameService:
             # Делегируем обновление игровому режиму
             status_update = await self.game_mode.update()
             if status_update:
-                state = GameUpdate(
+                state = GameUpdateEvent(
                     game_id=self.settings.game_id,
                     map_update=self.game_mode.map.get_changes(),
                     status=self.status,
                     is_active=True,
                 )
             else:
-                state = GameUpdate(
+                state = GameUpdateEvent(
                     game_id=self.settings.game_id,
                     status=self.status,
                     is_active=False,
@@ -301,7 +301,7 @@ class GameService:
             return state
         except Exception as e:
             logger.error(f"Error in game update: {e}", exc_info=True)
-            return GameUpdate(
+            return GameUpdateEvent(
                 game_id=self.settings.game_id,
                 status=self.status,
                 is_active=False,

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional, List
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, computed_field
 
 from app.entities import EnemyType
 from app.entities.game_status import GameStatus
@@ -12,7 +12,7 @@ from app.models.map_models import MapUpdate
 from app.models.team_models import TeamModeSettings
 
 
-class GameUpdate(BaseModel):
+class GameUpdateEvent(BaseModel):
     status: GameStatus
     is_active: bool
     error: bool = False
@@ -24,7 +24,7 @@ class GameUpdate(BaseModel):
 class GamePlayerInfo(BaseModel):
     """Информация об игроке в игре"""
     id: str
-    name: str
+    name: str | None = None
     unit_type: UnitType
     team_id: Optional[str] = None
     lives: int
@@ -82,19 +82,6 @@ class GameFilter(BaseModel):
     offset: int = Field(0, ge=0)
 
 
-class GameSettingsUpdate(BaseModel):
-    """Модель для обновления настроек игры"""
-    max_players: Optional[int] = Field(None, ge=1, le=8)
-    team_count: Optional[int] = Field(None, ge=1, le=8)
-    player_start_lives: Optional[int] = Field(None, ge=1, le=10)
-    enable_enemies: Optional[bool] = None
-    respawn_enabled: Optional[bool] = None
-    friendly_fire: Optional[bool] = None
-    time_limit: Optional[int] = Field(None, ge=60, le=3600)  # 1 минута - 1 час
-    score_limit: Optional[int] = Field(None, ge=1, le=100)
-    rounds_count: Optional[int] = Field(None, ge=1, le=50)
-
-
 class GameStatusUpdate(BaseModel):
     """Модель для изменения статуса игры"""
     action: str = Field(..., pattern="^(start|pause|resume)$")
@@ -120,27 +107,27 @@ class StandardResponse(BaseModel):
     data: Optional[dict] = None
 
 
-class GameCreateSettings(BaseModel):
-    # game_id: str = str(uuid4())
-    # Режим игры
-    game_mode: GameModeType = GameModeType.CAMPAIGN
+class GameSettingsUpdate(BaseModel):
+    """Модель для обновления настроек игры"""
     # Настройки игроков и команд
     max_players: int = 4
     player_start_lives: int = 3
-
     # Настройки врагов
     enable_enemies: bool = True
-
     # Настройки карт
-    map_chain_id: str | None = None
-    map_template_id: str | None = None
-
+    map_chain_id: Optional[str] = None
+    map_template_id: Optional[str] = None
     # Игровые настройки
     respawn_enabled: bool = False
     friendly_fire: bool = False
-    time_limit: int | None = 300  # в секундах
-    score_limit: int | None = 10
-    rounds_count: int | None = 15
+    time_limit: Optional[int] = 300  # в секундах
+    score_limit: Optional[int] = 10
+    rounds_count: Optional[int] = 15
+
+
+class GameCreateSettings(GameSettingsUpdate):
+    # Режим игры
+    game_mode: GameModeType = GameModeType.CAMPAIGN
 
 
 class GameSettings(BaseModel):
@@ -205,6 +192,7 @@ class GameSettings(BaseModel):
     score_limit: Optional[int] = 10
     rounds_count: Optional[int] = 15
 
+    @computed_field(return_type=TeamModeSettings)
     @property
     def team_mode_settings(self) -> TeamModeSettings:
         match self.game_mode:
@@ -241,10 +229,3 @@ class GameSettings(BaseModel):
                     allow_uneven_teams=True,
                     default_team_names=["Heroes"]
                 )
-
-class EnemyModel(BaseModel):
-    x: float
-    y: float
-    size: int
-    speed: float
-    enemy_type: EnemyType
