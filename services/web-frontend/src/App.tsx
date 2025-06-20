@@ -42,14 +42,7 @@ const App: React.FC = () => {
       <Routes>
         {/* Главная страница - доступна всем */}
         <Route path="/" element={<Home />} />
-        
-        {/* Игровая страница - отдельно от основного Layout */}
-        <Route path="/account/game/:gameId" element={
-          <ProtectedRoute>
-            <Game />
-          </ProtectedRoute>
-        } />
-        
+
         <Route path="/account" element={<Layout />}>
           {/* Публичные маршруты - доступны только НЕ авторизованным */}
           <Route path="login" element={
@@ -92,26 +85,38 @@ const App: React.FC = () => {
               <Stats />
             </ProtectedRoute>
           } />
+
           <Route path="games/create" element={
             <ProtectedRoute>
               <CreateGame />
             </ProtectedRoute>
           } />
+
+          {/* Игровая страница - отдельно от основного Layout */}
+          <Route path="game/:gameId" element={
+            <ProtectedRoute>
+              <Game />
+            </ProtectedRoute>
+          } />
+
           <Route path="games/:gameId/manage" element={
             <ProtectedRoute>
               <GameManagementWrapper />
             </ProtectedRoute>
           } />
-          <Route path="maps/editor" element={
-            <ProtectedRoute>
-              <MapEditor />
-            </ProtectedRoute>
-          } />
+
           <Route path="games" element={
             <ProtectedRoute>
               <GameList />
             </ProtectedRoute>
           } />
+
+          <Route path="maps/editor" element={
+            <ProtectedRoute>
+              <MapEditor />
+            </ProtectedRoute>
+          } />
+
           
           {/* Редирект с корневого маршрута на login для неавторизованных */}
           <Route index element={<Navigate to="/account/login" replace />} />

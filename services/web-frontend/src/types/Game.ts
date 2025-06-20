@@ -1,6 +1,8 @@
 // Определения типов данных (на основе game_routes.py и team_routes.py)
 import {GameClient} from "../components/GameClient";
 import React from "react";
+import {MapUpdate} from "./Map";
+import {EntitiesInfo} from "./EntitiesParams";
 
 export enum GameStatus {
     PENDING = 'pending',
@@ -20,6 +22,29 @@ export enum UnitType {
     TANK = 'tank',
 }
 
+export enum WeaponType {
+    BOMB = "bomb",
+    BULLET = "bullet",
+    MINE = "mine",
+}
+
+export enum EnemyType {
+    COIN = "coin",
+    BEAR = "bear",
+    GHOST = "ghost",
+}
+
+export enum PowerUpType {
+    BOMB_UP = "BOMB_UP",
+    BULLET_UP = "BULLET_UP",
+    MINE_UP = "MINE_UP",
+    BOMB_POWER_UP = "BOMB_POWER_UP",
+    BULLET_POWER_UP = "BULLET_POWER_UP",
+    SPEED_UP = "SPEED_UP",
+    LIFE_UP = "LIFE_UP"
+    // MINE_POWER_UP = "MINE_POWER_UP"
+}
+
 export interface MapTemplate {
     id: string;
     name: string;
@@ -35,15 +60,53 @@ export interface MapTemplate {
 }
 
 export interface GamePlayerInfo {
-    id: string;
-    name: string;
-    unit_type: UnitType;
+    name?: string;
     team_id?: string;
-    lives: number;
+    player_id: string;
     x: number;
     y: number;
-    color: string;
+    lives: number;
+    primary_weapon: WeaponType;
+    primary_weapon_max_count: number;
+    primary_weapon_power: number;
+    secondary_weapon?: WeaponType;
+    secondary_weapon_max_count?: number;
+    secondary_weapon_power?: number;
     invulnerable: boolean;
+    color: string;
+    unit_type: UnitType;
+}
+
+export interface EnemyState {
+    x: number,
+    y: number,
+    type: EnemyType,
+    lives: number,
+    invulnerable: boolean,
+    destroyed: boolean,
+}
+
+export interface WeaponState {
+  x: number;
+  y: number;
+  type: WeaponType;
+  direction?: [number, number];
+  activated: boolean;
+  exploded: boolean;
+  explosion_cells: [number, number][];
+  owner_id: string;
+}
+
+export interface PowerUpState {
+    x: number,
+    y: number,
+    type: PowerUpType,
+}
+
+export interface MapData {
+  grid: number[][] | null;
+  width: number;
+  height: number;
 }
 
 export interface GameTeamInfo {
@@ -53,6 +116,18 @@ export interface GameTeamInfo {
     player_ids: string[];
     player_count: number;
 }
+
+export interface GameUpdateEvent {
+  status: GameStatus;
+  is_active: boolean;
+  error?: boolean; // по умолчанию False → необязательное с типом boolean
+  message?: string | null;
+  map_update?: MapUpdate[] | null;
+  game_id?: string | null;
+}
+
+
+
 
 export interface TeamModeSettings {
   game_mode: GameModeType;
@@ -190,14 +265,34 @@ export interface GameListItem {
 }
 
 export interface GameCanvasProps {
-    socketUrl?: string;
-    socketPath?: string;
     onGameClientReady?: (gameClient: GameClient | null) => void;
     gameId?: string;
     userId?: string;
+    entitiesInfo?: EntitiesInfo
 }
 
 export interface GameLayoutProps {
     children: React.ReactNode;
     onOpenSettings?: () => void;
+}
+
+export interface GameState {
+    players: {
+        [playerId: string]: GamePlayerInfo
+    };
+    enemies: EnemyState[];
+    weapons: WeaponState[];
+    power_ups: PowerUpState[];
+    map: MapData;
+    level: number;
+    error?: boolean
+    is_active?: boolean;
+    status: GameStatus,
+    teams?: GameTeamInfo
+}
+
+export interface ResponseGameState{
+    success: boolean,
+    game_state: GameState,
+    message?: string
 }

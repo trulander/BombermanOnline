@@ -1,23 +1,26 @@
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {GameClient} from './GameClient';
-import {Box, Typography} from '@mui/material';
+import {Box, CircularProgress, Typography} from '@mui/material';
 import {GameCanvasProps} from "../types/Game";
+import {gameApi} from "../services/api";
+import {EntitiesInfo} from "../types/EntitiesParams";
 
 const GameCanvas: React.FC<GameCanvasProps> = ({
-  socketUrl = 'http://localhost', 
-  socketPath = '/socket.io',
   onGameClientReady,
   gameId,
-  userId
+  userId,
+  entitiesInfo
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameClientRef = useRef<GameClient | null>(null);
-  
+
+
   useEffect(() => {
-    if (canvasRef.current) {
+    if (canvasRef.current && entitiesInfo && !gameClientRef.current) {
       // Инициализация игрового клиента
       gameClientRef.current = new GameClient(
         canvasRef.current,
+        entitiesInfo,
         userId
       );
       
@@ -40,7 +43,8 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       };
     }
-  }, [gameId, onGameClientReady, userId]);
+  }, [gameId, onGameClientReady, userId, entitiesInfo]);
+
   
   return (
     <Box sx={{ 

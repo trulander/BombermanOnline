@@ -1,18 +1,11 @@
 import { io, Socket as IOSocket } from 'socket.io-client';
 import { InputHandler } from '../services/InputHandler';
 import { Renderer } from './Renderer';
-import { GameState } from '../types/GameState';
 import { Socket } from '../types/Socket';
 import logger, { LogLevel } from '../utils/Logger';
 import { tokenService } from '../services/tokenService';
-
-// Расширяем интерфейс Window для переменных окружения
-declare global {
-    interface Window {
-        SOCKET_URL: string;
-        SOCKET_PATH: string;
-    }
-}
+import {GameState, GameUpdateEvent, ResponseGameState} from "../types/Game";
+import { EntitiesInfo } from "../types/EntitiesParams";
 
 export class GameClient {
     private canvas: HTMLCanvasElement;
@@ -49,7 +42,11 @@ export class GameClient {
     }> = [];
     private clickHandler?: (e: MouseEvent) => void;
 
-    constructor(canvas: HTMLCanvasElement, initialPlayerId: string | null = null) {
+    constructor(
+        canvas: HTMLCanvasElement,
+        entitiesInfo: EntitiesInfo,
+        initialPlayerId: string | null = null
+    ) {
         this.canvas = canvas;
         this.playerId = initialPlayerId;
         
@@ -68,7 +65,7 @@ export class GameClient {
         });
         
         this.inputHandler = new InputHandler();
-        this.renderer = new Renderer(canvas);
+        this.renderer = new Renderer(canvas, entitiesInfo);
         
         // Создаем единый обработчик для кликов по canvas
         this.setupCanvasClickHandler();
@@ -163,21 +160,18 @@ export class GameClient {
         // Game events
         this.socket.on('game_state', (gameState: GameState) => {
             logger.debug('Получено событие game_state', {
-                hasGrid: !!gameState.map?.grid_data,
+                hasGrid: !!gameState.map?.grid,
                 playersCount: Object.keys(gameState.players).length,
-                mapChangesCount: gameState.map?.changedCells?.length || 0
             });
-            this.processGameStateUpdate(gameState);
+            this.processFullGameStateUpdate(gameState);
         });
 
         // Добавляем обработчик для game_update
-        this.socket.on('game_update', (gameState: GameState) => {
+        this.socket.on('game_update', (gameUpdate: GameUpdateEvent) => {
             logger.debug('Получено событие game_update', {
-                hasGrid: !!gameState.map?.grid_data,
-                playersCount: Object.keys(gameState.players).length,
-                mapChangesCount: gameState.map?.changedCells?.length || 0
+                hasGrid: !!gameUpdate?.map_update,
             });
-            this.processGameStateUpdate(gameState);
+            this.processGameStateUpdate(gameUpdate);
         });
 
         this.socket.on('player_disconnected', (data: { player_id: string }) => {
@@ -197,7 +191,6 @@ export class GameClient {
             logger.info('Game over', {
                 gameId: this.gameId,
                 playerId: this.playerId,
-                score: this.gameState?.score || 0
             });
             this.showGameOver();
         });
@@ -246,20 +239,20 @@ export class GameClient {
     }
 
     // Функция для обработки результата запроса состояния игры
-    private handleGetGameStateResponse(response: any): void {
+    private handleGetGameStateResponse(response: ResponseGameState): void {
         if (response.success) {
             logger.debug('Получено состояние игры и полная карта', {
-                hasFullMap: !!(response.full_map && response.full_map.grid_data),
+                hasFullMap: !!(response.game_state && response.game_state.map),
                 hasGameState: !!response.game_state
             });
             
             // Сохраняем полную карту в кеш
-            if (response.full_map && response.full_map.grid_data) {
+            if (response.game_state.map && response.game_state.map.grid) {
                 logger.debug('Получена полная карта', {
-                    width: response.full_map.grid_data[0]?.length,
-                    height: response.full_map.grid_data.length
+                    width: response.game_state.map.width,
+                    height: response.game_state.map.height
                 });
-                this.cachedMapGrid = JSON.parse(JSON.stringify(response.full_map.grid_data));
+                this.cachedMapGrid = JSON.parse(JSON.stringify(response.game_state.map.grid));
             } else {
                 logger.error('Не удалось получить карту из запроса состояния', {
                     message: response.message,
@@ -271,11 +264,6 @@ export class GameClient {
             
             // Сохраняем состояние игры
             this.gameState = response.game_state;
-            
-            // Убеждаемся, что у состояния игры есть полная карта из кеша
-            if (this.gameState && this.gameState.map && this.cachedMapGrid) {
-                this.gameState.map.grid_data = this.cachedMapGrid;
-            }
         } else {
             logger.error('Ошибка получения состояния игры', {
                 message: response.message,
@@ -299,12 +287,23 @@ export class GameClient {
     }
 
     // Обработка обновлений игры
-    private processGameStateUpdate(gameState: GameState): void {
+    private processFullGameStateUpdate(gameState: GameState): void {
+        this.lastUpdateTime = performance.now();
+
+        // Сохраняем обновленное состояние
+        this.gameState = gameState;
+
+        // Обновляем информацию в header
+        this.updateGameInfo();
+    }
+
+    // Обработка обновлений игры частичными изменениями
+    private processGameStateUpdate(gameUpdate: GameUpdateEvent): void {
         this.lastUpdateTime = performance.now();
         
         // Применяем изменения к кешированной карте
-        if (gameState.map?.changedCells && this.cachedMapGrid) {
-            const changes = gameState.map.changedCells;
+        if (gameUpdate?.map_update && this.cachedMapGrid) {
+            const changes = gameUpdate.map_update;
             
             // Применяем изменения к кешированной карте
             for (const cell of changes) {
@@ -323,13 +322,11 @@ export class GameClient {
                     });
                 }
             }
-            
-            // Добавляем полную карту к игровому состоянию
-            gameState.map.grid_data = this.cachedMapGrid;
-        } else if (gameState.map?.changedCells && !this.cachedMapGrid) {
+
+        } else if (gameUpdate?.map_update && !this.cachedMapGrid) {
             // Если нет кешированной карты, но есть изменения, запрашиваем полное состояние
             logger.warn('Получены изменения, но нет кешированной карты', {
-                changesCount: gameState.map.changedCells.length,
+                changesCount: gameUpdate?.map_update.length,
                 gameId: this.gameId,
                 playerId: this.playerId
             });
@@ -338,8 +335,12 @@ export class GameClient {
         }
         
         // Сохраняем обновленное состояние
-        this.gameState = gameState;
-        
+        if (this.gameState == null){
+            this.requestGameState()
+        }else{
+            this.gameState.map.grid = this.cachedMapGrid;
+        }
+
         // Обновляем информацию в header
         this.updateGameInfo();
     }
@@ -391,10 +392,10 @@ export class GameClient {
         // Если у нас есть состояние игры и ID игрока, рендерим
         if (this.gameState && this.playerId) {
             // Проверяем, есть ли данные карты
-            if (!this.gameState.map || !this.gameState.map.grid_data) {
+            if (!this.gameState.map || !this.gameState.map.grid) {
                 logger.warn('Нет данных карты для рендеринга', {
                     hasMap: !!this.gameState.map,
-                    hasGrid: !!(this.gameState.map && this.gameState.map.grid_data),
+                    hasGrid: !!(this.gameState.map && this.gameState.map.grid),
                     hasCachedGrid: !!this.cachedMapGrid
                 });
                 
@@ -404,11 +405,10 @@ export class GameClient {
                         this.gameState.map = {
                             width: this.cachedMapGrid[0].length,
                             height: this.cachedMapGrid.length,
-                            cellSize: 40, // Значение по умолчанию, если не указано
-                            grid_data: this.cachedMapGrid
+                            grid: this.cachedMapGrid
                         };
                     } else {
-                        this.gameState.map.grid_data = this.cachedMapGrid;
+                        this.gameState.map.grid = this.cachedMapGrid;
                     }
                     logger.debug('Используем кешированную карту для рендеринга', {
                         width: this.cachedMapGrid[0].length,
@@ -581,7 +581,6 @@ export class GameClient {
     private updateGameInfo(): void {
         if (this.gameState) {
             window.dispatchEvent(new CustomEvent('levelUpdate', { detail: this.gameState.level }));
-            window.dispatchEvent(new CustomEvent('scoreUpdate', { detail: this.gameState.score }));
         }
     }
 
@@ -615,16 +614,15 @@ export class GameClient {
         ctx.textAlign = 'center';
         ctx.fillText('GAME OVER', this.canvas.width / 2, this.canvas.height / 2 - 20);
         
-        if (this.gameState) {
-            ctx.font = '20px Arial';
-            ctx.fillText(`Final Score: ${this.gameState.score}`, this.canvas.width / 2, this.canvas.height / 2 + 20);
-        }
+        // if (this.gameState) {
+        //     ctx.font = '20px Arial';
+        //     ctx.fillText(`Final Score: ${this.gameState.score}`, this.canvas.width / 2, this.canvas.height / 2 + 20);
+        // }
         
         // Back to menu button
         this.drawButton(ctx, 'BACK TO MENU', this.canvas.width / 2, this.canvas.height / 2 + 70, 200, 50, () => {
             logger.info('Возврат в главное меню после окончания игры', {
                 gameId: this.gameId,
-                score: this.gameState?.score || 0
             });
             this.gameId = null;
             this.playerId = null;
@@ -633,7 +631,6 @@ export class GameClient {
             // Очищаем информацию в header
             this.updateGameId('');
             window.dispatchEvent(new CustomEvent('levelUpdate', { detail: 1 }));
-            window.dispatchEvent(new CustomEvent('scoreUpdate', { detail: 0 }));
             
             this.showMenu();
         });

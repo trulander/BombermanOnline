@@ -26,11 +26,19 @@ providers:
 log:
   level: INFO
 
+pilot:
+  enabled: false
+
 accessLog:
   filePath: "/var/log/traefik/access.log"
 
+#experimental:
+#  plugins:
+#    extractCookie:
+#      moduleName: "github.com/v-electrolux/extractcookie"
+#      version: "v1.0.1"
+
 experimental:
-  plugins:
+  localPlugins:
     extractCookie:
-      moduleName: "github.com/v-electrolux/extractcookie"
-      version: "v1.0.1"
+      moduleName: extractcookie

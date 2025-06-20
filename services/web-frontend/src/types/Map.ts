@@ -51,3 +51,9 @@ export const cellTypeColors: Record<CellType, string> = {
     [CellType.ENEMY_SPAWN]: '#f00',
     [CellType.LEVEL_EXIT]: '#0f0',
 };
+
+export interface MapUpdate {
+  x: number;
+  y: number;
+  type: CellType;
+}

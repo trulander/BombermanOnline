@@ -223,6 +223,7 @@ services:
       - ./traefik/routers.yml:/etc/traefik/routers.yml
       - ./traefik/logs:/var/log/traefik
       - ./traefik/traefik_plugins:/plugins-storage
+      - ./traefik/local-plugins:/plugins-local/src
     command:
       - "--configFile=/etc/traefik/traefik.yml"
     restart: unless-stopped

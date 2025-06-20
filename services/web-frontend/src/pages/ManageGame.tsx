@@ -128,7 +128,7 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
   // Effect to determine if the current user is in the game and their unit type
   useEffect(() => {
     if (user && game && game.players) {
-      const currentPlayer = game.players.find(p => p.id === user.id);
+      const currentPlayer = game.players.find(p => p.player_id === user.id);
       if (currentPlayer) {
         setIsPlayerInThisGame(true);
         setPlayerUnitType(currentPlayer.unit_type);
@@ -363,7 +363,7 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
         setEditTeamId(null);
         setEditTeamName('');
         setSuccess('Команда успешно обновлена!');
-        fetchGameDetails(); // Refresh teams list
+        await fetchGameDetails(); // Refresh teams list
       } else {
         setEditTeamError(response.data.message || 'Не удалось обновить команду.');
       }
@@ -382,7 +382,7 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
       const response = await proxiedGameApi.delete(`/games/${gameId}/teams/${teamId}`);
       if (response.data.success) {
         setSuccess('Команда успешно удалена!');
-        fetchGameDetails(); // Refresh teams list
+        await fetchGameDetails(); // Refresh teams list
       } else {
         setError(response.data.message || 'Не удалось удалить команду.');
       }
@@ -398,7 +398,7 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
       const response = await proxiedGameApi.post(`/games/${gameId}/teams/${teamId}/players`, { player_id: playerId });
       if (response.data) {
         setSuccess(`Игрок ${playerId} добавлен в команду ${teamId} успешно!`);
-        fetchGameDetails();
+        await fetchGameDetails();
       } else {
         setError(response.data.message || 'Не удалось добавить игрока в команду.');
       }
@@ -414,7 +414,7 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
       const response = await proxiedGameApi.delete(`/games/${gameId}/teams/${teamId}/players/${playerId}`);
       if (response.data.success) {
         setSuccess(`Игрок ${playerId} удален из команды ${teamId} успешно!`);
-        fetchGameDetails();
+        await fetchGameDetails();
       } else {
         setError(response.data.message || 'Не удалось удалить игрока из команды.');
       }
@@ -430,7 +430,7 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
       const response = await proxiedGameApi.post(`/games/${gameId}/teams/distribute`, { redistribute_existing: redistributeExisting });
       if (response.data.success) {
         setSuccess('Игроки успешно распределены по командам!');
-        fetchGameDetails();
+        await fetchGameDetails();
       } else {
         setError(response.data.message || 'Не удалось распределить игроков.');
       }
@@ -771,17 +771,17 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
                 ) : (
                   game?.players.map(player => (
                     <ListItem
-                      key={player.id}
+                      key={player.player_id}
                       secondaryAction={
                         <Box>
                           {game?.game_mode === GameModeType.CAPTURE_THE_FLAG && (
                             <FormControl sx={{ minWidth: 120, mr: 1 }} size="small">
-                              <InputLabel id={`team-select-label-${player.id}`}>Команда</InputLabel>
+                              <InputLabel id={`team-select-label-${player.player_id}`}>Команда</InputLabel>
                               <Select
-                                labelId={`team-select-label-${player.id}`}
+                                labelId={`team-select-label-${player.player_id}`}
                                 value={player.team_id || ''}
                                 label="Команда"
-                                onChange={(e) => handleAddPlayerToTeam(e.target.value as string, player.id)}
+                                onChange={(e) => handleAddPlayerToTeam(e.target.value as string, player.player_id)}
                                 disabled={game?.status !== GameStatus.PENDING}
                               >
                                 <MenuItem value=""><em>Без команды</em></MenuItem>
@@ -796,7 +796,7 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
                           <IconButton
                             edge="end"
                             aria-label="delete"
-                            onClick={() => handleRemovePlayer(player.id)}
+                            onClick={() => handleRemovePlayer(player.player_id)}
                             disabled={game?.status !== GameStatus.PENDING}
                           >
                             <Remove />
@@ -814,7 +814,7 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
                                 label={game?.teams.find(t => t.id === player.team_id)?.name || 'Неизвестная команда'}
                                 size="small"
                                 sx={{ ml: 1, backgroundColor: player.color || '#ccc', color: '#fff' }}
-                                onDelete={() => handleRemovePlayerFromTeam(player.team_id!, player.id)}
+                                onDelete={() => handleRemovePlayerFromTeam(player.team_id!, player.player_id)}
                               />
                             )}
                           </Box>
@@ -910,7 +910,7 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
                               return (
                                 <Chip
                                   key={playerId}
-                                  label={game?.players.find(p => p.id === playerId)?.name || `Неизвестный игрок (${playerId.substring(0, 4)}...)`}
+                                  label={game?.players.find(p => p.player_id === playerId)?.name || `Неизвестный игрок (${playerId.substring(0, 4)}...)`}
                                   size="small"
                                   sx={{ mr: 0.5, mb: 0.5 }}
                                   onDelete={() => handleRemovePlayerFromTeam(team.id, playerId)}

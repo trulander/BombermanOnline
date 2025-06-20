@@ -31,18 +31,13 @@ const GameLayout: React.FC<GameLayoutProps> = ({ children, onOpenSettings }) => 
       setLevel(event.detail);
     };
 
-    const handleScoreUpdate = (event: any) => {
-      setScore(event.detail);
-    };
 
     window.addEventListener('gameIdUpdate', handleGameIdUpdate);
     window.addEventListener('levelUpdate', handleLevelUpdate);
-    window.addEventListener('scoreUpdate', handleScoreUpdate);
 
     return () => {
       window.removeEventListener('gameIdUpdate', handleGameIdUpdate);
       window.removeEventListener('levelUpdate', handleLevelUpdate);
-      window.removeEventListener('scoreUpdate', handleScoreUpdate);
     };
   }, []);
 
@@ -74,9 +69,9 @@ const GameLayout: React.FC<GameLayoutProps> = ({ children, onOpenSettings }) => 
             Level: {level}
           </Typography>
           
-          <Typography variant="body1" sx={{ mr: 2 }}>
-            Score: {score}
-          </Typography>
+          {/*<Typography variant="body1" sx={{ mr: 2 }}>*/}
+          {/*  Score: {score}*/}
+          {/*</Typography>*/}
           
           <IconButton
             edge="end"

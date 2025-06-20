@@ -1,5 +1,7 @@
-import { GameState } from '../types/GameState';
 import logger, { LogLevel } from '../utils/Logger';
+import {GameState} from "../types/Game";
+import { EntitiesInfo, EntityInfo, UnitInfo } from '../types/EntitiesParams';
+import { EnemyType, PowerUpType, WeaponType } from '../types/Game';
 
 export class Renderer {
     private canvas: HTMLCanvasElement;
@@ -26,11 +28,17 @@ export class Renderer {
     
     // Флаг для отладки
     private debugMode: boolean = false;
+    
+    private entitiesInfo: EntitiesInfo;
 
-    constructor(canvas: HTMLCanvasElement) {
+    constructor(
+        canvas: HTMLCanvasElement,
+        entitiesInfo: EntitiesInfo
+    ) {
         this.canvas = canvas;
         this.ctx = canvas.getContext('2d')!;
         this.previousFrameTime = performance.now();
+        this.entitiesInfo = entitiesInfo;
         
         // Установка начальных размеров canvas
         this.canvas.width = 800;
@@ -43,7 +51,7 @@ export class Renderer {
         this.previousFrameTime = currentTime;
         
         // Проверяем наличие необходимых данных
-        if (!gameState.map || !gameState.map.grid_data) {
+        if (!gameState.map || !gameState.map.grid) {
             logger.error('Отсутствует gameState.map.grid_data', {
                 gameState: gameState,
                 time: currentTime
@@ -71,8 +79,8 @@ export class Renderer {
                 cellSize: this.cellSize,
                 playerPos: { x: currentPlayer.x, y: currentPlayer.y },
                 gridSize: {
-                    width: gameState.map.grid_data[0].length,
-                    height: gameState.map.grid_data.length
+                    width: gameState.map.width,
+                    height: gameState.map.height
                 },
                 time: currentTime
             });
@@ -142,7 +150,7 @@ export class Renderer {
         // Рендерим игровые объекты с учетом плавного смещения
         this.renderMapSection(gameState, this.currentMapOffset.x, this.currentMapOffset.y, offsetDiffX, offsetDiffY);
         this.renderPowerUps(gameState, offsetDiffX, offsetDiffY);
-        this.renderBombs(gameState, offsetDiffX, offsetDiffY);
+        this.renderWeapons(gameState, offsetDiffX, offsetDiffY);
         this.renderEnemies(gameState, offsetDiffX, offsetDiffY);
         this.renderPlayers(gameState, currentPlayerId, offsetDiffX, offsetDiffY);
 
@@ -181,7 +189,7 @@ export class Renderer {
     }
     
     private calculateViewOffsetWithDeadZone(playerX: number, playerY: number, map: GameState['map']): { x: number, y: number } {
-        if (!map || !map.width || !map.height || !map.grid_data) {
+        if (!map || !map.width || !map.height || !map.grid) {
             logger.error('Недостаточно данных для расчета смещения вида', {
                 map,
                 playerX,
@@ -286,7 +294,7 @@ export class Renderer {
 
     private renderMapSection(gameState: GameState, offsetX: number, offsetY: number, offsetDiffX: number, offsetDiffY: number): void {
         const map = gameState.map;
-        if (!map || !map.grid_data) {
+        if (!map || !map.grid) {
             logger.error('Отсутствует gameState.map.grid_data при рендеринге карты', {
                 gameState
             });
@@ -296,15 +304,15 @@ export class Renderer {
         // Вычисляем границы видимой области в координатах сетки
         const startGridX = Math.floor(offsetX / this.cellSize);
         const startGridY = Math.floor(offsetY / this.cellSize);
-        const endGridX = Math.min(map.width || map.grid_data[0].length, startGridX + (this.viewRadius * 2 + 1) + 1);
-        const endGridY = Math.min(map.height || map.grid_data.length, startGridY + (this.viewRadius * 2 + 1) + 1);
+        const endGridX = Math.min(map.width || map.grid[0].length, startGridX + (this.viewRadius * 2 + 1) + 1);
+        const endGridY = Math.min(map.height || map.grid.length, startGridY + (this.viewRadius * 2 + 1) + 1);
 
         // Рендерим только видимую часть карты
         for (let y = startGridY; y < endGridY; y++) {
             for (let x = startGridX; x < endGridX; x++) {
-                if (x < 0 || y < 0 || y >= map.grid_data.length || x >= map.grid_data[0].length) continue;
+                if (x < 0 || y < 0 || y >= map.grid.length || x >= map.grid[0].length) continue;
                 
-                const cellType = map.grid_data[y] && map.grid_data[y][x] !== undefined ? map.grid_data[y][x] : 0;
+                const cellType = map.grid[y] && map.grid[y][x] !== undefined ? map.grid[y][x] : 0;
                 
                 // Вычисляем координаты ячейки с учетом плавного смещения
                 const renderX = (x * this.cellSize) - offsetX + offsetDiffX;
@@ -356,11 +364,16 @@ export class Renderer {
     }
     
     private renderPowerUps(gameState: GameState, offsetDiffX: number, offsetDiffY: number): void {
-        if (!gameState.powerUps) return;
+        if (!gameState.power_ups) return;
 
-        for (const powerUp of gameState.powerUps) {
+        for (const powerUp of gameState.power_ups) {
+            // Get dimensions from entitiesInfo
+            const powerUpInfo = this.entitiesInfo.power_up_types[powerUp.type];
+            const width = powerUpInfo?.width || this.cellSize;
+            const height = powerUpInfo?.height || this.cellSize;
+
             // Проверяем, находится ли powerUp в видимой области
-            if (!this.isObjectVisible(powerUp.x, powerUp.y, powerUp.width, powerUp.height)) continue;
+            if (!this.isObjectVisible(powerUp.x, powerUp.y, width, height)) continue;
             
             // Floating animation
             const time = performance.now() / 1000;
@@ -371,26 +384,44 @@ export class Renderer {
             let shadowColor = "rgba(155, 89, 182, 0.7)";
             let symbol = "?";
 
-            switch (powerUp.type) {
-                case "BOMB_UP":
+            switch (powerUp.type as PowerUpType) {
+                case PowerUpType.BOMB_UP:
                     color = "#F39C12"; // Orange
                     shadowColor = "rgba(243, 156, 18, 0.7)";
-                    symbol = "B";
+                    symbol = "BU";
                     break;
-                case "POWER_UP":
+                case PowerUpType.BULLET_UP:
                     color = "#E74C3C"; // Red
                     shadowColor = "rgba(231, 76, 60, 0.7)";
-                    symbol = "P";
+                    symbol = "BU";
                     break;
-                case "LIFE_UP":
+                case PowerUpType.MINE_UP:
+                    color = "#E74C3C"; // Red
+                    shadowColor = "rgba(231, 76, 60, 0.7)";
+                    symbol = "MU";
+                    break;
+                case PowerUpType.BOMB_POWER_UP:
+                    color = "#E74C3C"; // Red
+                    shadowColor = "rgba(231, 76, 60, 0.7)";
+                    symbol = "BPU";
+                    break;
+                case PowerUpType.BULLET_POWER_UP:
+                    color = "#E74C3C"; // Red
+                    shadowColor = "rgba(231, 76, 60, 0.7)";
+                    symbol = "BPU";
+                    break;
+                case PowerUpType.LIFE_UP:
                     color = "#3498DB"; // Blue
                     shadowColor = "rgba(52, 152, 219, 0.7)";
                     symbol = "♥";
                     break;
-                case "SPEED_UP":
+                case PowerUpType.SPEED_UP:
                     color = "#2ECC71"; // Green
                     shadowColor = "rgba(46, 204, 113, 0.7)";
-                    symbol = "S";
+                    symbol = ">>";
+                    break;
+                default:
+                    logger.warn(`Неизвестный тип бонуса`, { type: powerUp.type });
                     break;
             }
 
@@ -405,9 +436,9 @@ export class Renderer {
 
             this.ctx.beginPath();
             this.ctx.arc(
-                renderX + powerUp.width / 2,
-                renderY + powerUp.height / 2,
-                powerUp.width / 2,
+                renderX + width / 2,
+                renderY + height / 2,
+                width / 2,
                 0,
                 Math.PI * 2
             );
@@ -415,77 +446,123 @@ export class Renderer {
 
             // Draw icon
             this.ctx.fillStyle = "white";
-            this.ctx.font = `bold ${powerUp.width / 2}px Arial`;
+            this.ctx.font = `bold ${width / 2}px Arial`;
             this.ctx.textAlign = "center";
             this.ctx.textBaseline = "middle";
-            this.ctx.fillText(symbol, renderX + powerUp.width / 2, renderY + powerUp.height / 2);
+            this.ctx.fillText(symbol, renderX + width / 2, renderY + height / 2);
 
             // Reset shadow
             this.ctx.shadowBlur = 0;
         }
     }
 
-    private renderBombs(gameState: GameState, offsetDiffX: number, offsetDiffY: number): void {
-        if (!gameState.bombs) return;
+    private renderWeapons(gameState: GameState, offsetDiffX: number, offsetDiffY: number): void {
+        if (!gameState.weapons) return;
 
-        for (const bomb of gameState.bombs) {
-            // Проверяем, находится ли бомба в видимой области
-            if (!bomb.exploded && !this.isObjectVisible(bomb.x, bomb.y, bomb.width, bomb.height)) continue;
+        for (const weapon of gameState.weapons) {
+            // Get dimensions from entitiesInfo for the specific weapon type
+            const weaponInfo = this.entitiesInfo.weapon_types[weapon.type];
+            const width = weaponInfo?.width || this.cellSize;
+            const height = weaponInfo?.height || this.cellSize;
 
-            if (!bomb.exploded) {
-                // Bomb pulsating effect
-                const time = performance.now() / 1000;
-                const scale = 0.8 + Math.sin(time * 5) * 0.1;
-                const size = bomb.width * scale;
-                const offset = (bomb.width - size) / 2;
+            // Filter for bombs and render
+            if (weapon.type === WeaponType.BOMB) {
+                if (!weapon.exploded && !this.isObjectVisible(weapon.x, weapon.y, width, height)) continue;
 
-                // Draw bomb with smooth movement
-                const renderX = this.getRelativeX(bomb.x) + offsetDiffX;
-                const renderY = this.getRelativeY(bomb.y) + offsetDiffY;
+                if (!weapon.exploded) {
+                    // Bomb pulsating effect
+                    const time = performance.now() / 1000;
+                    const scale = 0.8 + Math.sin(time * 5) * 0.1;
+                    const size = width * scale;
+                    const offset = (width - size) / 2;
 
-                this.ctx.fillStyle = "#333";
+                    // Draw bomb with smooth movement
+                    const renderX = this.getRelativeX(weapon.x) + offsetDiffX;
+                    const renderY = this.getRelativeY(weapon.y) + offsetDiffY;
+
+                    this.ctx.fillStyle = "#333";
+                    this.ctx.beginPath();
+                    this.ctx.arc(
+                        renderX + width / 2,
+                        renderY + height / 2,
+                        size / 2,
+                        0,
+                        Math.PI * 2
+                    );
+                    this.ctx.fill();
+
+                    // Draw fuse
+                    this.ctx.strokeStyle = "#999";
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(renderX + width / 2, renderY + offset);
+                    this.ctx.lineTo(renderX + width / 2, renderY - 5);
+                    this.ctx.stroke();
+                } else {
+                    // Draw explosion with smooth movement
+                    for (const cell of weapon.explosion_cells) {
+                        if (!this.isObjectVisible(cell[0], cell[1], this.cellSize, this.cellSize)) continue;
+                        const expRenderX = this.getRelativeX(cell[0]) + offsetDiffX;
+                        const expRenderY = this.getRelativeY(cell[1]) + offsetDiffY;
+                        
+                        // Explosion gradient
+                        const gradient = this.ctx.createRadialGradient(
+                            expRenderX + this.cellSize / 2,
+                            expRenderY + this.cellSize / 2,
+                            0,
+                            expRenderX + this.cellSize / 2,
+                            expRenderY + this.cellSize / 2,
+                            this.cellSize / 2
+                        );
+
+                        gradient.addColorStop(0, "rgba(255, 255, 0, 0.8)");
+                        gradient.addColorStop(0.7, "rgba(255, 80, 0, 0.8)");
+                        gradient.addColorStop(1, "rgba(255, 0, 0, 0.4)");
+
+                        this.ctx.fillStyle = gradient;
+                        this.ctx.fillRect(expRenderX, expRenderY, this.cellSize, this.cellSize);
+                    }
+                }
+            } else if (weapon.type === WeaponType.BULLET) {
+                // Render bullets (example - similar to power-ups or smaller circles)
+                if (!this.isObjectVisible(weapon.x, weapon.y, width, height)) continue;
+
+                const renderX = this.getRelativeX(weapon.x) + offsetDiffX;
+                const renderY = this.getRelativeY(weapon.y) + offsetDiffY;
+
+                this.ctx.fillStyle = "#8B0000"; // Dark red for bullets
                 this.ctx.beginPath();
                 this.ctx.arc(
-                    renderX + bomb.width / 2,
-                    renderY + bomb.height / 2,
-                    size / 2,
+                    renderX + width / 2,
+                    renderY + height / 2,
+                    width / 2,
                     0,
                     Math.PI * 2
                 );
                 this.ctx.fill();
+            } else if (weapon.type === WeaponType.MINE) {
+                // Render mines (example)
+                if (!weapon.exploded && !this.isObjectVisible(weapon.x, weapon.y, width, height)) continue;
+                
+                const renderX = this.getRelativeX(weapon.x) + offsetDiffX;
+                const renderY = this.getRelativeY(weapon.y) + offsetDiffY;
 
-                // Draw fuse
-                this.ctx.strokeStyle = "#999";
-                this.ctx.lineWidth = 2;
-                this.ctx.beginPath();
-                this.ctx.moveTo(renderX + bomb.width / 2, renderY + offset);
-                this.ctx.lineTo(renderX + bomb.width / 2, renderY - 5);
-                this.ctx.stroke();
-            } else {
-                // Draw explosion with smooth movement
-                for (const cell of bomb.explosionCells) {
-                    // Проверяем, находится ли взрыв в видимой области
-                    if (!this.isObjectVisible(cell.x, cell.y, this.cellSize, this.cellSize)) continue;
+                this.ctx.fillStyle = "#4B0082"; // Indigo for mines
+                this.ctx.fillRect(renderX, renderY, width, height);
 
-                    const renderX = this.getRelativeX(cell.x) + offsetDiffX;
-                    const renderY = this.getRelativeY(cell.y) + offsetDiffY;
-
-                    // Explosion gradient
-                    const gradient = this.ctx.createRadialGradient(
-                        renderX + this.cellSize / 2,
-                        renderY + this.cellSize / 2,
-                        0,
-                        renderX + this.cellSize / 2,
-                        renderY + this.cellSize / 2,
-                        this.cellSize / 2
-                    );
-
-                    gradient.addColorStop(0, "rgba(255, 255, 0, 0.8)");
-                    gradient.addColorStop(0.7, "rgba(255, 80, 0, 0.8)");
-                    gradient.addColorStop(1, "rgba(255, 0, 0, 0.4)");
-
-                    this.ctx.fillStyle = gradient;
-                    this.ctx.fillRect(renderX, renderY, this.cellSize, this.cellSize);
+                if (!weapon.exploded) {
+                    this.ctx.strokeStyle = "#fff";
+                    this.ctx.lineWidth = 1;
+                    this.ctx.strokeRect(renderX + 2, renderY + 2, width - 4, height - 4);
+                } else {
+                    // Explosion rendering for mine (can reuse bomb explosion logic or simplify)
+                    for (const cell of weapon.explosion_cells) {
+                        if (!this.isObjectVisible(cell[0], cell[1], this.cellSize, this.cellSize)) continue;
+                        const expRenderX = this.getRelativeX(cell[0]) + offsetDiffX;
+                        const expRenderY = this.getRelativeY(cell[1]) + offsetDiffY;
+                        this.ctx.fillStyle = "rgba(255, 140, 0, 0.6)"; // Orange for mine explosion
+                        this.ctx.fillRect(expRenderX, expRenderY, this.cellSize, this.cellSize);
+                    }
                 }
             }
         }
@@ -497,8 +574,13 @@ export class Renderer {
         for (const enemy of gameState.enemies) {
             if (enemy.destroyed) continue; // Don't render destroyed enemies
 
+            // Get dimensions from entitiesInfo
+            const enemyInfo = this.entitiesInfo.enemy_types[enemy.type];
+            const width = enemyInfo?.width || this.cellSize;
+            const height = enemyInfo?.height || this.cellSize;
+
             // Проверяем, находится ли враг в видимой области
-            if (!this.isObjectVisible(enemy.x, enemy.y, enemy.width, enemy.height)) continue;
+            if (!this.isObjectVisible(enemy.x, enemy.y, width, height)) continue;
 
             // Apply smooth movement
             const renderX = this.getRelativeX(enemy.x) + offsetDiffX;
@@ -506,14 +588,12 @@ export class Renderer {
             
             const x = enemy.x;
             const y = enemy.y;
-            const width = enemy.width;
-            const height = enemy.height;
             const centerX = renderX + width / 2;
             const centerY = renderY + height / 2;
 
             // Draw based on type
-            switch (enemy.type) {
-                case "coin":
+            switch (enemy.type as EnemyType) {
+                case EnemyType.COIN:
                     this.ctx.fillStyle = "#FFD700"; // Gold
                     this.ctx.beginPath();
                     this.ctx.arc(centerX, centerY, width / 2, 0, Math.PI * 2);
@@ -524,7 +604,7 @@ export class Renderer {
                     this.ctx.arc(centerX - width * 0.15, centerY - height * 0.15, width / 5, 0, Math.PI * 2);
                     this.ctx.fill();
                     break;
-                case "bear":
+                case EnemyType.BEAR:
                     this.ctx.fillStyle = "#8B4513"; // SaddleBrown
                     this.ctx.fillRect(renderX, renderY, width, height);
                     // Simple ears
@@ -539,7 +619,7 @@ export class Renderer {
                     this.ctx.fillRect(renderX + width * 0.2, renderY + height * 0.3, bearEyeSize, bearEyeSize);
                     this.ctx.fillRect(renderX + width * 0.6, renderY + height * 0.3, bearEyeSize, bearEyeSize);
                     break;
-                case "ghost":
+                case EnemyType.GHOST:
                     // Semi-transparent ghost
                     this.ctx.fillStyle = "rgba(200, 200, 255, 0.8)";
 
@@ -573,6 +653,7 @@ export class Renderer {
                     this.ctx.fill();
                     break;
                 default:
+                    logger.warn(`Неизвестный тип врага`, { type: enemy.type });
                     // Default enemy (simple square)
                     this.ctx.fillStyle = "#FF6B6B";
                     this.ctx.fillRect(renderX, renderY, width, height);
@@ -604,6 +685,11 @@ export class Renderer {
         for (const playerId in gameState.players) {
             const player = gameState.players[playerId];
             
+            // Get dimensions from entitiesInfo
+            const playerUnitInfo = this.entitiesInfo.player_units[player.unit_type];
+            const width = playerUnitInfo?.width || this.cellSize;
+            const height = playerUnitInfo?.height || this.cellSize;
+
             // Определяем позицию отрисовки игрока
             let renderX: number;
             let renderY: number;
@@ -613,9 +699,7 @@ export class Renderer {
             renderY = this.getRelativeY(player.y) + offsetDiffY;
 
             // Draw player
-            const width = player.width;
-            const height = player.height;
-
+            // Use calculated width and height
             // Draw player body
             this.ctx.fillStyle = player.color;
             this.ctx.beginPath();

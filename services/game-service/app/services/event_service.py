@@ -84,6 +84,7 @@ class EventService:
         return await self.nats_repository.publish_event(
             subject_base="game.update",
             payload=data,
+            specific_suffix=data.get("game_id")
         )
 
     async def send_game_over(self, game_id: str) -> bool:
@@ -92,7 +93,8 @@ class EventService:
             subject_base="game.over",
             payload={
                 "game_id": game_id,
-            }
+            },
+            specific_suffix=game_id
         )
 
     async def handle_create_game(self, data: dict, callback: Callable) -> dict:
@@ -147,7 +149,8 @@ class EventService:
                 payload={
                     "player_id": player_id,
                     "game_id": game_id,
-                }
+                },
+                specific_suffix=game_id
             )
             logger.info(f"Sent player_disconnected notification for player {player_id} in game {game_id}")
 

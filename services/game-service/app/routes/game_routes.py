@@ -8,12 +8,13 @@ from app.dependenties import game_coordinator
 from app.models.game_models import (
     GameInfo, GameListItem, GameFilter, GameSettingsUpdate,
     GameStatusUpdate, PlayerAction, GameCreateResponse, StandardResponse,
-    GamePlayerInfo, GameTeamInfo, GameCreateSettings
+    GameTeamInfo, GameCreateSettings
 )
 
 from app.entities.game_status import GameStatus
 from app.entities.game_mode import GameModeType
 from app.entities.player import UnitType
+from app.models.map_models import PlayerState
 
 if TYPE_CHECKING:
     from app.coordinators.game_coordinator import GameCoordinator
@@ -87,7 +88,7 @@ async def get_games(
 @router.get("/{game_id}", response_model=GameInfo)
 async def get_game(
     game_id: str,
-    # current_user: dict = Depends(get_current_user)
+    current_user: dict = Depends(get_current_user)
 ):
     """Получить подробную информацию об игре"""
     coordinator = get_game_coordinator()
@@ -107,18 +108,19 @@ async def get_game(
                 logger.warning(f"Player entity {player_id} not found in game_service.players for game {game_id}")
                 continue # Пропускаем этого игрока, если не найден
 
-            player_info = GamePlayerInfo(
-                id=player_id,
-                name=player_state_data.name, # Получаем name из Player entity
-                unit_type=player_state_data.unit_type,
-                team_id=player_state_data.team_id, # Получаем team_id из Player entity
-                lives=player_state_data.lives,
-                x=player_state_data.x,
-                y=player_state_data.y,
-                color=player_state_data.color,
-                invulnerable=player_state_data.invulnerable
-            )
-            players_info.append(player_info)
+            # player_info = PlayerState(
+            #     player_id=player_id,
+            #     name=player_state_data.name, # Получаем name из Player entity
+            #     unit_type=player_state_data.unit_type,
+            #     team_id=player_state_data.team_id, # Получаем team_id из Player entity
+            #     lives=player_state_data.lives,
+            #     x=player_state_data.x,
+            #     y=player_state_data.y,
+            #     color=player_state_data.color,
+            #     invulnerable=player_state_data.invulnerable,
+            #     primary_weapon=p
+            # )
+            players_info.append(player_state_data)
         
         # Формируем информацию о командах
         teams_info = []

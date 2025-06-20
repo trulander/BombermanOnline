@@ -35,9 +35,9 @@ class NatsService:
                 self._nc = await nats.connect(settings.NATS_URL)
                 # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
                 # Подписываемся на обновления игры
-                await self._nc.subscribe(f"game.update.{settings.HOSTNAME}", cb=self.handle_game_update)
-                await self._nc.subscribe(f"game.over.{settings.HOSTNAME}", cb=self.handle_game_over)
-                await self._nc.subscribe(f"game.player_disconnected.{settings.HOSTNAME}", cb=self.handle_player_disconnected)
+                await self._nc.subscribe(f"game.update.*", cb=self.handle_game_update)
+                await self._nc.subscribe(f"game.over.*", cb=self.handle_game_over)
+                await self._nc.subscribe(f"game.player_disconnected.*", cb=self.handle_player_disconnected)
 
                 logger.info(f"Connected to NATS: {settings.NATS_URL}")
             return self._nc

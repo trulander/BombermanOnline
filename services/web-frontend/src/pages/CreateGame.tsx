@@ -18,11 +18,8 @@ import {Field, Form, Formik} from 'formik';
 import * as Yup from 'yup';
 import {MapTemplate} from "../types/Map";
 import {GameCreateSettings, GameModeType} from "../types/Game";
+import {EntitiesInfo} from "../types/EntitiesParams";
 
-interface EntitiesInfo {
-  game_modes: { [key: string]: string };
-  // Add other entity types if needed for future features
-}
 
 const validationSchema = Yup.object().shape({
   game_mode: Yup.string().required('Режим игры обязателен'),
@@ -128,10 +125,11 @@ const CreateGame: React.FC = () => {
                   value={values.game_mode}
                   onChange={handleChange}
                 >
-                  {entitiesInfo?.game_modes && Object.keys(entitiesInfo.game_modes).map((mode) => (
-                    <MenuItem key={mode} value={entitiesInfo.game_modes[mode]}>
-                      {entitiesInfo.game_modes[mode]}
-                    </MenuItem>
+                  {entitiesInfo?.game_modes &&
+                    (Object.keys(entitiesInfo.game_modes) as Array<keyof typeof entitiesInfo.game_modes>).map((mode) => (
+                      <MenuItem key={mode} value={entitiesInfo.game_modes[mode]}>
+                        {entitiesInfo.game_modes[mode]}
+                      </MenuItem>
                   ))}
                 </Field>
                 {touched.game_mode && errors.game_mode && (

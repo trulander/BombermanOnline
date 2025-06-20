@@ -8,7 +8,7 @@ from app.entities import EnemyType
 from app.entities.game_status import GameStatus
 from app.entities.game_mode import GameModeType
 from app.entities.player import UnitType
-from app.models.map_models import MapUpdate
+from app.models.map_models import MapUpdate, PlayerState
 from app.models.team_models import TeamModeSettings
 
 
@@ -21,17 +21,17 @@ class GameUpdateEvent(BaseModel):
     game_id: str = None
 
 
-class GamePlayerInfo(BaseModel):
-    """Информация об игроке в игре"""
-    id: str
-    name: str | None = None
-    unit_type: UnitType
-    team_id: Optional[str] = None
-    lives: int
-    x: float
-    y: float
-    color: str
-    invulnerable: bool = False
+# class GamePlayerInfo(BaseModel):
+#     """Информация об игроке в игре"""
+#     id: str
+#     name: str | None = None
+#     unit_type: UnitType
+#     team_id: Optional[str] = None
+#     lives: int
+#     x: float
+#     y: float
+#     color: str
+#     invulnerable: bool = False
 
 
 class GameTeamInfo(BaseModel):
@@ -53,7 +53,7 @@ class GameInfo(BaseModel):
     team_count: int
     level: int
     game_over: bool
-    players: List[GamePlayerInfo]
+    players: List[PlayerState]
     teams: List[GameTeamInfo]
     settings: dict  # GameSettings в виде словаря
     created_at: Optional[datetime] = None

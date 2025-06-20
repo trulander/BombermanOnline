@@ -101,7 +101,7 @@ class NatsRepository:
         Example: game.update.game123 or achievement.unlocked.game123.player456
         """
         subject_parts = [subject_base]
-        subject_parts.append(settings.WEBAPI_SERVICE_HOSTNAME) # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
+        # subject_parts.append(settings.WEBAPI_SERVICE_HOSTNAME) # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
         if specific_suffix:
             subject_parts.append(specific_suffix)
         
