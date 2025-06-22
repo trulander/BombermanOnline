@@ -1,6 +1,8 @@
 import random
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, NotRequired, TypedDict
+
+from typer.cli import state
 
 from .entity import Entity
 import logging
@@ -17,6 +19,16 @@ class EnemyType(Enum):
     COIN = "coin"
     BEAR = "bear"
     GHOST = "ghost"
+
+class EnemyUpdate(TypedDict):
+    entity_id: str
+    x: NotRequired[float]
+    y: NotRequired[float]
+    type: NotRequired[EnemyType]
+    lives: NotRequired[int]
+    invulnerable: NotRequired[bool]
+    destroyed: NotRequired[bool]
+
 
 class Enemy(Entity):
     ENEMY_LIVES: dict[EnemyType, int] = {
@@ -53,3 +65,22 @@ class Enemy(Entity):
 
 
         logger.debug(f"Enemy created: type={enemy_type.value}, position=({x}, {y}), speed={speed}, lives={self.lives}")
+
+    def get_changes(self, full_state: bool = False) -> EnemyUpdate:
+        previous_state = {} if full_state else getattr(self, "_state", {})
+        current_state = {
+            "x": self.x,
+            "y": self.y,
+            "type": self.type,
+            "lives": self.lives,
+            "invulnerable": self.invulnerable,
+            "destroyed": self.destroyed,
+        }
+        changes = {
+            "entity_id": self.id
+        }
+        for key, value in current_state.items():
+            if key not in previous_state or previous_state[key] != value:
+                changes[key] = value
+        self._state = current_state
+        return EnemyUpdate(**changes)

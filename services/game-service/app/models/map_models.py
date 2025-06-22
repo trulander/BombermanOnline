@@ -1,4 +1,4 @@
-from typing import List, Optional, Dict, Tuple, Any, TYPE_CHECKING
+from typing import List, Optional, Dict, Tuple, Any, TYPE_CHECKING, TypedDict
 from datetime import datetime
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, Integer, String, Text, JSON, Boolean, DateTime, Float
@@ -238,9 +238,9 @@ class MapChainFilter(BaseModel):
 
 
 class PlayerState(BaseModel):
+    player_id: str
     name: str | None = None
     team_id: str
-    player_id: str
     x: float
     y: float
     lives: int
@@ -256,6 +256,7 @@ class PlayerState(BaseModel):
 
 
 class EnemyState(BaseModel):
+    entity_id: str
     x: float
     y: float
     type: EnemyType
@@ -265,9 +266,10 @@ class EnemyState(BaseModel):
 
 
 class WeaponState(BaseModel):
+    entity_id: str
     x: float
     y: float
-    type: WeaponType
+    weapon_type: WeaponType
     direction: Optional[tuple[float, float]] = None
     activated: bool
     exploded: bool
@@ -276,6 +278,7 @@ class WeaponState(BaseModel):
 
 
 class PowerUpState(BaseModel):
+    entity_id: str
     x: float
     y: float
     type: PowerUpType
@@ -289,15 +292,15 @@ class MapData(BaseModel):
 
 class MapState(BaseModel):
     players: dict[str, PlayerState]
-    enemies: list[EnemyState]
-    weapons: list[WeaponState]
-    power_ups: list[PowerUpState]
+    enemies: dict[str, EnemyState]
+    weapons: dict[str, WeaponState]
+    power_ups: dict[str, PowerUpState]
     map: MapData
     level: int
-    error: Optional[bool] = None
-    is_active: Optional[bool] = None
+    error: bool | None = None
+    is_active: bool | None = None
     status: GameStatus = None
-    teams: Optional[dict[str, "GameTeamInfo"]] = None
+    teams: dict[str, "GameTeamInfo"] | None = None
 
 
 class MapUpdate(BaseModel):

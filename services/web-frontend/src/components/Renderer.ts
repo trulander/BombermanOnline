@@ -366,7 +366,8 @@ export class Renderer {
     private renderPowerUps(gameState: GameState, offsetDiffX: number, offsetDiffY: number): void {
         if (!gameState.power_ups) return;
 
-        for (const powerUp of gameState.power_ups) {
+        for (const powerUpId in gameState.power_ups) {
+            const powerUp = gameState.power_ups[powerUpId];
             // Get dimensions from entitiesInfo
             const powerUpInfo = this.entitiesInfo.power_up_types[powerUp.type];
             const width = powerUpInfo?.width || this.cellSize;
@@ -459,14 +460,15 @@ export class Renderer {
     private renderWeapons(gameState: GameState, offsetDiffX: number, offsetDiffY: number): void {
         if (!gameState.weapons) return;
 
-        for (const weapon of gameState.weapons) {
+        for (const weaponId in gameState.weapons) {
+            const weapon = gameState.weapons[weaponId];
             // Get dimensions from entitiesInfo for the specific weapon type
-            const weaponInfo = this.entitiesInfo.weapon_types[weapon.type];
+            const weaponInfo = this.entitiesInfo.weapon_types[weapon.weapon_type];
             const width = weaponInfo?.width || this.cellSize;
             const height = weaponInfo?.height || this.cellSize;
 
             // Filter for bombs and render
-            if (weapon.type === WeaponType.BOMB) {
+            if (weapon.weapon_type === WeaponType.BOMB) {
                 if (!weapon.exploded && !this.isObjectVisible(weapon.x, weapon.y, width, height)) continue;
 
                 if (!weapon.exploded) {
@@ -523,7 +525,7 @@ export class Renderer {
                         this.ctx.fillRect(expRenderX, expRenderY, this.cellSize, this.cellSize);
                     }
                 }
-            } else if (weapon.type === WeaponType.BULLET) {
+            } else if (weapon.weapon_type === WeaponType.BULLET) {
                 // Render bullets (example - similar to power-ups or smaller circles)
                 if (!this.isObjectVisible(weapon.x, weapon.y, width, height)) continue;
 
@@ -540,7 +542,7 @@ export class Renderer {
                     Math.PI * 2
                 );
                 this.ctx.fill();
-            } else if (weapon.type === WeaponType.MINE) {
+            } else if (weapon.weapon_type === WeaponType.MINE) {
                 // Render mines (example)
                 if (!weapon.exploded && !this.isObjectVisible(weapon.x, weapon.y, width, height)) continue;
                 
@@ -571,7 +573,8 @@ export class Renderer {
     private renderEnemies(gameState: GameState, offsetDiffX: number, offsetDiffY: number): void {
         if (!gameState.enemies) return;
 
-        for (const enemy of gameState.enemies) {
+        for (const enemyId in gameState.enemies) {
+            const enemy = gameState.enemies[enemyId];
             if (enemy.destroyed) continue; // Don't render destroyed enemies
 
             // Get dimensions from entitiesInfo

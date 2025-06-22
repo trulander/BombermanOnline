@@ -4,8 +4,16 @@ import { Renderer } from './Renderer';
 import { Socket } from '../types/Socket';
 import logger, { LogLevel } from '../utils/Logger';
 import { tokenService } from '../services/tokenService';
-import {GameState, GameUpdateEvent, ResponseGameState} from "../types/Game";
+import {
+    GamePlayerInfo,
+    GameState,
+    GameUpdateEvent,
+    OptionalEnemyState,
+    OptionalGamePlayerInfo, OptionalPowerUpState, OptionalWeaponState,
+    ResponseGameState
+} from "../types/Game";
 import { EntitiesInfo } from "../types/EntitiesParams";
+import {gameApi} from "../services/api";
 
 export class GameClient {
     private canvas: HTMLCanvasElement;
@@ -57,11 +65,9 @@ export class GameClient {
         const accessToken = tokenService.getAccessToken();
 
         // Initialize socket connection to Python backend
-        // Теперь НЕ передаем auth параметр, полагаемся на cookie
         this.socket = io(this.socketUrl, {
             transports: ['websocket'],
             path: this.socketPath ? this.socketPath : undefined
-            // auth параметр удален - используем cookie
         });
         
         this.inputHandler = new InputHandler();
@@ -207,6 +213,7 @@ export class GameClient {
         this.refreshTokenAndReconnect();
     }
 
+
     // Обновление токена и переподключение
     private async refreshTokenAndReconnect(): Promise<void> {
         try {
@@ -261,7 +268,9 @@ export class GameClient {
                     responseData: response
                 });
             }
-            
+            logger.debug('Обновляем полный gameState', {
+                "response.game_state": response.game_state
+            });
             // Сохраняем состояние игры
             this.gameState = response.game_state;
         } else {
@@ -297,48 +306,86 @@ export class GameClient {
         this.updateGameInfo();
     }
 
+
     // Обработка обновлений игры частичными изменениями
     private processGameStateUpdate(gameUpdate: GameUpdateEvent): void {
-        this.lastUpdateTime = performance.now();
-        
-        // Применяем изменения к кешированной карте
-        if (gameUpdate?.map_update && this.cachedMapGrid) {
-            const changes = gameUpdate.map_update;
-            
-            // Применяем изменения к кешированной карте
-            for (const cell of changes) {
-                // Проверяем корректность индексов
-                if (cell.y >= 0 && this.cachedMapGrid.length > 0 && 
-                    cell.y < this.cachedMapGrid.length &&
-                    cell.x >= 0 && cell.x < this.cachedMapGrid[0].length) {
-                    this.cachedMapGrid[cell.y][cell.x] = cell.type;
-                } else {
-                    logger.warn('Неверные координаты ячейки', {
-                        x: cell.x,
-                        y: cell.y,
-                        type: cell.type,
-                        mapWidth: this.cachedMapGrid[0]?.length,
-                        mapHeight: this.cachedMapGrid.length
-                    });
-                }
-            }
-
-        } else if (gameUpdate?.map_update && !this.cachedMapGrid) {
+        // Сохраняем обновленное состояние
+        if (!this.gameState || !this.cachedMapGrid){
             // Если нет кешированной карты, но есть изменения, запрашиваем полное состояние
-            logger.warn('Получены изменения, но нет кешированной карты', {
-                changesCount: gameUpdate?.map_update.length,
+            logger.warn('Получены изменения, но нет кешированной карты или полного gameState', {
+                changesCount: gameUpdate?.map_update?.length,
                 gameId: this.gameId,
                 playerId: this.playerId
             });
             this.requestGameState();
             return;
-        }
-        
-        // Сохраняем обновленное состояние
-        if (this.gameState == null){
-            this.requestGameState()
         }else{
-            this.gameState.map.grid = this.cachedMapGrid;
+            this.lastUpdateTime = performance.now();
+
+            // Применяем изменения к кешированной карте
+            if (gameUpdate.map_update && this.cachedMapGrid){
+                try {
+                    // Применяем изменения к кешированной карте
+                    for (const cell of gameUpdate.map_update) {
+                        this.cachedMapGrid[cell.y][cell.x] = cell.type;
+                    }
+                    this.gameState.map.grid = this.cachedMapGrid;
+                } catch (err) {
+                    logger.error('error', err);
+                }
+            }
+
+            for (const playerId in gameUpdate.players_update) {
+                const player = gameUpdate.players_update[playerId];
+
+                const updatedState = { ...this.gameState.players[playerId] };
+                for (const key in player) {
+                    // if (Object.prototype.hasOwnProperty.call(gameUpdate.players_update[playerId], key)) {
+                        (updatedState as any)[key] = gameUpdate.players_update[playerId][key as keyof OptionalGamePlayerInfo];
+                    // }
+                }
+            }
+            for (const entityId in gameUpdate.enemies_update) {
+                const player = gameUpdate.enemies_update[entityId];
+
+                const updatedState = { ...this.gameState.enemies[entityId] };
+                for (const key in player) {
+                    // if (Object.prototype.hasOwnProperty.call(gameUpdate.enemies[entityId], key)) {
+                        (updatedState as any)[key] = gameUpdate.enemies_update[entityId][key as keyof OptionalEnemyState];
+                    // }
+                }
+            }
+            for (const entityId in gameUpdate.weapons_update) {
+                const player = gameUpdate.weapons_update[entityId];
+
+                const updatedState = { ...this.gameState.weapons[entityId] };
+                for (const key in player) {
+                    // if (Object.prototype.hasOwnProperty.call(gameUpdate.weapons[entityId], key)) {
+                        (updatedState as any)[key] = gameUpdate.weapons_update[entityId][key as keyof OptionalWeaponState];
+                    // }
+                }
+            }
+            for (const entityId in gameUpdate.power_ups_update) {
+                const player = gameUpdate.power_ups_update[entityId];
+
+                const updatedState = { ...this.gameState.power_ups[entityId] };
+                for (const key in player) {
+                    // if (Object.prototype.hasOwnProperty.call(gameUpdate.power_ups[entityId], key)) {
+                        (updatedState as any)[key] = gameUpdate.power_ups_update[entityId][key as keyof OptionalPowerUpState];
+                    // }
+                }
+            }
+            // for (const entityId in gameUpdate.teams_update) {
+            //     const player = gameUpdate.teams_update[entityId];
+            //
+            //     const updatedState = { ...this.gameState.teams[entityId] };
+            //     for (const key in player) {
+            //         // if (Object.prototype.hasOwnProperty.call(gameUpdate.teams[entityId], key)) {
+            //             (updatedState as any)[key] = gameUpdate.teams_update[entityId][key as keyof OptionalTeamsState];
+            //         // }
+            //     }
+            // }
+
         }
 
         // Обновляем информацию в header

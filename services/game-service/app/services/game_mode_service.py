@@ -1,5 +1,7 @@
 import random
 import time
+from collections import defaultdict
+
 import math
 import logging
 from abc import ABC, abstractmethod
@@ -8,13 +10,13 @@ from typing import Dict, List, Tuple, Optional, Any
 from .team_service import TeamService
 from ..entities import Entity
 from ..entities.map import Map
-from ..entities.player import Player, UnitType
-from ..entities.enemy import Enemy
-from ..entities.weapon import Weapon, WeaponType
+from ..entities.player import Player, UnitType, PlayerUpdate
+from ..entities.enemy import Enemy, EnemyUpdate
+from ..entities.weapon import Weapon, WeaponType, WeaponUpdate
 from ..entities.bomb import Bomb
 from ..entities.bullet import Bullet
 from ..entities.mine import Mine
-from ..entities.power_up import PowerUp, PowerUpType
+from ..entities.power_up import PowerUp, PowerUpType, PowerUpUpdate
 from ..models.game_models import GameSettings
 from ..services.map_service import MapService
 from ..models.map_models import MapState, PlayerState, EnemyState, WeaponState, PowerUpState, MapData, MapUpdate
@@ -157,49 +159,54 @@ class GameModeService(ABC):
             logger.error(f"Error getting player {player_id}: {e}", exc_info=True)
             return None
     
-    async def update(self) -> bool:
+    async def update(self) -> dict:
         """Обновить состояние игры и вернуть новое состояние"""
         try:
             # Вычисляем delta time
             current_time: float = time.time()
             delta_time: float = current_time - self.last_update_time
             self.last_update_time = current_time
-            
+
             # Пропускаем обновление если игра окончена
             if self.game_over:
                 logger.debug("Game is over, skipping update")
-                return False
-            
+                return {}
+
+            result = {}
             # Обновляем игроков
             for player in list(self.players.values()):
-                self.update_player(player, delta_time)
+                result["players_update"] = {player.id: self.update_player(player, delta_time)}
             
             # Обновляем врагов если включены
             if self.settings.enable_enemies:
                 for enemy in list(self.enemies):
-                    self.update_enemy(enemy=enemy, delta_time=delta_time)
+                    result["enemies_update"] = {enemy.id: self.update_enemy(enemy=enemy, delta_time=delta_time)}
             
             # Обновляем оружие
             for weapon in list(self.weapons.values()):
-                self.update_weapon(weapon, delta_time)
+                result["weapons_update"] = {weapon.id: self.update_weapon(weapon, delta_time)}
+
+
+            for power_up in self.power_ups.values():
+                result["power_ups_update"] = {power_up: power_up.get_changes()}
             
             # Проверяем завершение игры
             if self.is_game_over():
                 await self.handle_game_over()
             
-            return True
+            return result
             
         except Exception as e:
             logger.error(f"Error in game update: {e}", exc_info=True)
-            return False
+            return {}
     
-    def update_player(self, player: Player, delta_time: float) -> None:
+    def update_player(self, player: Player, delta_time: float) -> PlayerUpdate | None:
         """Обновить одного игрока"""
         try:
-            if player.destroyed <= 0:
+            if player.destroyed:
                 #TODO тут может нужно удалять игрока из списка, но не просто так, иначе в общем счете его не будет наверное
                 #self.players.pop(player.id)
-                return
+                return None
 
             player.update(delta_time=delta_time)
 
@@ -215,32 +222,36 @@ class GameModeService(ABC):
                     if not enemy.destroyed and self.check_entity_collision(entity1=player, entity2=enemy):
                         logger.info(f"Player {player.id} hit by enemy {enemy.type.value}")
                         self.handle_player_hit(player=player)
+            return player.get_changes()
                         
         except Exception as e:
             logger.error(f"Error updating player {player.id}: {e}", exc_info=True)
 
-    def update_enemy(self, enemy: Enemy, delta_time: float) -> None:
+    def update_enemy(self, enemy: Enemy, delta_time: float) -> EnemyUpdate | None:
         """Обновить одного врага"""
         try:
             if enemy.destroyed:
                 enemy.destroy_animation_timer += delta_time
                 if enemy.destroy_animation_timer >= self.settings.destroy_animation_time:
                     self.enemies.remove(enemy)
-                return
+                return None
 
             enemy.update(delta_time=delta_time)
+            return enemy.get_changes()
 
         except Exception as e:
             logger.error(f"Error updating enemy {enemy.id}: {e}", exc_info=True)
 
 
-    def update_weapon(self, weapon: Weapon, delta_time: float) -> None:
+    def update_weapon(self, weapon: Weapon, delta_time: float) -> WeaponUpdate | None:
         """Обновить оружие"""
         try:
             weapon.update(delta_time=delta_time, handle_weapon_explosion=self.handle_weapon_explosion)
             if weapon.activated and weapon.is_exploded():
                 #здесь оружие взорвалось и взрыв завершен
                 self.weapons.pop(weapon.id)
+                return None
+            return weapon.get_changes()
 
         except Exception as e:
             logger.error(f"Error updating weapon {weapon.id}: {e}", exc_info=True)
@@ -475,67 +486,31 @@ class GameModeService(ABC):
     def get_state(self) -> MapState:
         """Получить полное состояние игры"""
         try:
-            map_data = self.map.get_map() if self.map else {'grid': None, 'width': 0, 'height': 0}
-            map_model = MapData(**map_data.model_dump())
-
             players_data: dict[str, PlayerState] = {}
             for player_id, player in self.players.items():
-                players_data[player_id] = PlayerState(
-                    team_id=player.team_id,
-                    player_id=player_id,
-                    x=player.x,
-                    y=player.y,
-                    lives=player.lives,
-                    primary_weapon=player.primary_weapon if player.primary_weapon else None,
-                    primary_weapon_max_count=player.primary_weapon_max_count,
-                    primary_weapon_power=player.primary_weapon_power,
-                    secondary_weapon=player.secondary_weapon if player.secondary_weapon else None,
-                    secondary_weapon_max_count=player.secondary_weapon_max_count,
-                    secondary_weapon_power=player.secondary_weapon_power,
-                    invulnerable=player.invulnerable,
-                    color=player.color,
-                    unit_type=player.unit_type if player.unit_type else None
-                )
+                players_data[player_id] = PlayerState(**player.get_changes(full_state=True))
 
-            enemies_data: list[EnemyState] = []
+            enemies_data: dict[str, EnemyState] = {}
             if self.settings.enable_enemies:
                 for enemy in self.enemies:
-                    enemies_data.append(EnemyState(
-                        x=enemy.x,
-                        y=enemy.y,
-                        type=enemy.type if enemy.type else None,
-                        lives=enemy.lives,
-                        invulnerable=enemy.invulnerable,
-                        destroyed=enemy.destroyed
-                    ))
+                    enemies_data[enemy.id] = (EnemyState(**enemy.get_changes(full_state=True)))
 
-            weapons_data: list[WeaponState] = []
+            weapons_data: dict[str, WeaponState] = {}
             for weapon in self.weapons.values():
-                weapons_data.append(WeaponState(
-                    x=weapon.x,
-                    y=weapon.y,
-                    type=weapon.weapon_type if weapon.weapon_type else None,
-                    direction=weapon.direction,
-                    activated=weapon.activated,
-                    exploded=weapon.is_exploded(),
-                    explosion_cells=weapon.get_damage_area(),
-                    owner_id=weapon.owner_id
-                ))
+                weapons_data[weapon.id] = (WeaponState(**weapon.get_changes(full_state=True)))
 
-            power_ups_data: list[PowerUpState] = []
+            power_ups_data: dict[str, PowerUpState] = {}
             for power_up in self.power_ups.values():
-                power_ups_data.append(PowerUpState(
-                    x=power_up.x,
-                    y=power_up.y,
-                    type=power_up.type if power_up.type else None
-                ))
+                power_ups_data[power_up.id] = (PowerUpState(**power_up.get_changes(full_state=True)))
+
+            map_data = self.map.get_map() if self.map else {'grid': None, 'width': 0, 'height': 0}
 
             return MapState(
                 players=players_data,
                 enemies=enemies_data,
                 weapons=weapons_data,
                 power_ups=power_ups_data,
-                map=map_model,
+                map=MapData(**map_data.model_dump()),
                 level=self.level,
                 teams=None
             )

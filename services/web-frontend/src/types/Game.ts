@@ -62,7 +62,7 @@ export interface MapTemplate {
 export interface GamePlayerInfo {
     name?: string;
     team_id?: string;
-    player_id: string;
+    entity_id: string;
     x: number;
     y: number;
     lives: number;
@@ -76,8 +76,10 @@ export interface GamePlayerInfo {
     color: string;
     unit_type: UnitType;
 }
+export type OptionalGamePlayerInfo = Partial<GamePlayerInfo>;
 
 export interface EnemyState {
+    entity_id: string,
     x: number,
     y: number,
     type: EnemyType,
@@ -85,23 +87,28 @@ export interface EnemyState {
     invulnerable: boolean,
     destroyed: boolean,
 }
+export type OptionalEnemyState = Partial<EnemyState>;
 
 export interface WeaponState {
-  x: number;
-  y: number;
-  type: WeaponType;
-  direction?: [number, number];
-  activated: boolean;
-  exploded: boolean;
-  explosion_cells: [number, number][];
-  owner_id: string;
+    entity_id: string,
+    x: number;
+    y: number;
+    weapon_type: WeaponType;
+    direction?: [number, number];
+    activated: boolean;
+    exploded: boolean;
+    explosion_cells: [number, number][];
+    owner_id: string;
 }
+export type OptionalWeaponState = Partial<WeaponState>;
 
 export interface PowerUpState {
+    entity_id: string,
     x: number,
     y: number,
     type: PowerUpType,
 }
+export type OptionalPowerUpState = Partial<PowerUpState>;
 
 export interface MapData {
   grid: number[][] | null;
@@ -116,17 +123,7 @@ export interface GameTeamInfo {
     player_ids: string[];
     player_count: number;
 }
-
-export interface GameUpdateEvent {
-  status: GameStatus;
-  is_active: boolean;
-  error?: boolean; // по умолчанию False → необязательное с типом boolean
-  message?: string | null;
-  map_update?: MapUpdate[] | null;
-  game_id?: string | null;
-}
-
-
+export type OptionalGameTeamInfo = Partial<GameTeamInfo>;
 
 
 export interface TeamModeSettings {
@@ -280,16 +277,46 @@ export interface GameState {
     players: {
         [playerId: string]: GamePlayerInfo
     };
-    enemies: EnemyState[];
-    weapons: WeaponState[];
-    power_ups: PowerUpState[];
+    enemies: {
+        [entityId: string]: EnemyState
+    };
+    weapons: {
+        [entityId: string]: WeaponState
+    };
+    power_ups: {
+        [entityId: string]: PowerUpState
+    };
     map: MapData;
     level: number;
     error?: boolean
     is_active?: boolean;
     status: GameStatus,
-    teams?: GameTeamInfo
+    teams?: {
+        [teamId: string]: GameTeamInfo
+    };
 }
+
+export interface GameUpdateEvent {
+    status: GameStatus;
+    is_active: boolean;
+    error?: boolean; // по умолчанию False → необязательное с типом boolean
+    message?: string | null;
+    map_update?: MapUpdate[] | null;
+    players_update?: {
+        [playerId: string]: OptionalGamePlayerInfo
+    };
+    enemies_update?: {
+        [entityId: string]: OptionalEnemyState
+    };
+    weapons_update?: {
+        [entityId: string]: OptionalWeaponState
+    };
+    power_ups_update?: {
+        [entityId: string]: OptionalPowerUpState
+    };
+    game_id?: string | null;
+}
+
 
 export interface ResponseGameState{
     success: boolean,

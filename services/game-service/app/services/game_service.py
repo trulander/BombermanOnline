@@ -93,21 +93,21 @@ class GameService:
             match unit_type:
                 case UnitType.BOMBERMAN:
                     player = Bomberman(
-                        player_id=player_id,
+                        id=player_id,
                         size=self.settings.cell_size,
                         map=self.game_mode.map,
                         settings=self.settings
                     )
                 case UnitType.TANK:
                     player = Tank(
-                        player_id=player_id,
+                        id=player_id,
                         size=self.settings.cell_size,
                         map=self.game_mode.map,
                         settings=self.settings
                     )
                 case _:
                     player = Bomberman(
-                        player_id=player_id,
+                        id=player_id,
                         size=self.settings.cell_size,
                         map=self.game_mode.map,
                         settings=self.settings
@@ -268,7 +268,7 @@ class GameService:
         """Обновить состояние игры"""
         try:
             if not self.is_active():
-                logger.debug("game is not actice yet.")
+                logger.debug("game is not active yet.")
                 return GameUpdateEvent(
                     game_id=self.settings.game_id,
                     status=self.status,
@@ -277,20 +277,14 @@ class GameService:
             
             # Делегируем обновление игровому режиму
             status_update = await self.game_mode.update()
-            if status_update:
-                state = GameUpdateEvent(
-                    game_id=self.settings.game_id,
-                    map_update=self.game_mode.map.get_changes(),
-                    status=self.status,
-                    is_active=True,
-                )
-            else:
-                state = GameUpdateEvent(
-                    game_id=self.settings.game_id,
-                    status=self.status,
-                    is_active=False,
-                    message=f"Game is finished"
-                )
+            state = GameUpdateEvent(
+                game_id=self.settings.game_id,
+                map_update=self.game_mode.map.get_changes(),
+                status=self.status,
+                is_active=self.is_active(),
+                **status_update
+            )
+
             # Проверяем завершение игры
             if self.game_mode.game_over:
                 self.status = GameStatus.FINISHED
@@ -362,9 +356,9 @@ class GameService:
             logger.error(f"Error getting game state: {e}", exc_info=True)
             return MapState(
                 players={},
-                enemies=[],
-                weapons=[],
-                power_ups=[],
+                enemies={},
+                weapons={},
+                power_ups={},
                 map=MapData(grid=None, width=0, height=0),
                 level=0,
                 error=True,

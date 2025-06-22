@@ -5,9 +5,12 @@ from uuid import uuid4
 from pydantic import BaseModel, Field, computed_field
 
 from app.entities import EnemyType
+from app.entities.enemy import EnemyUpdate
 from app.entities.game_status import GameStatus
 from app.entities.game_mode import GameModeType
-from app.entities.player import UnitType
+from app.entities.player import UnitType, PlayerUpdate
+from app.entities.power_up import PowerUpUpdate
+from app.entities.weapon import WeaponUpdate
 from app.models.map_models import MapUpdate, PlayerState
 from app.models.team_models import TeamModeSettings
 
@@ -18,6 +21,11 @@ class GameUpdateEvent(BaseModel):
     error: bool = False
     message: Optional[str] = None
     map_update: list[MapUpdate] = None
+    players_update: dict[str, PlayerUpdate] = None
+    enemies_update: dict[str, EnemyUpdate] = None
+    weapons_update: dict[str, WeaponUpdate] = None
+    power_ups_update: dict[str, PowerUpUpdate] = None
+    #TODO Добавить teams
     game_id: str = None
 
 

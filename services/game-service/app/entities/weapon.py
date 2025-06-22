@@ -1,7 +1,7 @@
 import time
 from abc import ABC, abstractmethod
 from enum import Enum
-from typing import Callable, TYPE_CHECKING
+from typing import Callable, TYPE_CHECKING, TypedDict, NotRequired
 from .entity import Entity
 import logging
 
@@ -18,6 +18,17 @@ class WeaponType(Enum):
     BOMB = "bomb"
     BULLET = "bullet"
     MINE = "mine"
+
+class WeaponUpdate(TypedDict):
+    entity_id: str
+    x: NotRequired[float]
+    y: NotRequired[float]
+    weapon_type: NotRequired[WeaponType]
+    direction: NotRequired[tuple[float, float]]
+    activated: NotRequired[bool]
+    exploded: NotRequired[bool]
+    explosion_cells: NotRequired[list[tuple[int, int]]]
+    owner_id: NotRequired[str]
 
 
 class Weapon(Entity, ABC):
@@ -135,3 +146,23 @@ class Weapon(Entity, ABC):
         if self.activated and time.time() - self.explosion_timer >= self.settings.bomb_explosion_duration:
             return True
         return False
+
+    def get_changes(self, full_state: bool = False) -> WeaponUpdate:
+        previous_state = {} if full_state else getattr(self, "_state", {})
+        current_state = {
+            "x": self.x,
+            "y": self.y,
+            "weapon_type": self.weapon_type,
+            "direction": self.direction,
+            "activated": self.activated,
+            "exploded": self.is_exploded(),
+            "explosion_cells": self.explosion_cells,
+        }
+        changes = {
+            "entity_id": self.id
+        }
+        for key, value in current_state.items():
+            if key not in previous_state or previous_state[key] != value:
+                changes[key] = value
+        self._state = current_state
+        return WeaponUpdate(**changes)

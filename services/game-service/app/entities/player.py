@@ -1,6 +1,6 @@
 from abc import ABC
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict, NotRequired
 
 from .entity import Entity
 from .weapon import WeaponType
@@ -19,6 +19,22 @@ class UnitType(Enum):
     BOMBERMAN = "bomberman"  # Классический бомбермен
     TANK = "tank"           # Танк с пулями
 
+class PlayerUpdate(TypedDict):
+    player_id: str
+    name: NotRequired[str]
+    team_id: NotRequired[str]
+    x: NotRequired[float]
+    y: NotRequired[float]
+    lives: NotRequired[int]
+    primary_weapon: NotRequired[WeaponType]
+    primary_weapon_max_count: NotRequired[int]
+    primary_weapon_power: NotRequired[int]
+    secondary_weapon: NotRequired[WeaponType]
+    secondary_weapon_max_count: NotRequired[int]
+    secondary_weapon_power: NotRequired[int]
+    invulnerable: NotRequired[bool]
+    color: NotRequired[str]
+    unit_type: NotRequired[UnitType]
 
 class Player(Entity, ABC):
     # Colors for different players
@@ -30,7 +46,7 @@ class Player(Entity, ABC):
 
     def __init__(
             self,
-            player_id: str,
+            id: str,
             size: float,
             map: "Map",
             settings: "GameSettings",
@@ -38,7 +54,7 @@ class Player(Entity, ABC):
     ):
         try:
             super().__init__(
-                entity_id=player_id,
+                id=id,
                 width=size * self.scale_size,
                 height=size * self.scale_size,
                 speed=3.0,
@@ -70,9 +86,9 @@ class Player(Entity, ABC):
                 'weapon2': False
             }
             
-            logger.info(f"Player created: id={player_id}, unit_type={self.unit_type.value}")
+            logger.info(f"Player created: id={id}, unit_type={self.unit_type.value}")
         except Exception as e:
-            logger.error(f"Error creating player {player_id}: {e}", exc_info=True)
+            logger.error(f"Error creating player {id}: {e}", exc_info=True)
             raise
     
     def set_inputs(self, inputs: "Inputs") -> None:
@@ -142,3 +158,29 @@ class Player(Entity, ABC):
             self.lives = self.settings.player_max_lives
 
 
+    def get_changes(self, full_state: bool = False) -> PlayerUpdate:
+        previous_state = {} if full_state else getattr(self, "_state", {})
+        current_state = {
+            "name": self.name,
+            "team_id": self.team_id,
+            "x": self.x,
+            "y": self.y,
+            "lives": self.lives,
+            "primary_weapon": self.primary_weapon,
+            "primary_weapon_max_count": self.primary_weapon_max_count,
+            "primary_weapon_power": self.primary_weapon_power,
+            "secondary_weapon": self.secondary_weapon,
+            "secondary_weapon_max_count": self.secondary_weapon_max_count,
+            "secondary_weapon_power": self.secondary_weapon_power,
+            "invulnerable": self.invulnerable,
+            "color": self.color,
+            "unit_type": self.unit_type,
+        }
+        changes = {
+            "player_id": self.id
+        }
+        for key, value in current_state.items():
+            if key not in previous_state or previous_state[key] != value:
+                changes[key] = value
+        self._state = current_state
+        return changes

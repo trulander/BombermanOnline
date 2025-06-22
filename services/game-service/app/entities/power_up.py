@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict, NotRequired
 
 from .entity import Entity
 from .player import Player # Keep for type hinting in apply_to_player
@@ -25,6 +25,13 @@ class PowerUpType(Enum):
     # MINE_POWER_UP = 'MINE_POWER_UP'
     SPEED_UP = 'SPEED_UP'
     LIFE_UP = 'LIFE_UP'
+
+
+class PowerUpUpdate(TypedDict):
+    entity_id: str
+    x: NotRequired[float]
+    y: NotRequired[float]
+    type: NotRequired[PowerUpType]
 
 
 class PowerUp(Entity):
@@ -80,3 +87,19 @@ class PowerUp(Entity):
 
         except Exception as e:
             logger.error(f"Error applying powerup {self.type.name} to player {player.id}: {e}", exc_info=True)
+
+    def get_changes(self, full_state: bool = False) -> PowerUpUpdate:
+        previous_state = {} if full_state else getattr(self, "_state", {})
+        current_state = {
+            "x": self.x,
+            "y": self.y,
+            "type": self.type
+        }
+        changes = {
+            "entity_id": self.id
+        }
+        for key, value in current_state.items():
+            if key not in previous_state or previous_state[key] != value:
+                changes[key] = value
+        self._state = current_state
+        return PowerUpUpdate(**changes)

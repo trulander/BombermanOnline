@@ -1,3 +1,5 @@
+from abc import abstractmethod
+
 import math
 import random
 import time
@@ -25,7 +27,7 @@ class Entity:
         y: float = 0.0,
         width: float = 0.0,
         height: float = 0.0,
-        entity_id: str | None = None,
+        id: str | None = str(uuid.uuid4()),
         name: str = "",
         ai: bool = False,
         speed: float = 0.0,
@@ -41,7 +43,7 @@ class Entity:
             self.y: float = y
             self.width: float = width
             self.height: float = height
-            self.id: str = entity_id if entity_id is not None else str(uuid.uuid4())
+            self.id: str = id
             self.name: str = name
             self.destroyed: bool = False
             # State
@@ -65,6 +67,12 @@ class Entity:
             logger.error(f"Error creating entity: {e}", exc_info=True)
             raise
 
+    @abstractmethod
+    def get_changes(self, *args, **kwargs):
+        """Возвращает последние изменения в обьекте,
+        каждый класс должен реализовывать самостоятельно логику
+        и базироваться на своей моделе обновлений данных"""
+        return self._state
 
     def get_direction(self) -> tuple[float, float]:
         """Get a random normalized direction vector"""

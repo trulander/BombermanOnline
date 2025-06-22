@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import GameCanvas from '../components/GameCanvas';
 import GameLayout from '../components/GameLayout';
@@ -61,13 +61,13 @@ const Game: React.FC = () => {
     }
   };
 
-  const setGameClientRef = (gameClient: GameClient | null) => {
+  const setGameClientRef = useCallback((gameClient: GameClient | null) => {
     gameClientRef.current = gameClient;
     if (gameClient) {
       gameClient.setAuthenticationFailedHandler(handleAuthenticationFailed);
       gameClient.setGameJoinedHandler(handleGameJoined);
     }
-  };
+  }, [handleAuthenticationFailed, handleGameJoined]);
 
   const handleOpenSettings = () => {
     setIsSettingsOpen(true);
@@ -114,8 +114,8 @@ const Game: React.FC = () => {
   }
 
   return (
-    <GameLayout onOpenSettings={hasJoinedGame ? handleOpenSettings : undefined}>
-      <GameCanvas onGameClientReady={setGameClientRef} gameId={gameId} userId={user?.id || ''} entitiesInfo={entitiesInfo} />
+    <GameLayout onOpenSettings={handleOpenSettings}>
+      <GameCanvas onGameClientReady={setGameClientRef} gameId={gameId} userId={user?.id} entitiesInfo={entitiesInfo} />
       
       {gameId && (
         <Dialog open={isSettingsOpen} onClose={handleCloseSettings} maxWidth="md" fullWidth>

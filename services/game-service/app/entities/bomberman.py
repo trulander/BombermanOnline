@@ -17,14 +17,14 @@ class Bomberman(Player):
 
     def __init__(
             self,
-            player_id: str,
+            id: str,
             size: float,
             map: "Map",
             settings: "GameSettings",
     ):
         try:
             super().__init__(
-                player_id =player_id,
+                id=id,
                 size = size,
                 map=map,
                 settings=settings
@@ -42,9 +42,9 @@ class Bomberman(Player):
             self.secondary_weapon_max_count: int = 1
             self.secondary_weapon_power: int = 1
 
-            logger.info(f"Player created: id={player_id}, unit_type={self.unit_type.value}")
+            logger.info(f"Player created: id={id}, unit_type={self.unit_type.value}")
         except Exception as e:
-            logger.error(f"Error creating player {player_id}: {e}", exc_info=True)
+            logger.error(f"Error creating player {id}: {e}", exc_info=True)
             raise
 
 

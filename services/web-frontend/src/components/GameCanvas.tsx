@@ -40,6 +40,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         if (gameClientRef.current) {
           gameClientRef.current.stop();
           onGameClientReady?.(null);
+          gameClientRef.current = null;
         }
       };
     }
