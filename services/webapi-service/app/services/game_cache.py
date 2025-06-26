@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 
 
 class GameInstanceCache:
-    def __init__(self, redis_repository: RedisRepository, ttl=60):
+    def __init__(self, redis_repository: RedisRepository, ttl=300):
         self.redis_repository = redis_repository
         self.local_cache = {}
         self.ttl = ttl

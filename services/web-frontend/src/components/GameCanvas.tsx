@@ -4,6 +4,7 @@ import {Box, CircularProgress, Typography} from '@mui/material';
 import {GameCanvasProps} from "../types/Game";
 import {gameApi} from "../services/api";
 import {EntitiesInfo} from "../types/EntitiesParams";
+import logger from "../utils/Logger";
 
 const GameCanvas: React.FC<GameCanvasProps> = ({
   onGameClientReady,
@@ -14,6 +15,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameClientRef = useRef<GameClient | null>(null);
 
+  console.log('GameCanvas created');
 
   useEffect(() => {
     if (canvasRef.current && entitiesInfo && !gameClientRef.current) {
@@ -30,9 +32,9 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
       // Если есть gameId, пытаемся присоединиться к игре
       if (gameId) {
         gameClientRef.current.joinGame(gameId, userId || '');
-      } else {
-        // Запускаем игровое меню, если нет gameId
         gameClientRef.current.start();
+      } else {
+        logger.error('Cannot start game: gameId is not available ');
       }
       
       // Очистка при размонтировании компонента
@@ -44,7 +46,7 @@ const GameCanvas: React.FC<GameCanvasProps> = ({
         }
       };
     }
-  }, [gameId, onGameClientReady, userId, entitiesInfo]);
+  }, );
 
   
   return (

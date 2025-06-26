@@ -49,8 +49,8 @@ class PowerUp(Entity):
             width = size * self.scale_size
             height = size * self.scale_size
             super().__init__(
-                x=x + (size - width) / 2,
-                y=y + (size - height) / 2,
+                x=x,
+                y=y,
                 width=width,
                 height=height,
                 name=f"PowerUp_{power_type.name}",

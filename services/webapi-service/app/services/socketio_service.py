@@ -11,6 +11,7 @@ from ..config import settings
 
 # Импортировать наш новый класс
 from .metrics_socket_server import MetricsSocketServer
+from ..dependencies import game_cache
 
 logger = logging.getLogger(__name__)
 
@@ -136,6 +137,9 @@ class SocketIOService:
         """Handle game state update from game service"""
         try:
             await self.sio.emit(event='game_update', data=game_state, room=f"game_{game_id}")
+            cached_game_id = game_cache.get_instance(game_id=game_id)
+            if not cached_game_id:
+                logger.error(f"Game id: {game_id} wasn't found in cache")
         except Exception as e:
             logger.error(f"Error in handle_game_update: {e}", exc_info=True)
     

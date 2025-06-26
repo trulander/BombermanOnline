@@ -1,3 +1,4 @@
+import time
 from abc import ABC
 from enum import Enum
 from typing import TYPE_CHECKING, TypedDict, NotRequired
@@ -61,10 +62,12 @@ class Player(Entity, ABC):
                 lives=3,
                 color=self.COLORS[0], # Default color, will be assigned later
                 map = map,
-                settings = settings
+                settings = settings,
+                name=name
             )
             self.team_id: str = ""  # ID команды
-
+            self.disconnected_time: float = 0.0
+            self.disconnected: bool = False
 
             # Настройки оружия в зависимости от типа юнита
 
@@ -90,7 +93,21 @@ class Player(Entity, ABC):
         except Exception as e:
             logger.error(f"Error creating player {id}: {e}", exc_info=True)
             raise
-    
+
+    def is_alive(self):
+        if not self.destroyed or (not self.disconnected and time.time() - self.disconnected_time < self.settings.destroy_disconnected_time):
+            return True
+        return False
+
+
+    def update_connection_status(self, connected: bool):
+        if not connected:
+            self.disconnected_time = time.time()
+            self.disconnected = True
+        else:
+            self.disconnected = False
+        logger.debug("Updated player connection status: connected={self.connected}, disconnected_time={self.disconnected_time}")
+
     def set_inputs(self, inputs: "Inputs") -> None:
         """Update player inputs"""
         try:
@@ -117,7 +134,7 @@ class Player(Entity, ABC):
             logger.error(f"Error setting inputs for player {self.id}: {e}", exc_info=True)
 
 
-    def get_direction(self) -> tuple[float, float]:
+    def get_direction(self, delta_time: float) -> tuple[float, float]:
         # Обработка движения
         dx: float = 0
         dy: float = 0

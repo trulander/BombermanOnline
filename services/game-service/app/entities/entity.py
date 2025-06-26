@@ -27,7 +27,7 @@ class Entity:
         y: float = 0.0,
         width: float = 0.0,
         height: float = 0.0,
-        id: str | None = str(uuid.uuid4()),
+        id: str | None = None,
         name: str = "",
         ai: bool = False,
         speed: float = 0.0,
@@ -43,7 +43,7 @@ class Entity:
             self.y: float = y
             self.width: float = width
             self.height: float = height
-            self.id: str = id
+            self.id: str = id if id is not None else str(uuid.uuid4())
             self.name: str = name
             self.destroyed: bool = False
             # State
@@ -58,7 +58,7 @@ class Entity:
             self.color: str = color
 
             # таймер бессмертия после получения урона, по умолчанию таймер для enemy должен быть переопределен для других типов
-            self.invulnerable_timer: float = self.settings.enemy_invulnerable_time
+            self.invulnerable_timer: float = 0
 
             self.direction: tuple[float, float] = (0, 1)  # Направление
 
@@ -74,21 +74,22 @@ class Entity:
         и базироваться на своей моделе обновлений данных"""
         return self._state
 
-    def get_direction(self) -> tuple[float, float]:
+    def get_direction(self, delta_time: float) -> tuple[float, float]:
         """Get a random normalized direction vector"""
         try:
             # рассчет движерия ботов
 
             # Обновление таймера движения
-            delta_time: float = time.time() - self.move_timer
+            self.move_timer += delta_time
             # Смена направления периодически или при столкновении со стеной
             change_direction_interval: float = 1.0 + random.random() * 2.0
-            if delta_time >= change_direction_interval:
+            if self.move_timer >= change_direction_interval:
                 # Choose one of four cardinal directions
                 choices = [(0, 1), (1, 0), (0, -1), (-1, 0)]
                 direction = random.choice(choices)
                 self.direction = direction
-                self.move_timer = time.time()
+                self.move_timer = 0
+
             else:
                 return self.direction
             logger.debug(f"Enemy new direction: {direction}")
@@ -98,6 +99,10 @@ class Entity:
             # Fallback to a default direction
             return (0, 1)
 
+    def is_alive(self):
+        if not self.destroyed:
+            return True
+        return False
 
     def set_hit(self) -> bool:
         if self.invulnerable:
@@ -113,7 +118,7 @@ class Entity:
     def move(self, delta_time: float) -> bool:
         # Обработка движения
 
-        dx, dy = self.get_direction()
+        dx, dy = self.get_direction(delta_time=delta_time)
         # Попытка движения в текущем направлении
         dx: float = dx * self.speed
         dy: float = dy * self.speed
@@ -133,6 +138,8 @@ class Entity:
         if dx != 0 or dy != 0:
             new_x: float = self.x + dx
             new_y: float = self.y + dy
+            #TODO доработать проверку коллизий со стенами в методе получения направления,
+            # чтобы сразу отсечь невозможные направления и вернуть только то что возможно
             if not self.check_collision(
                     x=new_x,
                     y=new_y,
@@ -170,15 +177,16 @@ class Entity:
         try:
             # Вычисляем клетки сетки, с которыми пересекается сущность
             grid_left: int = int(x / self.settings.cell_size)
-            grid_right: int = int((x + self.width - 1) / self.settings.cell_size)
+            grid_right: int = int((x + self.width) / self.settings.cell_size)
             grid_top: int = int(y / self.settings.cell_size)
-            grid_bottom: int = int((y + self.height - 1) / self.settings.cell_size)
+            grid_bottom: int = int((y + self.height) / self.settings.cell_size)
 
-            # Проверка коллизии с клетками карты
-            for grid_y in range(grid_top, grid_bottom + 1):
-                for grid_x in range(grid_left, grid_right + 1):
-                    if self.map.is_solid(grid_x, grid_y):
-                        return True
+            # Check all corners in the map
+            if (self.map.is_solid(grid_left, grid_top) or
+                    self.map.is_solid(grid_right, grid_top) or
+                    self.map.is_solid(grid_left, grid_bottom) or
+                    self.map.is_solid(grid_right, grid_bottom)):
+                return True
             return False
 
         except Exception as e:

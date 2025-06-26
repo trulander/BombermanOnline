@@ -13,13 +13,13 @@ import {gameApi} from "../services/api";
 const Game: React.FC = () => {
   const navigate = useNavigate();
   const { gameId } = useParams<{ gameId: string }>();
-  const gameClientRef = useRef<GameClient | null>(null);
+  // const gameClientRef = useRef<GameClient | null>(null);
   const [searchParams] = useSearchParams();
   const openSettingsOnLoad = searchParams.get('openSettings') === 'true';
   const { user } = useAuth();
 
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [hasJoinedGame, setHasJoinedGame] = useState(false);
+  // const [hasJoinedGame, setHasJoinedGame] = useState(false);
 
   const [entitiesInfo, setEntitiesInfo] = useState<EntitiesInfo>();
   const [loadingEntities, setLoadingEntities] = useState<boolean>(true);
@@ -55,19 +55,19 @@ const Game: React.FC = () => {
     navigate('/account/login');
   };
 
-  const handleGameJoined = (success: boolean) => {
-    if (success) {
-      setHasJoinedGame(true);
-    }
-  };
+  // const handleGameJoined = (success: boolean) => {
+  //   if (success) {
+  //     setHasJoinedGame(true);
+  //   }
+  // };
 
-  const setGameClientRef = useCallback((gameClient: GameClient | null) => {
-    gameClientRef.current = gameClient;
-    if (gameClient) {
-      gameClient.setAuthenticationFailedHandler(handleAuthenticationFailed);
-      gameClient.setGameJoinedHandler(handleGameJoined);
-    }
-  }, [handleAuthenticationFailed, handleGameJoined]);
+  // const setGameClientRef = useCallback((gameClient: GameClient | null) => {
+  //   gameClientRef.current = gameClient;
+  //   if (gameClient) {
+  //     gameClient.setAuthenticationFailedHandler(handleAuthenticationFailed);
+  //     gameClient.setGameJoinedHandler(handleGameJoined);
+  //   }
+  // }, [handleAuthenticationFailed, handleGameJoined]);
 
   const handleOpenSettings = () => {
     setIsSettingsOpen(true);
@@ -115,7 +115,7 @@ const Game: React.FC = () => {
 
   return (
     <GameLayout onOpenSettings={handleOpenSettings}>
-      <GameCanvas onGameClientReady={setGameClientRef} gameId={gameId} userId={user?.id} entitiesInfo={entitiesInfo} />
+      <GameCanvas gameId={gameId} userId={user?.id} entitiesInfo={entitiesInfo} />
       
       {gameId && (
         <Dialog open={isSettingsOpen} onClose={handleCloseSettings} maxWidth="md" fullWidth>

@@ -218,10 +218,20 @@ class Logger {
     }
     
     private createLogEntry(level: string, message: any, data?: any): LogEntry {
+        let combinedMessage = String(message);
+
+        if (data !== undefined) {
+            try {
+                const json = JSON.stringify(data, null, 2);
+                combinedMessage += ` | data: ${json}`;
+            } catch (err) {
+                combinedMessage += ` | data: [Unserializable: ${err}]`;
+            }
+        }
         return {
             timestamp: new Date().toISOString(),
             level,
-            message: String(message),
+            message: combinedMessage,
             service: this.serviceName,
             sessionId: this.sessionId,
             data
@@ -295,35 +305,55 @@ class Logger {
     }
     
     public trace(message: any, data?: any) {
-        log.trace(message);
+        if (data !== undefined) {
+            log.trace(message, data);  // Логируем с данными
+        } else {
+            log.trace(message);        // Логируем только сообщение
+        }
         if (this.shouldLog(LogLevel.TRACE)) {
             this.addToQueue(this.createLogEntry('TRACE', message, data));
         }
     }
     
     public debug(message: any, data?: any) {
-        log.debug(message);
+        if (data !== undefined) {
+            log.debug(message, data);  // Логируем с данными
+        } else {
+            log.debug(message);        // Логируем только сообщение
+        }
         if (this.shouldLog(LogLevel.DEBUG)) {
             this.addToQueue(this.createLogEntry('DEBUG', message, data));
         }
     }
     
     public info(message: any, data?: any) {
-        log.info(message);
+        if (data !== undefined) {
+            log.info(message, data);  // Логируем с данными
+        } else {
+            log.info(message);        // Логируем только сообщение
+        }
         if (this.shouldLog(LogLevel.INFO)) {
             this.addToQueue(this.createLogEntry('INFO', message, data));
         }
     }
     
     public warn(message: any, data?: any) {
-        log.warn(message);
+        if (data !== undefined) {
+            log.warn(message, data);  // Логируем с данными
+        } else {
+            log.warn(message);        // Логируем только сообщение
+        }
         if (this.shouldLog(LogLevel.WARN)) {
             this.addToQueue(this.createLogEntry('WARN', message, data));
         }
     }
     
     public error(message: any, data?: any) {
-        log.error(message);
+        if (data !== undefined) {
+            log.error(message, data);  // Логируем с данными
+        } else {
+            log.error(message);        // Логируем только сообщение
+        }
         if (this.shouldLog(LogLevel.ERROR)) {
             const enhancedData = {
                 ...data,

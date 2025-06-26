@@ -469,9 +469,9 @@ export class Renderer {
 
             // Filter for bombs and render
             if (weapon.weapon_type === WeaponType.BOMB) {
-                if (!weapon.exploded && !this.isObjectVisible(weapon.x, weapon.y, width, height)) continue;
+                if (!weapon.activated && !this.isObjectVisible(weapon.x, weapon.y, width, height)) continue;
 
-                if (!weapon.exploded) {
+                if (!weapon.activated) {
                     // Bomb pulsating effect
                     const time = performance.now() / 1000;
                     const scale = 0.8 + Math.sin(time * 5) * 0.1;
@@ -544,7 +544,7 @@ export class Renderer {
                 this.ctx.fill();
             } else if (weapon.weapon_type === WeaponType.MINE) {
                 // Render mines (example)
-                if (!weapon.exploded && !this.isObjectVisible(weapon.x, weapon.y, width, height)) continue;
+                if (!weapon.activated && !this.isObjectVisible(weapon.x, weapon.y, width, height)) continue;
                 
                 const renderX = this.getRelativeX(weapon.x) + offsetDiffX;
                 const renderY = this.getRelativeY(weapon.y) + offsetDiffY;
@@ -552,7 +552,7 @@ export class Renderer {
                 this.ctx.fillStyle = "#4B0082"; // Indigo for mines
                 this.ctx.fillRect(renderX, renderY, width, height);
 
-                if (!weapon.exploded) {
+                if (!weapon.activated) {
                     this.ctx.strokeStyle = "#fff";
                     this.ctx.lineWidth = 1;
                     this.ctx.strokeRect(renderX + 2, renderY + 2, width - 4, height - 4);

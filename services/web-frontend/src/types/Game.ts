@@ -17,6 +17,12 @@ export enum GameModeType {
     CAPTURE_THE_FLAG = "capture_the_flag",  // Командная игра с флагами
 }
 
+export enum WeaponActionType {
+    PLACEWEAPON1 = "PLACEWEAPON1",
+    WEAPON1ACTION1 = "WEAPON1ACTION1",
+    PLACEWEAPON2 = "PLACEWEAPON2",
+}
+
 export enum UnitType {
     BOMBERMAN = 'bomberman',
     TANK = 'tank',
@@ -323,3 +329,4 @@ export interface ResponseGameState{
     game_state: GameState,
     message?: string
 }
+

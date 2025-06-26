@@ -309,8 +309,8 @@ class MapService:
                     speed += (level - 5) * 0.1
                 
                 enemy_data = {
-                    'x': x,
-                    'y': y,
+                    'x': x * self.game_settings.cell_size,
+                    'y': y * self.game_settings.cell_size,
                     'type': enemy_type,
                     'speed': speed
                 }

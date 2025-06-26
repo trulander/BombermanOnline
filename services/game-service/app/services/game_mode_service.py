@@ -12,7 +12,7 @@ from ..entities import Entity
 from ..entities.map import Map
 from ..entities.player import Player, UnitType, PlayerUpdate
 from ..entities.enemy import Enemy, EnemyUpdate
-from ..entities.weapon import Weapon, WeaponType, WeaponUpdate
+from ..entities.weapon import Weapon, WeaponType, WeaponUpdate, WeaponAction
 from ..entities.bomb import Bomb
 from ..entities.bullet import Bullet
 from ..entities.mine import Mine
@@ -86,6 +86,7 @@ class GameModeService(ABC):
             
             if not spawn_positions:
                 logger.warning("No player spawn positions found, using fallback positions")
+                #TODO переписать на получение пустых клеток с карты, вместо использования угловых клеток
                 spawn_positions = [
                     (1, 1),
                     (self.map.width - 2, 1),
@@ -108,6 +109,9 @@ class GameModeService(ABC):
             
             # Назначаем позицию
             x, y = available_positions[0]
+            #TODO вынести логику рассчета относительных координат в саму карту,
+            # карта должна заниматься рассчетом относительных коодринат, чтобы вне оьекта карты небыло
+            # абсолютных координат в формате хранения ячеек и относительных с перерасчетом на размер ячейки для отображения
             player.x = x * self.settings.cell_size
             player.y = y * self.settings.cell_size
             
@@ -132,7 +136,13 @@ class GameModeService(ABC):
         except Exception as e:
             logger.error(f"Error adding player {player.id}: {e}", exc_info=True)
             return False
-    
+
+    def update_player_connection_status(self, player_id: str, connected: bool):
+        player = self.get_player(player_id=player_id)
+        if player:
+            player.update_connection_status(connected=connected)
+
+
     def remove_player(self, player_id: str) -> bool:
         """Удалить игрока из игры"""
         try:
@@ -172,28 +182,28 @@ class GameModeService(ABC):
                 logger.debug("Game is over, skipping update")
                 return {}
 
-            result = {}
+            result = defaultdict(dict)
             # Обновляем игроков
             for player in list(self.players.values()):
-                result["players_update"] = {player.id: self.update_player(player, delta_time)}
+                result["players_update"].update({player.id: self.update_player(player=player, delta_time=delta_time)})
             
             # Обновляем врагов если включены
             if self.settings.enable_enemies:
                 for enemy in list(self.enemies):
-                    result["enemies_update"] = {enemy.id: self.update_enemy(enemy=enemy, delta_time=delta_time)}
+                    result["enemies_update"].update({enemy.id: self.update_enemy(enemy=enemy, delta_time=delta_time)})
             
             # Обновляем оружие
             for weapon in list(self.weapons.values()):
-                result["weapons_update"] = {weapon.id: self.update_weapon(weapon, delta_time)}
+                result["weapons_update"].update({weapon.id: self.update_weapon(weapon=weapon, delta_time=delta_time)})
 
 
             for power_up in self.power_ups.values():
-                result["power_ups_update"] = {power_up: power_up.get_changes()}
+                result["power_ups_update"].update({power_up.id: power_up.get_changes()})
             
             # Проверяем завершение игры
             if self.is_game_over():
                 await self.handle_game_over()
-            
+            logger.debug(f"Game update event: {result}")
             return result
             
         except Exception as e:
@@ -203,10 +213,10 @@ class GameModeService(ABC):
     def update_player(self, player: Player, delta_time: float) -> PlayerUpdate | None:
         """Обновить одного игрока"""
         try:
-            if player.destroyed:
+            if not player.is_alive():
                 #TODO тут может нужно удалять игрока из списка, но не просто так, иначе в общем счете его не будет наверное
-                #self.players.pop(player.id)
-                return None
+                self.players.pop(player.id)
+                return player.get_changes()
 
             player.update(delta_time=delta_time)
 
@@ -234,7 +244,7 @@ class GameModeService(ABC):
                 enemy.destroy_animation_timer += delta_time
                 if enemy.destroy_animation_timer >= self.settings.destroy_animation_time:
                     self.enemies.remove(enemy)
-                return None
+                return enemy.get_changes()
 
             enemy.update(delta_time=delta_time)
             return enemy.get_changes()
@@ -247,24 +257,26 @@ class GameModeService(ABC):
         """Обновить оружие"""
         try:
             weapon.update(delta_time=delta_time, handle_weapon_explosion=self.handle_weapon_explosion)
-            if weapon.activated and weapon.is_exploded():
+            if weapon.is_exploded():
                 #здесь оружие взорвалось и взрыв завершен
                 self.weapons.pop(weapon.id)
-                return None
+                return weapon.get_changes()
             return weapon.get_changes()
 
         except Exception as e:
             logger.error(f"Error updating weapon {weapon.id}: {e}", exc_info=True)
 
 
-    def place_weapon(self, player: Player, weapon_type: WeaponType) -> bool:
+    def place_weapon(self, player: Player, weapon_action: WeaponAction) -> bool:
         """Применить оружие игрока"""
         try:
             #определяем доступно ли игроку выбранный тип оружия и получаем для него максимальное допустимое количество
-            if player.primary_weapon == weapon_type:
+            if weapon_action == WeaponAction.PLACEWEAPON1:
+                weapon_type: WeaponType = player.primary_weapon
                 weapon_max_count: int = player.primary_weapon_max_count
                 weapon_power: int = player.primary_weapon_power
-            elif player.secondary_weapon == weapon_type:
+            elif weapon_action == WeaponAction.PLACEWEAPON2:
+                weapon_type: WeaponType = player.primary_weapon
                 weapon_max_count: int = player.secondary_weapon_max_count
                 weapon_power: int = player.secondary_weapon_power
             else:
@@ -294,18 +306,19 @@ class GameModeService(ABC):
 
             if weapon_type == WeaponType.BOMB:
                 weapon = Bomb(
-                    x=player.x,
-                    y=player.y,
+                    x=grid_x * self.settings.cell_size,
+                    y=grid_y * self.settings.cell_size,
                     size=self.settings.cell_size,
                     power=weapon_power,
                     owner_id=player.id,
                     map=self.map,
-                    settings=self.settings
+                    settings=self.settings,
+
                 )
             elif weapon_type == WeaponType.BULLET:
                 weapon = Bullet(
-                    x=player.x,
-                    y=player.y,
+                    x=grid_x * self.settings.cell_size,
+                    y=grid_y * self.settings.cell_size,
                     size=self.settings.cell_size,
                     direction=player.direction,
                     speed=weapon_power,
@@ -315,8 +328,8 @@ class GameModeService(ABC):
                 )
             elif weapon_type == WeaponType.MINE:
                 weapon = Mine(
-                    x=player.x,
-                    y=player.y,
+                    x=grid_x * self.settings.cell_size,
+                    y=grid_y * self.settings.cell_size,
                     size=self.settings.cell_size,
                     owner_id=player.id,
                     map=self.map,
@@ -342,7 +355,7 @@ class GameModeService(ABC):
                 self.team_service.add_score_to_player_team(weapon.owner_id, self.settings.block_destroy_score)
                 # Шанс появления усиления
                 if random.random() < self.settings.powerup_drop_chance:
-                    self.spawn_power_up(x=x, y=y)
+                    self.spawn_power_up(x=x * self.settings.cell_size , y=y * self.settings.cell_size)
 
             # Проверка коллизии с игроками
             for player in list(self.players.values()):
@@ -415,7 +428,7 @@ class GameModeService(ABC):
                     self.team_service.add_score_to_player_team(attacker_id, self.settings.enemy_destroy_score)
                 # Шанс появления бонуса
                 if random.random() < self.settings.enemy_powerup_drop_chance:
-                    self.spawn_power_up(enemy.x, enemy.y)
+                    self.spawn_power_up(int(enemy.x), int(enemy.y))
                     
         except Exception as e:
             logger.error(f"Error handling enemy hit: {e}", exc_info=True)
@@ -474,7 +487,12 @@ class GameModeService(ABC):
             
         except Exception as e:
             logger.error(f"Error creating enemies for level {self.level}: {e}", exc_info=True)
-    
+
+    def is_alive(self):
+        if time.time() - self.last_update_time <= self.settings.destroy_inactive_time:
+            return True
+        return False
+
     def is_active(self) -> bool:
         """Проверить активность игры"""
         try:
@@ -493,15 +511,15 @@ class GameModeService(ABC):
             enemies_data: dict[str, EnemyState] = {}
             if self.settings.enable_enemies:
                 for enemy in self.enemies:
-                    enemies_data[enemy.id] = (EnemyState(**enemy.get_changes(full_state=True)))
+                    enemies_data[enemy.id] = EnemyState(**enemy.get_changes(full_state=True))
 
             weapons_data: dict[str, WeaponState] = {}
             for weapon in self.weapons.values():
-                weapons_data[weapon.id] = (WeaponState(**weapon.get_changes(full_state=True)))
+                weapons_data[weapon.id] = WeaponState(**weapon.get_changes(full_state=True))
 
             power_ups_data: dict[str, PowerUpState] = {}
             for power_up in self.power_ups.values():
-                power_ups_data[power_up.id] = (PowerUpState(**power_up.get_changes(full_state=True)))
+                power_ups_data[power_up.id] = PowerUpState(**power_up.get_changes(full_state=True))
 
             map_data = self.map.get_map() if self.map else {'grid': None, 'width': 0, 'height': 0}
 

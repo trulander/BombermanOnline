@@ -10,7 +10,7 @@ const GameLayout: React.FC<GameLayoutProps> = ({ children, onOpenSettings }) => 
   const navigate = useNavigate();
   const [gameId, setGameId] = useState<string>('');
   const [level, setLevel] = useState<number>(1);
-  const [score, setScore] = useState<number>(0);
+  const [status, setStatus] = useState<number>(0);
 
   const handleBack = () => {
     navigate('/account/dashboard');
@@ -31,13 +31,18 @@ const GameLayout: React.FC<GameLayoutProps> = ({ children, onOpenSettings }) => 
       setLevel(event.detail);
     };
 
+    const handleStatusUpdate = (event: any) => {
+      setStatus(event.detail);
+    };
 
     window.addEventListener('gameIdUpdate', handleGameIdUpdate);
     window.addEventListener('levelUpdate', handleLevelUpdate);
+    window.addEventListener('statusUpdate', handleStatusUpdate);
 
     return () => {
       window.removeEventListener('gameIdUpdate', handleGameIdUpdate);
       window.removeEventListener('levelUpdate', handleLevelUpdate);
+      window.removeEventListener('statusUpdate', handleStatusUpdate);
     };
   }, []);
 
@@ -69,9 +74,9 @@ const GameLayout: React.FC<GameLayoutProps> = ({ children, onOpenSettings }) => 
             Level: {level}
           </Typography>
           
-          {/*<Typography variant="body1" sx={{ mr: 2 }}>*/}
-          {/*  Score: {score}*/}
-          {/*</Typography>*/}
+          <Typography variant="body1" sx={{ mr: 2 }}>
+            Status: {status}
+          </Typography>
           
           <IconButton
             edge="end"

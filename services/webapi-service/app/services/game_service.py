@@ -83,7 +83,7 @@ class GameService:
             logger.info(f"Joining game {game_id} with player ID {player_id}")
             response = await self.nats_service.join_game(game_id, player_id)
 
-            if response.get('success') and (player_id := response.get('player_id')):
+            if response.get('success'):
                 # Сохраняем привязки
                 logger.debug(f"Saving mappings for SID {sid_user_id} to player {player_id} in game {game_id}")
                 self.sid_user_id_to_player[sid_user_id] = player_id

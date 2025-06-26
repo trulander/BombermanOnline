@@ -3,7 +3,9 @@ export interface Input {
     down: boolean;
     left: boolean;
     right: boolean;
-    bomb: boolean;
+    weapon1: boolean;
+    action1: boolean;
+    weapon2: boolean;
     restart: boolean;
 }
 
@@ -16,7 +18,9 @@ export class InputHandler {
             down: false,
             left: false,
             right: false,
-            bomb: false,
+            weapon1: false,
+            action1: false,
+            weapon2: false,
             restart: false
         };
         
@@ -56,7 +60,7 @@ export class InputHandler {
                 this.input.right = true;
                 break;
             case ' ':
-                this.input.bomb = true;
+                this.input.weapon1 = true;
                 break;
             case 'r':
             case 'R':
@@ -88,7 +92,7 @@ export class InputHandler {
                 this.input.right = false;
                 break;
             case ' ':
-                this.input.bomb = false;
+                this.input.weapon1 = false;
                 break;
             case 'r':
             case 'R':
@@ -101,7 +105,9 @@ export class InputHandler {
         return this.input;
     }
     
-    public resetBombInput(): void {
-        this.input.bomb = false;
+    public resetWeaponInput(): void {
+        this.input.weapon1 = false;
+        this.input.weapon2 = false;
+        this.input.action1 = false;
     }
 } 

@@ -145,12 +145,14 @@ class GameSettings(BaseModel):
     default_map_width: int = 23
     default_map_height: int = 23
     destroy_animation_time: float = 0.5
+    destroy_inactive_time: float = 300
 
     # Настройки игрока
     player_default_speed: float = 3.0
     player_invulnerable_time: float = 2.0
     player_max_speed: float = 6.0
     player_max_lives: int = 10
+    destroy_disconnected_time: float = 25
 
     # Настройки оружия
     bomb_timer: float = 2.0 #таймер для автоматического взрыва установленной бомбы
@@ -177,7 +179,7 @@ class GameSettings(BaseModel):
 
     # Настройки генерации карт
     enable_snake_walls: bool = False
-    allow_enemies_near_players: bool = False
+    allow_enemies_near_players: bool = True
     min_distance_from_players: int = 1
 
 

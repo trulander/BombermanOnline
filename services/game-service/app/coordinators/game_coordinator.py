@@ -12,7 +12,7 @@ from ..services.map_service import MapService
 from ..repositories.map_repository import MapRepository
 from ..entities.player import UnitType
 from ..entities.game_mode import GameModeType
-from ..entities.weapon import WeaponType
+from ..entities.weapon import WeaponType, WeaponAction
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class GameCoordinator:
                 start_time = time.time()
                 
                 for game_id, game in list(self.games.items()):
-                    if game.is_active():
+                    if game.game_mode.is_alive() and game.is_active():
                         active_games += 1
                         updated_state = await game.update()
                         # Отправляем обновление через NATS всем подключенным клиентам
@@ -125,22 +125,12 @@ class GameCoordinator:
                 "success": False,
                 "message": "Game not found"
             }
+        self.games[game_id].game_mode.update_player_connection_status(player_id=player_id, connected=True)
+
         return {
             "success": True,
             "message": f"Player {player_id} joined game {game_id}"
         }
-
-        #Старая логика подключения игрока к игре через nats event с webapi-service , теперь это только уведопление
-        #TODO добавить обработку счетчика для игрока, если он отключился от игры, по счетчику считать его выбывшым, если он
-        # не вернется в игру до окончания счетчика
-
-        # try:
-        #     unit_type = UnitType(unit_type_str)
-        # except ValueError:
-        #     unit_type = UnitType.BOMBERMAN
-        #
-        # return self.games[game_id].add_player(player_id, unit_type)
-
 
     async def game_input(self, **kwargs) -> None:
         game_id = kwargs.get("game_id")
@@ -164,7 +154,7 @@ class GameCoordinator:
         """Применить оружие игрока (новый универсальный метод)"""
         game_id = kwargs.get("game_id")
         player_id = kwargs.get("player_id")
-        weapon_type_str = kwargs.get("weapon_type", "bomb")  # По умолчанию бомба для совместимости
+        weapon_action = WeaponAction(kwargs.get("weapon_action", WeaponAction.PLACEWEAPON1))
 
         if not game_id in self.games:
             logger.warning(f"Game {game_id} not found for place_weapon")
@@ -177,14 +167,9 @@ class GameCoordinator:
         player = game.get_player(player_id)
 
         if player:
-            try:
-                weapon_type = WeaponType(weapon_type_str)
-            except ValueError:
-                weapon_type = player.primary_weapon  # Используем основное оружие игрока
+            result = game.place_weapon(player_id=player_id, weapon_action=weapon_action)
 
-            result = game.place_weapon(player_id=player_id, weapon_type=weapon_type)
-
-            logger.info(f"Weapon {weapon_type.value} applied by player {player_id} in game {game_id}, result: {result}")
+            logger.info(f"Weapon {weapon_action.value} applied by player {player_id} in game {game_id}, result: {result}")
             return result
 
         else:
@@ -221,9 +206,12 @@ class GameCoordinator:
 
         if game_id and game_id in self.games and player_id:
             game = self.games[game_id]
-            result = game.remove_player(player_id)
-            logger.info(f"Player {player_id} disconnected from game {game_id}, status: {result}")
-            return result
+            game.game_mode.update_player_connection_status(player_id=player_id, connected=False)
+            logger.info(f"Player {player_id} disconnected from game {game_id}")
+            return {
+                    "success": True,
+                    "message": f"Player {player_id} disconnected from game {game_id}"
+                }
         else:
             if not game_id:
                 logger.warning("Missing game_id in disconnect request")

@@ -41,7 +41,7 @@ class Bullet(Weapon):
 
     def activate(self, **kwargs) -> None:
         """Пуля активируется при попадании в цель"""
-        super().activate(kwargs=kwargs)
+        super().activate(**kwargs)
         logger.debug(f"Bullet {self.id} hit target!")
 
 
@@ -50,10 +50,10 @@ class Bullet(Weapon):
         if not self.move(
                 delta_time=kwargs.get('delta_time', 0)
         ):
-            self.activate(kwargs=kwargs)
+            self.activate(**kwargs)
 
 
-    def get_direction(self) -> tuple[float, float]:
+    def get_direction(self, delta_time: float) -> tuple[float, float]:
         """Get a random normalized direction vector"""
         try:
             return self.direction

@@ -1,4 +1,5 @@
 import logging
+import time
 from typing import Dict, Optional, Any
 
 from ..entities.bomberman import Bomberman
@@ -6,7 +7,7 @@ from ..entities.player import Player, UnitType
 from ..entities.tank import Tank
 from ..models.game_models import GameSettings, GameTeamInfo, GameUpdateEvent
 from ..entities.game_mode import GameModeType
-from ..entities.weapon import WeaponType
+from ..entities.weapon import WeaponType, WeaponAction
 from ..entities.game_status import GameStatus
 from ..models.map_models import MapState, MapData, MapUpdate
 from ..services.map_service import MapService
@@ -156,7 +157,7 @@ class GameService:
             
             if success:
                 # Если игра активна и нет игроков, помечаем как завершенную
-                if self.status == GameStatus.ACTIVE and len(self.game_mode.players) == 0:
+                if self.is_active() and len(self.game_mode.players) == 0:
                     self.status = GameStatus.FINISHED
                     logger.info("Game marked as finished due to no players")
                 self.updated_at = datetime.utcnow()
@@ -303,7 +304,7 @@ class GameService:
                 message=f"Error in game update: {e}"
             )
     
-    def place_weapon(self, player_id: str, weapon_type: WeaponType) -> dict:
+    def place_weapon(self, player_id: str, weapon_action: WeaponAction) -> dict:
         """Применить оружие игрока"""
         try:
             if self.status != GameStatus.ACTIVE:
@@ -317,12 +318,12 @@ class GameService:
                 logger.warning(message)
                 return {"success": False, "message": message}
             
-            result = self.game_mode.place_weapon(player, weapon_type)
+            result = self.game_mode.place_weapon(player, weapon_action)
             if result:
                 self.updated_at = datetime.utcnow()
                 return {"success": True, "message": "Weapon applied successfully"}
             else:
-                message = f"Failed to apply weapon {weapon_type.value} for player {player_id}."
+                message = f"Failed to apply weapon {weapon_action.value} for player {player_id}."
                 logger.warning(message)
                 return {"success": False, "message": message}
         except Exception as e:
@@ -330,7 +331,8 @@ class GameService:
             logger.error(message, exc_info=True)
             return {"success": False, "message": message}
 
-    
+
+
     def is_active(self) -> bool:
         """Проверить активность игры"""
         try:

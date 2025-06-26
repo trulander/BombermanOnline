@@ -188,6 +188,7 @@ class NatsService:
             game_service_address = await self.game_cache.get_instance(game_id=game_id)
             if not game_service_address:
                 logger.critical(f"Game service address not found: {game_id}")
+                raise Exception(f"Game service address not found: {game_id}")
             nc = await self.get_nc()
             # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
             sharded_subject = f"game.join.{game_service_address}"
@@ -213,8 +214,10 @@ class NatsService:
         logger.debug(f"Sending input for player {player_id} in game {game_id}: {inputs}")
         try:
             nc = await self.get_nc()
-            # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
-            sharded_subject = f"game.input.{settings.GAME_SERVICE_HOSTNAME}"
+            game_service_address = await self.game_cache.get_instance(game_id=game_id)
+            if not game_service_address:
+                logger.critical(f"Game service address not found: {game_id}")
+            sharded_subject = f"game.input.{game_service_address}"
             await nc.publish(
                 sharded_subject,
                 json.dumps({
@@ -236,7 +239,6 @@ class NatsService:
             if not game_service_address:
                 logger.critical(f"Game service address not found: {game_id}")
             nc = await self.get_nc()
-            # шардируем евенты с HOSTNAME для распределения по инстансам сервиса
             sharded_subject = f"game.place_weapon.{game_service_address}"
             response = await nc.request(
                 sharded_subject,

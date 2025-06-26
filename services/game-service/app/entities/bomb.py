@@ -39,18 +39,18 @@ class Bomb(Weapon):
         )
         self.power: int = power
         
-        logger.debug(f"Bomb created: position=({x}, {y}), power={power}, owner={owner_id}, timer={self.time_created}")
+        logger.debug(f"Bomb created: position=({x}, {y}), power={power}, owner={owner_id}, timer={self.settings.bomb_timer}")
 
 
     def activate(self, **kwargs) -> None:
         """Активировать взрыв бомбы"""
-        super().activate(kwargs=kwargs)
+        super().activate(**kwargs)
         logger.info(f"Bomb {self.id} exploded!")
 
     
-    def update(self, *kwargs) -> None:
+    def update(self, **kwargs) -> None:
         """Обновить состояние бомбы"""
-        super().update(kwargs=kwargs)
+        super().update(**kwargs)
 
     
     def get_damage_area(self) -> list[tuple[int, int]]:

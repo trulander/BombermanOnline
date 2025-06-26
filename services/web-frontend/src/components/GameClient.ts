@@ -1,19 +1,21 @@
-import { io, Socket as IOSocket } from 'socket.io-client';
-import { InputHandler } from '../services/InputHandler';
-import { Renderer } from './Renderer';
-import { Socket } from '../types/Socket';
-import logger, { LogLevel } from '../utils/Logger';
-import { tokenService } from '../services/tokenService';
+import {io, Socket as IOSocket} from 'socket.io-client';
+import {InputHandler} from '../services/InputHandler';
+import {Renderer} from './Renderer';
+import logger from '../utils/Logger';
+import {tokenService} from '../services/tokenService';
 import {
+    EnemyState,
     GamePlayerInfo,
     GameState,
+    GameStatus,
     GameUpdateEvent,
     OptionalEnemyState,
-    OptionalGamePlayerInfo, OptionalPowerUpState, OptionalWeaponState,
-    ResponseGameState
+    OptionalGamePlayerInfo,
+    OptionalPowerUpState,
+    OptionalWeaponState, PowerUpState,
+    ResponseGameState, WeaponActionType, WeaponState
 } from "../types/Game";
-import { EntitiesInfo } from "../types/EntitiesParams";
-import {gameApi} from "../services/api";
+import {EntitiesInfo} from "../types/EntitiesParams";
 
 export class GameClient {
     private canvas: HTMLCanvasElement;
@@ -128,7 +130,7 @@ export class GameClient {
                 socketPath: this.socketPath
             });
             this.isConnected = true;
-            this.showMenu();
+            // this.showMenu();
         });
 
         this.socket.on('disconnect', () => {
@@ -321,7 +323,8 @@ export class GameClient {
             return;
         }else{
             this.lastUpdateTime = performance.now();
-
+            this.gameState.status = gameUpdate.status
+            this.gameState.is_active = gameUpdate.is_active
             // Применяем изменения к кешированной карте
             if (gameUpdate.map_update && this.cachedMapGrid){
                 try {
@@ -335,46 +338,95 @@ export class GameClient {
                 }
             }
 
+            // Создаем новый объект для актуальных игроков
+            const updatedPlayers: { [key: string]: GamePlayerInfo } = {};
+            // Обновляем/добавляем игроков из gameUpdate.players_update
             for (const playerId in gameUpdate.players_update) {
+              if (Object.prototype.hasOwnProperty.call(gameUpdate.players_update, playerId)) {
                 const player = gameUpdate.players_update[playerId];
-
-                const updatedState = { ...this.gameState.players[playerId] };
+                const updatedState = this.gameState.players[playerId]
+                  ? { ...this.gameState.players[playerId] }
+                  : {} as GamePlayerInfo;
                 for (const key in player) {
-                    // if (Object.prototype.hasOwnProperty.call(gameUpdate.players_update[playerId], key)) {
-                        (updatedState as any)[key] = gameUpdate.players_update[playerId][key as keyof OptionalGamePlayerInfo];
-                    // }
+                  if (Object.prototype.hasOwnProperty.call(player, key)) {
+                    (updatedState as any)[key] = player[key as keyof OptionalGamePlayerInfo];
+                  }
                 }
+                updatedPlayers[playerId] = updatedState;
+              }
             }
-            for (const entityId in gameUpdate.enemies_update) {
-                const player = gameUpdate.enemies_update[entityId];
 
-                const updatedState = { ...this.gameState.enemies[entityId] };
-                for (const key in player) {
-                    // if (Object.prototype.hasOwnProperty.call(gameUpdate.enemies[entityId], key)) {
-                        (updatedState as any)[key] = gameUpdate.enemies_update[entityId][key as keyof OptionalEnemyState];
-                    // }
-                }
-            }
-            for (const entityId in gameUpdate.weapons_update) {
-                const player = gameUpdate.weapons_update[entityId];
+            // Заменяем gameState.players только актуальными игроками
+            this.gameState.players = updatedPlayers;
 
-                const updatedState = { ...this.gameState.weapons[entityId] };
-                for (const key in player) {
-                    // if (Object.prototype.hasOwnProperty.call(gameUpdate.weapons[entityId], key)) {
-                        (updatedState as any)[key] = gameUpdate.weapons_update[entityId][key as keyof OptionalWeaponState];
-                    // }
-                }
-            }
-            for (const entityId in gameUpdate.power_ups_update) {
-                const player = gameUpdate.power_ups_update[entityId];
 
-                const updatedState = { ...this.gameState.power_ups[entityId] };
-                for (const key in player) {
-                    // if (Object.prototype.hasOwnProperty.call(gameUpdate.power_ups[entityId], key)) {
-                        (updatedState as any)[key] = gameUpdate.power_ups_update[entityId][key as keyof OptionalPowerUpState];
-                    // }
+            // Создаем новый объект для актуальных enemies
+            const updatedEnemies: { [key: string]: EnemyState } = {};
+            // Обновляем/добавляем игроков из gameUpdate.enemies_update
+            for (const enemyId in gameUpdate.enemies_update) {
+              if (Object.prototype.hasOwnProperty.call(gameUpdate.enemies_update, enemyId)) {
+                const enemy = gameUpdate.enemies_update[enemyId];
+                const updatedState = this.gameState.enemies[enemyId]
+                  ? { ...this.gameState.enemies[enemyId] }
+                  : {} as EnemyState;
+                for (const key in enemy) {
+                  if (Object.prototype.hasOwnProperty.call(enemy, key)) {
+                    (updatedState as any)[key] = enemy[key as keyof OptionalEnemyState];
+                  }
                 }
+                updatedEnemies[enemyId] = updatedState;
+              }
             }
+
+            // Заменяем gameState.enemies только актуальными enemies
+            this.gameState.enemies = updatedEnemies;
+
+
+
+            // Создаем новый объект для актуальных weapons
+            const updatedWeapons: { [key: string]: WeaponState } = {};
+            // Обновляем/добавляем игроков из gameUpdate.weapons_update
+            for (const weaponId in gameUpdate.weapons_update) {
+              if (Object.prototype.hasOwnProperty.call(gameUpdate.weapons_update, weaponId)) {
+                const weapon = gameUpdate.weapons_update[weaponId];
+                const updatedState = this.gameState.weapons[weaponId]
+                  ? { ...this.gameState.weapons[weaponId] }
+                  : {} as WeaponState;
+                for (const key in weapon) {
+                  if (Object.prototype.hasOwnProperty.call(weapon, key)) {
+                    (updatedState as any)[key] = weapon[key as keyof OptionalWeaponState];
+                  }
+                }
+                updatedWeapons[weaponId] = updatedState;
+              }
+            }
+
+            // Заменяем gameState.weapons только актуальными weapons
+            this.gameState.weapons = updatedWeapons;
+
+
+            // Создаем новый объект для актуальных power_ups
+            const updatedPowerUps: { [key: string]: PowerUpState } = {};
+            // Обновляем/добавляем игроков из gameUpdate.power_ups_update
+            for (const powerUpId in gameUpdate.power_ups_update) {
+              if (Object.prototype.hasOwnProperty.call(gameUpdate.power_ups_update, powerUpId)) {
+                const powerUp = gameUpdate.power_ups_update[powerUpId];
+                const updatedState = this.gameState.power_ups[powerUpId]
+                  ? { ...this.gameState.power_ups[powerUpId] }
+                  : {} as PowerUpState;
+                for (const key in powerUp) {
+                  if (Object.prototype.hasOwnProperty.call(powerUp, key)) {
+                    (updatedState as any)[key] = powerUp[key as keyof OptionalPowerUpState];
+                  }
+                }
+                updatedPowerUps[powerUpId] = updatedState;
+              }
+            }
+
+            // Заменяем gameState.weapons только актуальными weapons
+            this.gameState.power_ups = updatedPowerUps;
+
+
             // for (const entityId in gameUpdate.teams_update) {
             //     const player = gameUpdate.teams_update[entityId];
             //
@@ -402,12 +454,15 @@ export class GameClient {
             canvasWidth: this.canvas.width,
             canvasHeight: this.canvas.height
         });
-        this.showMenu();
+        // this.showMenu();
         this.startGameLoop();
     }
 
     private startGameLoop(): void {
         const gameLoop = () => {
+            logger.info('startGameLoop status:', {"state": this.gameState});
+
+
             // Отправляем входные данные на сервер, если мы в игре
             if (this.gameId && this.playerId) {
                 this.sendInputs();
@@ -423,6 +478,12 @@ export class GameClient {
         // Проверяем время последнего обновления
         const currentTime = performance.now();
         const timeSinceLastUpdate = currentTime - this.lastUpdateTime;
+        console.info("тик update")
+        //Если на паузе, пропускаем игровой цикл
+        if (this.gameState?.status != GameStatus.ACTIVE){
+            logger.info('startGameLoop status != GameStatus.ACTIVE пропускаем');
+            return
+        }
         
         // Если прошло больше 3 секунд без обновлений и мы в игре, запрашиваем состояние
         if (this.gameId && this.playerId && this.lastUpdateTime > 0 && timeSinceLastUpdate > 3000) {
@@ -541,7 +602,7 @@ export class GameClient {
             logger.info('Попытка присоединиться к игре', {gameId});
             this.joinGame(gameId, this.playerId || '');
         } else {
-            this.showMenu();
+            // this.showMenu();
         }
     }
 
@@ -578,8 +639,8 @@ export class GameClient {
                     playerId: this.playerId
                 });
                 
-                // Уведомляем родительский компонент, что игра успешно присоединена
-                this.onGameJoined?.(true);
+                // // Уведомляем родительский компонент, что игра успешно присоединена
+                // this.onGameJoined?.(true);
                 
                 // Отправляем Game ID в header через DOM event
                 this.updateGameId(gameId);
@@ -628,6 +689,7 @@ export class GameClient {
     private updateGameInfo(): void {
         if (this.gameState) {
             window.dispatchEvent(new CustomEvent('levelUpdate', { detail: this.gameState.level }));
+            window.dispatchEvent(new CustomEvent('statusUpdate', { detail: this.gameState.status }));
         }
     }
 
@@ -706,6 +768,7 @@ export class GameClient {
         const inputs = this.inputHandler.getInput();
         
         // Отправляем ввод игрока в соответствии с форматом, ожидаемым сервером
+        // if (inputs.up || inputs.down || inputs.left || inputs.right)
         this.socket?.emit('input', {
             game_id: this.gameId,
             inputs: {
@@ -716,14 +779,35 @@ export class GameClient {
             }
         });
         
-        // Отправляем команду установки бомбы отдельно
-        if (inputs.bomb) {
-            this.socket?.emit('place_bomb', {
-                game_id: this.gameId
+
+        if (inputs.weapon1) {
+            this.socket?.emit('place_weapon', {
+                game_id: this.gameId,
+                weapon_action: WeaponActionType.PLACEWEAPON1,
             });
             
             // Сбрасываем ввод бомбы, чтобы предотвратить многократные установки от одного нажатия
-            this.inputHandler.resetBombInput();
+            this.inputHandler.resetWeaponInput();
+        }
+
+        if (inputs.weapon2) {
+            this.socket?.emit('place_weapon', {
+                game_id: this.gameId,
+                weapon_action: WeaponActionType.PLACEWEAPON2,
+            });
+
+            // Сбрасываем ввод бомбы, чтобы предотвратить многократные установки от одного нажатия
+            this.inputHandler.resetWeaponInput();
+        }
+
+        if (inputs.action1) {
+            this.socket?.emit('place_weapon', {
+                game_id: this.gameId,
+                weapon_action: WeaponActionType.WEAPON1ACTION1,
+            });
+
+            // Сбрасываем ввод бомбы, чтобы предотвратить многократные установки от одного нажатия
+            this.inputHandler.resetWeaponInput();
         }
     }
 
@@ -731,8 +815,8 @@ export class GameClient {
         this.onAuthenticationFailed = handler;
     }
     
-    // Новый метод для установки обработчика успешного присоединения к игре
-    public setGameJoinedHandler(handler: (success: boolean) => void): void {
-        this.onGameJoined = handler;
-    }
+    // // Новый метод для установки обработчика успешного присоединения к игре
+    // public setGameJoinedHandler(handler: (success: boolean) => void): void {
+    //     this.onGameJoined = handler;
+    // }
 } 

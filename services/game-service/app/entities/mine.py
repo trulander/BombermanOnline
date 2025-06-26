@@ -37,13 +37,13 @@ class Mine(Weapon):
 
     def activate(self, **kwargs) -> None:
         """Активировать взрыв мины"""
-        super().activate(kwargs=kwargs)
+        super().activate(**kwargs)
         logger.info(f"Mine {self.id} exploded!")
 
     
     def update(self, **kwargs) -> None:
         """Обновить состояние мины"""
-        super().update(kwargs=kwargs)
+        super().update(**kwargs)
 
 
     def get_damage_area(self) -> list[tuple[int, int]]:
