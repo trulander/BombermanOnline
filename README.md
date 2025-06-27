@@ -18,6 +18,37 @@
    - Prometheus, Grafana - мониторинг
    - Loki, Fluent Bit - логирование
 
+## Документация
+
+Здесь вы найдете подробную документацию по различным компонентам проекта Bomberman Online:
+
+### Инфраструктура
+
+*   [Docker Compose Конфигурация](docs/infra/docker-compose.md)
+
+### Сервисы
+
+*   [Auth Service](docs/services/auth-service.md)
+*   [Game Allocator Service](docs/services/game-allocator-service.md)
+*   [Game Service](docs/services/game-service.md)
+    *   [API Эндпоинты](services/game-service/docs/api_endpoints.md)
+    *   [Архитектура Сущностей](services/game-service/docs/architecture/entities.md)
+    *   [Архитектура Моделей](services/game-service/docs/architecture/models.md)
+    *   [Обзор Архитектуры](services/game-service/docs/architecture/overview.md)
+    *   [Архитектура Репозиториев](services/game-service/docs/architecture/repositories.md)
+    *   [Архитектура Сервисов](services/game-service/docs/architecture/services.md)
+    *   [Конфигурация](services/game-service/docs/configuration.md)
+    *   [Введение](services/game-service/docs/introduction.md)
+    *   [События NATS](services/game-service/docs/nats_events.md)
+    *   [Команды и Действия Игроков](services/game-service/docs/player_commands_and_actions.md)
+    *   [Настройка](services/game-service/docs/setup.md)
+    *   [Логика Команд](services/game-service/docs/teams_logic.md)
+*   [Web Frontend](docs/services/web-frontend.md)
+    *   [Архитектура Аутентификации WebSocket](services/web-frontend/docs/WEBSOCKET_AUTH_ARCHITECTURE.md)
+    *   [Архитектура Маршрутизации](services/web-frontend/docs/ROUTING_ARCHITECTURE.md)
+    *   [Архитектура Управления Токенами](services/web-frontend/docs/TOKEN_MANAGEMENT_ARCHITECTURE.md)
+*   [WebAPI Service](docs/services/webapi-service.md)
+
 ## Сервисы
 
 ### Web Frontend
