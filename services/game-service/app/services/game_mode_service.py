@@ -290,8 +290,8 @@ class GameModeService(ABC):
                 return False
             
             # Получаем позицию в сетке
-            grid_x = int((player.x + player.width/2) / self.settings.cell_size)
-            grid_y = int((player.y + player.height/2) / self.settings.cell_size)
+            grid_x = round(player.x / self.settings.cell_size)
+            grid_y = round(player.y / self.settings.cell_size)
             
             # weapon_x = grid_x * self.settings.cell_size
             # weapon_y = grid_y * self.settings.cell_size
@@ -428,7 +428,7 @@ class GameModeService(ABC):
                     self.team_service.add_score_to_player_team(attacker_id, self.settings.enemy_destroy_score)
                 # Шанс появления бонуса
                 if random.random() < self.settings.enemy_powerup_drop_chance:
-                    self.spawn_power_up(int(enemy.x), int(enemy.y))
+                    self.spawn_power_up(round(enemy.x), round(enemy.y))
                     
         except Exception as e:
             logger.error(f"Error handling enemy hit: {e}", exc_info=True)

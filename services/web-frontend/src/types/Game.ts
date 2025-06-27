@@ -5,16 +5,16 @@ import {MapUpdate} from "./Map";
 import {EntitiesInfo} from "./EntitiesParams";
 
 export enum GameStatus {
-    PENDING = 'pending',
-    ACTIVE = 'active',
-    PAUSED = 'paused',
-    FINISHED = 'finished',
+    PENDING = 'PENDING',
+    ACTIVE = 'ACTIVE',
+    PAUSED = 'PAUSED',
+    FINISHED = 'FINISHED',
 }
 
 export enum GameModeType {
-    CAMPAIGN = "campaign",                 // Прохождение с возможностью кооператива
-    FREE_FOR_ALL = "free_for_all",         // Все против всех (количество игроков = количество команд)
-    CAPTURE_THE_FLAG = "capture_the_flag",  // Командная игра с флагами
+    CAMPAIGN = "CAMPAIGN",                 // Прохождение с возможностью кооператива
+    FREE_FOR_ALL = "FREE_FOR_ALL",         // Все против всех (количество игроков = количество команд)
+    CAPTURE_THE_FLAG = "CAPTURE_THE_FLAG",  // Командная игра с флагами
 }
 
 export enum WeaponActionType {
@@ -24,20 +24,20 @@ export enum WeaponActionType {
 }
 
 export enum UnitType {
-    BOMBERMAN = 'bomberman',
-    TANK = 'tank',
+    BOMBERMAN = 'BOMBERMAN',
+    TANK = 'TANK',
 }
 
 export enum WeaponType {
-    BOMB = "bomb",
-    BULLET = "bullet",
-    MINE = "mine",
+    BOMB = "BOMB",
+    BULLET = "BULLET",
+    MINE = "MINE",
 }
 
 export enum EnemyType {
-    COIN = "coin",
-    BEAR = "bear",
-    GHOST = "ghost",
+    COIN = "COIN",
+    BEAR = "BEAR",
+    GHOST = "GHOST",
 }
 
 export enum PowerUpType {

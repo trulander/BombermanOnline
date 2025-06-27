@@ -25,10 +25,10 @@ services:
         - LOG_FORMAT=json
       volumes:
         - ../services/game-allocator-service/app:/app/game-allocator-service/app
-      depends_on:
-        - consul
-        - prometheus
-        - nats
+#      depends_on:
+#        - consul
+#        - prometheus
+#        - nats
       labels:
         - "traefik.enable=true"
 #        - "traefik.http.routers.allocator.rule=Host(`allocator.localhost`)"
@@ -55,11 +55,11 @@ services:
       - NATS_URL=nats://nats:4222
       - AUTH_SERVICE_URL=http://auth-service:5003
       - CONSUL_HOST=consul
-    depends_on:
-      - postgres
-      - redis
-      - nats
-      - auth-service
+#    depends_on:
+#      - postgres
+#      - redis
+#      - nats
+#      - auth-service
 #    ports:
 #      - "5001:5001"
     expose:
@@ -84,6 +84,7 @@ services:
       - ../services/game-service/app:/app/game-service/app
       - game_logs:/var/log/game-service
     environment:
+      - LOG_LEVEL=INFO
       - PYTHONUNBUFFERED=1
       - REDIS_HOST=redis
       - NATS_URL=nats://nats:4222
@@ -95,10 +96,10 @@ services:
       - POSTGRES_PASSWORD=bomberman
       - LOG_FORMAT=json
       - CONSUL_HOST=consul
-    depends_on:
-      - redis
-      - nats
-      - auth-service
+#    depends_on:
+#      - redis
+#      - nats
+#      - auth-service
 #    ports:
 #      - "5002:5002"
     expose:
@@ -131,9 +132,9 @@ services:
       - POSTGRES_PASSWORD=bomberman
       - SECRET_KEY=${AUTH_SECRET_KEY:-your_secret_key_here}
       - CONSUL_HOST=consul
-    depends_on:
-      - postgres
-      - redis
+#    depends_on:
+#      - postgres
+#      - redis
 #    ports:
 #      - "5003:5003"
     expose:
@@ -177,7 +178,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB:-bomberman}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    restart: unless-stopped
+#    restart: unless-stopped
 
   redis:
     image: redis:7.2
@@ -191,8 +192,8 @@ services:
     environment:
       REDIS_ADDR: redis://redis:6379
     ports: ["9121:9121"]
-    depends_on:
-      - redis
+#    depends_on:
+#      - redis
 
   nats:
     image: nats:2.10
@@ -207,9 +208,9 @@ services:
     command: "-varz -connz -subz -routez -gatewayz -healthz -accstatz -leafz -jsz=all http://nats:8222"
     ports:
       - "7777:7777"
-    depends_on:
-      - nats
-    restart: unless-stopped
+#    depends_on:
+#      - nats
+#    restart: unless-stopped
 
   traefik:
     image: traefik:3.4.0
@@ -226,13 +227,13 @@ services:
       - ./traefik/local-plugins:/plugins-local/src
     command:
       - "--configFile=/etc/traefik/traefik.yml"
-    restart: unless-stopped
-    depends_on:
-      - webapi-service
-      - game-service
-      - auth-service
-      - web-frontend
-      - fluent-bit
+#    restart: unless-stopped
+#    depends_on:
+#      - webapi-service
+#      - game-service
+#      - auth-service
+#      - web-frontend
+#      - fluent-bit
     labels:
       - "traefik.enable=true"
 
@@ -250,7 +251,7 @@ services:
       - '--web.enable-lifecycle'
     ports:
       - "9090:9090"
-    restart: unless-stopped
+#    restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.prometheus.rule=Host(`prometheus.localhost`)"
@@ -269,7 +270,7 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     ports:
       - "9100:9100"
-    restart: unless-stopped
+#    restart: unless-stopped
 
   cadvisor:
     image: gcr.io/cadvisor/cadvisor:v0.47.2
@@ -281,7 +282,7 @@ services:
       - /dev/disk/:/dev/disk:ro
     ports:
       - "8081:8080"
-    restart: unless-stopped
+#    restart: unless-stopped
 
   loki:
     image: grafana/loki:3.5.0
@@ -291,7 +292,7 @@ services:
     ports:
       - "3100:3100"
     command: -config.file=/etc/loki/local-config.yaml -target=all -log.level=info
-    restart: unless-stopped
+#    restart: unless-stopped
     networks:
       default:
         aliases:
@@ -311,9 +312,9 @@ services:
       - "8888:8888"
     environment:
       - LOKI_URL=http://loki.internal:3100/loki/api/v1/push
-    depends_on:
-      - loki
-    restart: unless-stopped
+#    depends_on:
+#      - loki
+#    restart: unless-stopped
     networks:
       - default
 
@@ -334,10 +335,10 @@ services:
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     ports:
       - "3001:3001"
-    depends_on:
-      - prometheus
-      - loki
-    restart: unless-stopped
+#    depends_on:
+#      - prometheus
+#      - loki
+#    restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"

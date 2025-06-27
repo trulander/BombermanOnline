@@ -47,7 +47,7 @@ const GameList: React.FC = () => {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
+    <Box sx={{ p: 3 }}>
       <Typography component="h1" variant="h4" gutterBottom align="center">
         Список игр
       </Typography>

@@ -16,9 +16,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 class EnemyType(Enum):
-    COIN = "coin"
-    BEAR = "bear"
-    GHOST = "ghost"
+    COIN = "COIN"
+    BEAR = "BEAR"
+    GHOST = "GHOST"
 
 class EnemyUpdate(TypedDict):
     entity_id: str

@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import GameCanvas from '../components/GameCanvas';
-import GameLayout from '../components/GameLayout';
+import Layout from '../components/Layout';
 import { GameClient } from '../components/GameClient';
 import ManageGame from './ManageGame';
 import {Box, CircularProgress, Dialog, DialogContent, DialogTitle, IconButton, Typography} from '@mui/material';
@@ -55,20 +55,6 @@ const Game: React.FC = () => {
     navigate('/account/login');
   };
 
-  // const handleGameJoined = (success: boolean) => {
-  //   if (success) {
-  //     setHasJoinedGame(true);
-  //   }
-  // };
-
-  // const setGameClientRef = useCallback((gameClient: GameClient | null) => {
-  //   gameClientRef.current = gameClient;
-  //   if (gameClient) {
-  //     gameClient.setAuthenticationFailedHandler(handleAuthenticationFailed);
-  //     gameClient.setGameJoinedHandler(handleGameJoined);
-  //   }
-  // }, [handleAuthenticationFailed, handleGameJoined]);
-
   const handleOpenSettings = () => {
     setIsSettingsOpen(true);
   };
@@ -114,7 +100,7 @@ const Game: React.FC = () => {
   }
 
   return (
-    <GameLayout onOpenSettings={handleOpenSettings}>
+    <Layout showGameSpecificInfo={true} onOpenGameSettings={handleOpenSettings}>
       <GameCanvas gameId={gameId} userId={user?.id} entitiesInfo={entitiesInfo} />
       
       {gameId && (
@@ -139,7 +125,7 @@ const Game: React.FC = () => {
           </DialogContent>
         </Dialog>
       )}
-    </GameLayout>
+    </Layout>
   );
 };
 

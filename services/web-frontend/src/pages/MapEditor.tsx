@@ -20,7 +20,6 @@ import {
   Typography
 } from '@mui/material';
 import {Add, Delete, Edit, Visibility} from '@mui/icons-material';
-import GameLayout from '../components/GameLayout';
 import {gameApi} from '../services/api';
 import {useAuth} from '../context/AuthContext';
 import {CellType, cellTypeColors, MapChain, MapGroup, MapTemplate} from "../types/Map";
@@ -414,419 +413,469 @@ const MapEditor: React.FC = () => {
   };
 
   return (
-    <GameLayout>
-      <Box sx={{ p: 3 }}>
-        <Typography variant="h4" gutterBottom>Редактор карт</Typography>
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h4" gutterBottom>Редактор карт</Typography>
 
-        {loading && <CircularProgress />}
-        {error && <Alert severity="error">{error}</Alert>}
+      {loading && <CircularProgress />}
+      {error && <Alert severity="error">{error}</Alert>}
 
-        <Box sx={{ mb: 4 }}>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setOpenCreateDialog(true)}
-            sx={{ mr: 2 }}
-          >
-            Создать новый шаблон карты
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setOpenCreateGroupDialog(true)}
-            sx={{ mr: 2 }}
-          >
-            Создать новую группу карт
-          </Button>
-          <Button
-            variant="contained"
-            startIcon={<Add />}
-            onClick={() => setOpenCreateChainDialog(true)}
-          >
-            Создать новую цепочку карт
-          </Button>
-        </Box>
+      <Box sx={{ mb: 4 }}>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={() => setOpenCreateDialog(true)}
+          sx={{ mr: 2 }}
+        >
+          Создать новый шаблон карты
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={() => setOpenCreateGroupDialog(true)}
+          sx={{ mr: 2 }}
+        >
+          Создать новую группу карт
+        </Button>
+        <Button
+          variant="contained"
+          startIcon={<Add />}
+          onClick={() => setOpenCreateChainDialog(true)}
+        >
+          Создать новую цепочку карт
+        </Button>
+      </Box>
 
-        <Typography variant="h5" gutterBottom>Существующие шаблоны карт</Typography>
-        {mapTemplates.length === 0 && !loading && !error && (
-          <Typography>Шаблоны карт не найдены.</Typography>
-        )}
-        <List>
-          {mapTemplates.map((map) => (
-            <Card key={map.id} sx={{ mb: 2, p: 2 }}>
-              <CardContent>
-                <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={8}>
-                    <Typography variant="h6">{map.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Описание: {map.description || 'Нет описания'}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Размеры: {map.width}x{map.height}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Сложность: {map.difficulty}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Макс. игроков: {map.max_players}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Создан: {new Date(map.created_at).toLocaleString()}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={4} sx={{ textAlign: 'right' }}>
-                    <IconButton onClick={() => handleViewDetails(map)} color="primary">
-                      <Visibility />
-                    </IconButton>
-                    <IconButton onClick={() => handleEditMap(map)} color="secondary">
-                      <Edit />
-                    </IconButton>
-                    <IconButton onClick={() => handleDeleteMap(map.id)} color="error">
-                      <Delete />
-                    </IconButton>
-                  </Grid>
+      <Typography variant="h5" gutterBottom>Существующие шаблоны карт</Typography>
+      {mapTemplates.length === 0 && !loading && !error && (
+        <Typography>Шаблоны карт не найдены.</Typography>
+      )}
+      <List>
+        {mapTemplates.map((map) => (
+          <Card key={map.id} sx={{ mb: 2, p: 2 }}>
+            <CardContent>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={8}>
+                  <Typography variant="h6">{map.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Описание: {map.description || 'Нет описания'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Размеры: {map.width}x{map.height}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Сложность: {map.difficulty}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Макс. игроков: {map.max_players}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Создан: {new Date(map.created_at).toLocaleString()}
+                  </Typography>
                 </Grid>
-              </CardContent>
-            </Card>
-          ))}
-        </List>
-
-        {/* Map Groups Section */}
-        <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>Существующие группы карт</Typography>
-        {mapGroups.length === 0 && !loading && !error && (
-          <Typography>Группы карт не найдены.</Typography>
-        )}
-        <List>
-          {mapGroups.map((group) => (
-            <Card key={group.id} sx={{ mb: 2, p: 2 }}>
-              <CardContent>
-                <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={8}>
-                    <Typography variant="h6">{group.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Создан: {new Date(group.created_at).toLocaleString()}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={4} sx={{ textAlign: 'right' }}>
-                    <IconButton onClick={() => handleEditGroup(group)} color="secondary">
-                      <Edit />
-                    </IconButton>
-                    <IconButton onClick={() => handleDeleteGroup(group.id)} color="error">
-                      <Delete />
-                    </IconButton>
-                  </Grid>
+                <Grid item xs={4} sx={{ textAlign: 'right' }}>
+                  <IconButton onClick={() => handleViewDetails(map)} color="primary">
+                    <Visibility />
+                  </IconButton>
+                  <IconButton onClick={() => handleEditMap(map)} color="secondary">
+                    <Edit />
+                  </IconButton>
+                  <IconButton onClick={() => handleDeleteMap(map.id)} color="error">
+                    <Delete />
+                  </IconButton>
                 </Grid>
-              </CardContent>
-            </Card>
-          ))}
-        </List>
-
-        {/* Map Chains Section */}
-        <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>Существующие цепочки карт</Typography>
-        {mapChains.length === 0 && !loading && !error && (
-          <Typography>Цепочки карт не найдены.</Typography>
-        )}
-        <List>
-          {mapChains.map((chain) => (
-            <Card key={chain.id} sx={{ mb: 2, p: 2 }}>
-              <CardContent>
-                <Grid container spacing={2} alignItems="center">
-                  <Grid item xs={8}>
-                    <Typography variant="h6">{chain.name}</Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Описание: {chain.description || 'Нет описания'}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Шаблоны карт: 
-                      {chain.map_template_ids && chain.map_template_ids.length > 0 ? (
-                        chain.map_template_ids.map(mapId => {
-                          const template = mapTemplates.find(t => t.id === mapId);
-                          return (
-                            <Chip 
-                              key={mapId} 
-                              label={template ? template.name : mapId} 
-                              size="small" 
-                              sx={{ mr: 0.5, mb: 0.5 }}
-                            />
-                          );
-                        })
-                      ) : (
-                        <Chip label="Нет шаблонов" size="small" sx={{ mr: 0.5, mb: 0.5 }}/>
-                      )}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      Создан: {new Date(chain.created_at).toLocaleString()}
-                    </Typography>
-                  </Grid>
-                  <Grid item xs={4} sx={{ textAlign: 'right' }}>
-                    <IconButton onClick={() => handleEditChain(chain)} color="secondary">
-                      <Edit />
-                    </IconButton>
-                    <IconButton onClick={() => handleDeleteChain(chain.id)} color="error">
-                      <Delete />
-                    </IconButton>
-                  </Grid>
-                </Grid>
-              </CardContent>
-            </Card>
-          ))}
-        </List>
-
-        {/* Create Map Template Dialog */}
-        <Dialog open={openCreateDialog} onClose={() => setOpenCreateDialog(false)} maxWidth="md" fullWidth>
-          <DialogTitle>Создать новый шаблон карты</DialogTitle>
-          <DialogContent>
-            {createMapError && <Alert severity="error" sx={{ mb: 2 }}>{createMapError}</Alert>}
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Название карты"
-              type="text"
-              fullWidth
-              variant="outlined"
-              value={newMapName}
-              onChange={(e) => setNewMapName(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              margin="dense"
-              label="Описание карты"
-              type="text"
-              fullWidth
-              multiline
-              rows={3}
-              variant="outlined"
-              value={newMapDescription}
-              onChange={(e) => setNewMapDescription(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid item xs={6}>
-                <TextField
-                  margin="dense"
-                  label="Ширина"
-                  type="number"
-                  fullWidth
-                  variant="outlined"
-                  value={newMapWidth}
-                  onChange={(e) => setNewMapWidth(Number(e.target.value))}
-                  inputProps={{ min: 5, max: 50 }}
-                />
               </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  margin="dense"
-                  label="Высота"
-                  type="number"
-                  fullWidth
-                  variant="outlined"
-                  value={newMapHeight}
-                  onChange={(e) => setNewMapHeight(Number(e.target.value))}
-                  inputProps={{ min: 5, max: 50 }}
-                />
+            </CardContent>
+          </Card>
+        ))}
+      </List>
+
+      {/* Map Groups Section */}
+      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>Существующие группы карт</Typography>
+      {mapGroups.length === 0 && !loading && !error && (
+        <Typography>Группы карт не найдены.</Typography>
+      )}
+      <List>
+        {mapGroups.map((group) => (
+          <Card key={group.id} sx={{ mb: 2, p: 2 }}>
+            <CardContent>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={8}>
+                  <Typography variant="h6">{group.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Создан: {new Date(group.created_at).toLocaleString()}
+                  </Typography>
+                </Grid>
+                <Grid item xs={4} sx={{ textAlign: 'right' }}>
+                  <IconButton onClick={() => handleEditGroup(group)} color="secondary">
+                    <Edit />
+                  </IconButton>
+                  <IconButton onClick={() => handleDeleteGroup(group.id)} color="error">
+                    <Delete />
+                  </IconButton>
+                </Grid>
               </Grid>
+            </CardContent>
+          </Card>
+        ))}
+      </List>
+
+      {/* Map Chains Section */}
+      <Typography variant="h5" gutterBottom sx={{ mt: 4 }}>Существующие цепочки карт</Typography>
+      {mapChains.length === 0 && !loading && !error && (
+        <Typography>Цепочки карт не найдены.</Typography>
+      )}
+      <List>
+        {mapChains.map((chain) => (
+          <Card key={chain.id} sx={{ mb: 2, p: 2 }}>
+            <CardContent>
+              <Grid container spacing={2} alignItems="center">
+                <Grid item xs={8}>
+                  <Typography variant="h6">{chain.name}</Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Описание: {chain.description || 'Нет описания'}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Шаблоны карт:
+                    {chain.map_template_ids && chain.map_template_ids.length > 0 ? (
+                      chain.map_template_ids.map(mapId => {
+                        const template = mapTemplates.find(t => t.id === mapId);
+                        return (
+                          <Chip
+                            key={mapId}
+                            label={template ? template.name : mapId}
+                            size="small"
+                            sx={{ mr: 0.5, mb: 0.5 }}
+                          />
+                        );
+                      })
+                    ) : (
+                      <Chip label="Нет шаблонов" size="small" sx={{ mr: 0.5, mb: 0.5 }}/>
+                    )}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Создан: {new Date(chain.created_at).toLocaleString()}
+                  </Typography>
+                </Grid>
+                <Grid item xs={4} sx={{ textAlign: 'right' }}>
+                  <IconButton onClick={() => handleEditChain(chain)} color="secondary">
+                    <Edit />
+                  </IconButton>
+                  <IconButton onClick={() => handleDeleteChain(chain.id)} color="error">
+                    <Delete />
+                  </IconButton>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+        ))}
+      </List>
+
+      {/* Create Map Template Dialog */}
+      <Dialog open={openCreateDialog} onClose={() => setOpenCreateDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Создать новый шаблон карты</DialogTitle>
+        <DialogContent>
+          {createMapError && <Alert severity="error" sx={{ mb: 2 }}>{createMapError}</Alert>}
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Название карты"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newMapName}
+            onChange={(e) => setNewMapName(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Описание карты"
+            type="text"
+            fullWidth
+            multiline
+            rows={3}
+            variant="outlined"
+            value={newMapDescription}
+            onChange={(e) => setNewMapDescription(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={6}>
+              <TextField
+                margin="dense"
+                label="Ширина"
+                type="number"
+                fullWidth
+                variant="outlined"
+                value={newMapWidth}
+                onChange={(e) => setNewMapWidth(Number(e.target.value))}
+                inputProps={{ min: 5, max: 50 }}
+              />
             </Grid>
-            <Grid container spacing={2} sx={{ mb: 2 }}>
-              <Grid item xs={6}>
-                <TextField
-                  margin="dense"
-                  label="Сложность (1-10)"
-                  type="number"
-                  fullWidth
-                  variant="outlined"
-                  value={newMapDifficulty}
-                  onChange={(e) => setNewMapDifficulty(Number(e.target.value))}
-                  inputProps={{ min: 1, max: 10 }}
-                />
-              </Grid>
-              <Grid item xs={6}>
-                <TextField
-                  margin="dense"
-                  label="Макс. игроков (1-8)"
-                  type="number"
-                  fullWidth
-                  variant="outlined"
-                  value={newMapMaxPlayers}
-                  onChange={(e) => setNewMapMaxPlayers(Number(e.target.value))}
-                  inputProps={{ min: 1, max: 8 }}
-                />
-              </Grid>
+            <Grid item xs={6}>
+              <TextField
+                margin="dense"
+                label="Высота"
+                type="number"
+                fullWidth
+                variant="outlined"
+                value={newMapHeight}
+                onChange={(e) => setNewMapHeight(Number(e.target.value))}
+                inputProps={{ min: 5, max: 50 }}
+              />
             </Grid>
-            
-            {/* Cell Type Selector */}
-            <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Выберите тип ячейки для рисования:</Typography>
-            <Box sx={{ mb: 2 }}>
-              {Object.entries(CellType)
-                .filter(([key, value]) => typeof value === 'number')
-                .map(([key, value]) => (
-                  <Button
-                    key={key}
-                    variant={selectedCellType === value ? "contained" : "outlined"}
-                    onClick={() => setSelectedCellType(value as CellType)}
-                    sx={{ mr: 1, mb: 1 }}
-                  >
-                    {key.replace(/_/g, ' ').toLowerCase()}
-                  </Button>
-                ))}
-            </Box>
+          </Grid>
+          <Grid container spacing={2} sx={{ mb: 2 }}>
+            <Grid item xs={6}>
+              <TextField
+                margin="dense"
+                label="Сложность (1-10)"
+                type="number"
+                fullWidth
+                variant="outlined"
+                value={newMapDifficulty}
+                onChange={(e) => setNewMapDifficulty(Number(e.target.value))}
+                inputProps={{ min: 1, max: 10 }}
+              />
+            </Grid>
+            <Grid item xs={6}>
+              <TextField
+                margin="dense"
+                label="Макс. игроков (1-8)"
+                type="number"
+                fullWidth
+                variant="outlined"
+                value={newMapMaxPlayers}
+                onChange={(e) => setNewMapMaxPlayers(Number(e.target.value))}
+                inputProps={{ min: 1, max: 8 }}
+              />
+            </Grid>
+          </Grid>
 
-            {/* Interactive Grid Editor */}
-            <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Редактирование сетки карты:</Typography>
-            <Box
-              sx={{
-                display: 'grid',
-                gridTemplateColumns: `repeat(${newMapWidth}, 20px)`,
-                gap: '1px',
-                border: '1px solid #ccc',
-                width: newMapWidth * 20 + newMapWidth - 1,
-                height: newMapHeight * 20 + newMapHeight - 1,
-                margin: '0 auto',
-                cursor: isDrawing ? 'grabbing' : 'grab',
-              }}
-              onMouseLeave={handleMouseUp} // Stop drawing if mouse leaves grid
-            >
-              {currentGrid.map((row, rowIndex) => (
-                row && row.map((cell, colIndex) => (
-                  <Box
-                    key={`${rowIndex}-${colIndex}`}
-                    sx={{
-                      width: '20px',
-                      height: '20px',
-                      backgroundColor: cellTypeColors[cell as CellType],
-                      border: '0.5px solid #ccc',
-                    }}
-                    onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
-                    onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
-                    onMouseUp={handleMouseUp}
-                  />
-                ))
-              ))}
-            </Box>
-
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenCreateDialog(false)}>Отмена</Button>
-            <Button onClick={handleCreateMap} variant="contained">Создать</Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Edit Map Template Dialog */}
-        <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} maxWidth="md" fullWidth>
-          <DialogTitle>Редактировать шаблон карты</DialogTitle>
-          <DialogContent>
-            {editMapError && <Alert severity="error" sx={{ mb: 2 }}>{editMapError}</Alert>}
-            {editingMap && (
-              <>
-                <TextField
-                  autoFocus
-                  margin="dense"
-                  label="Название карты"
-                  type="text"
-                  fullWidth
-                  variant="outlined"
-                  value={editMapName}
-                  onChange={(e) => setEditMapName(e.target.value)}
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  margin="dense"
-                  label="Описание карты"
-                  type="text"
-                  fullWidth
-                  multiline
-                  rows={3}
-                  variant="outlined"
-                  value={editMapDescription}
-                  onChange={(e) => setEditMapDescription(e.target.value)}
-                  sx={{ mb: 2 }}
-                />
-                <Grid container spacing={2} sx={{ mb: 2 }}>
-                  <Grid item xs={6}>
-                    <TextField
-                      margin="dense"
-                      label="Ширина"
-                      type="number"
-                      fullWidth
-                      variant="outlined"
-                      value={editMapWidth}
-                      onChange={(e) => setEditMapWidth(Number(e.target.value))}
-                      inputProps={{ min: 5, max: 50 }}
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      margin="dense"
-                      label="Высота"
-                      type="number"
-                      fullWidth
-                      variant="outlined"
-                      value={editMapHeight}
-                      onChange={(e) => setEditMapHeight(Number(e.target.value))}
-                      inputProps={{ min: 5, max: 50 }}
-                    />
-                  </Grid>
-                </Grid>
-                <Grid container spacing={2} sx={{ mb: 2 }}>
-                  <Grid item xs={6}>
-                    <TextField
-                      margin="dense"
-                      label="Сложность (1-10)"
-                      type="number"
-                      fullWidth
-                      variant="outlined"
-                      value={editMapDifficulty}
-                      onChange={(e) => setEditMapDifficulty(Number(e.target.value))}
-                      inputProps={{ min: 1, max: 10 }}
-                    />
-                  </Grid>
-                  <Grid item xs={6}>
-                    <TextField
-                      margin="dense"
-                      label="Макс. игроков (1-8)"
-                      type="number"
-                      fullWidth
-                      variant="outlined"
-                      value={editMapMaxPlayers}
-                      onChange={(e) => setEditMapMaxPlayers(Number(e.target.value))}
-                      inputProps={{ min: 1, max: 8 }}
-                    />
-                  </Grid>
-                </Grid>
-
-                {/* Cell Type Selector for Edit Dialog */}
-                <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Выберите тип ячейки для рисования:</Typography>
-                <Box sx={{ mb: 2 }}>
-                  {Object.entries(CellType)
-                    .filter(([key, value]) => typeof value === 'number')
-                    .map(([key, value]) => (
-                      <Button
-                        key={key}
-                        variant={selectedCellType === value ? "contained" : "outlined"}
-                        onClick={() => setSelectedCellType(value as CellType)}
-                        sx={{ mr: 1, mb: 1 }}
-                      >
-                        {key.replace(/_/g, ' ').toLowerCase()}
-                      </Button>
-                    ))}
-                </Box>
-
-                {/* Interactive Grid Editor for Edit Dialog */}
-                <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Редактирование сетки карты:</Typography>
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${editMapWidth}, 20px)`,
-                    gap: '1px',
-                    border: '1px solid #ccc',
-                    width: editMapWidth * 20 + editMapWidth - 1,
-                    height: editMapHeight * 20 + editMapHeight - 1,
-                    margin: '0 auto',
-                    cursor: isDrawing ? 'grabbing' : 'grab',
-                  }}
-                  onMouseLeave={handleMouseUp} // Stop drawing if mouse leaves grid
+          {/* Cell Type Selector */}
+          <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Выберите тип ячейки для рисования:</Typography>
+          <Box sx={{ mb: 2 }}>
+            {Object.entries(CellType)
+              .filter(([key, value]) => typeof value === 'number')
+              .map(([key, value]) => (
+                <Button
+                  key={key}
+                  variant={selectedCellType === value ? "contained" : "outlined"}
+                  onClick={() => setSelectedCellType(value as CellType)}
+                  sx={{ mr: 1, mb: 1 }}
                 >
-                  {currentGrid.map((row, rowIndex) => (
-                    row && row.map((cell, colIndex) => (
+                  {key.replace(/_/g, ' ').toLowerCase()}
+                </Button>
+              ))}
+          </Box>
+
+          {/* Interactive Grid Editor */}
+          <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Редактирование сетки карты:</Typography>
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: `repeat(${newMapWidth}, 20px)`,
+              gap: '1px',
+              border: '1px solid #ccc',
+              width: newMapWidth * 20 + newMapWidth - 1,
+              height: newMapHeight * 20 + newMapHeight - 1,
+              margin: '0 auto',
+              cursor: isDrawing ? 'grabbing' : 'grab',
+            }}
+            onMouseLeave={handleMouseUp} // Stop drawing if mouse leaves grid
+          >
+            {currentGrid.map((row, rowIndex) => (
+              row && row.map((cell, colIndex) => (
+                <Box
+                  key={`${rowIndex}-${colIndex}`}
+                  sx={{
+                    width: '20px',
+                    height: '20px',
+                    backgroundColor: cellTypeColors[cell as CellType],
+                    border: '0.5px solid #ccc',
+                  }}
+                  onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
+                  onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
+                  onMouseUp={handleMouseUp}
+                />
+              ))
+            ))}
+          </Box>
+
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenCreateDialog(false)}>Отмена</Button>
+          <Button onClick={handleCreateMap} variant="contained">Создать</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Map Template Dialog */}
+      <Dialog open={openEditDialog} onClose={() => setOpenEditDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Редактировать шаблон карты</DialogTitle>
+        <DialogContent>
+          {editMapError && <Alert severity="error" sx={{ mb: 2 }}>{editMapError}</Alert>}
+          {editingMap && (
+            <>
+              <TextField
+                autoFocus
+                margin="dense"
+                label="Название карты"
+                type="text"
+                fullWidth
+                variant="outlined"
+                value={editMapName}
+                onChange={(e) => setEditMapName(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+              <TextField
+                margin="dense"
+                label="Описание карты"
+                type="text"
+                fullWidth
+                multiline
+                rows={3}
+                variant="outlined"
+                value={editMapDescription}
+                onChange={(e) => setEditMapDescription(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={6}>
+                  <TextField
+                    margin="dense"
+                    label="Ширина"
+                    type="number"
+                    fullWidth
+                    variant="outlined"
+                    value={editMapWidth}
+                    onChange={(e) => setEditMapWidth(Number(e.target.value))}
+                    inputProps={{ min: 5, max: 50 }}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    margin="dense"
+                    label="Высота"
+                    type="number"
+                    fullWidth
+                    variant="outlined"
+                    value={editMapHeight}
+                    onChange={(e) => setEditMapHeight(Number(e.target.value))}
+                    inputProps={{ min: 5, max: 50 }}
+                  />
+                </Grid>
+              </Grid>
+              <Grid container spacing={2} sx={{ mb: 2 }}>
+                <Grid item xs={6}>
+                  <TextField
+                    margin="dense"
+                    label="Сложность (1-10)"
+                    type="number"
+                    fullWidth
+                    variant="outlined"
+                    value={editMapDifficulty}
+                    onChange={(e) => setEditMapDifficulty(Number(e.target.value))}
+                    inputProps={{ min: 1, max: 10 }}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    margin="dense"
+                    label="Макс. игроков (1-8)"
+                    type="number"
+                    fullWidth
+                    variant="outlined"
+                    value={editMapMaxPlayers}
+                    onChange={(e) => setEditMapMaxPlayers(Number(e.target.value))}
+                    inputProps={{ min: 1, max: 8 }}
+                  />
+                </Grid>
+              </Grid>
+
+              {/* Cell Type Selector for Edit Dialog */}
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Выберите тип ячейки для рисования:</Typography>
+              <Box sx={{ mb: 2 }}>
+                {Object.entries(CellType)
+                  .filter(([key, value]) => typeof value === 'number')
+                  .map(([key, value]) => (
+                    <Button
+                      key={key}
+                      variant={selectedCellType === value ? "contained" : "outlined"}
+                      onClick={() => setSelectedCellType(value as CellType)}
+                      sx={{ mr: 1, mb: 1 }}
+                    >
+                      {key.replace(/_/g, ' ').toLowerCase()}
+                    </Button>
+                  ))}
+              </Box>
+
+              {/* Interactive Grid Editor for Edit Dialog */}
+              <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Редактирование сетки карты:</Typography>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${editMapWidth}, 20px)`,
+                  gap: '1px',
+                  border: '1px solid #ccc',
+                  width: editMapWidth * 20 + editMapWidth - 1,
+                  height: editMapHeight * 20 + editMapHeight - 1,
+                  margin: '0 auto',
+                  cursor: isDrawing ? 'grabbing' : 'grab',
+                }}
+                onMouseLeave={handleMouseUp} // Stop drawing if mouse leaves grid
+              >
+                {currentGrid.map((row, rowIndex) => (
+                  row && row.map((cell, colIndex) => (
+                    <Box
+                      key={`${rowIndex}-${colIndex}`}
+                      sx={{
+                        width: '20px',
+                        height: '20px',
+                        backgroundColor: cellTypeColors[cell as CellType],
+                        border: '0.5px solid #ccc',
+                      }}
+                      onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
+                      onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
+                      onMouseUp={handleMouseUp}
+                    />
+                  ))
+                ))}
+              </Box>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenEditDialog(false)}>Отмена</Button>
+          <Button onClick={handleSaveEditedMap} variant="contained">Сохранить</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* View Map Template Dialog */}
+      <Dialog open={openViewDialog} onClose={handleCloseViewDialog} maxWidth="md" fullWidth>
+        <DialogTitle>Просмотр шаблона карты: {selectedMap?.name}</DialogTitle>
+        <DialogContent>
+          {selectedMap && (
+            <>
+              <Typography variant="body1">Описание: {selectedMap.description || 'Нет описания'}</Typography>
+              <Typography variant="body1">Размеры: {selectedMap.width}x{selectedMap.height}</Typography>
+              <Typography variant="body1">Сложность: {selectedMap.difficulty}</Typography>
+              <Typography variant="body1">Макс. игроков: {selectedMap.max_players}</Typography>
+              <Typography variant="body1">Создан: {new Date(selectedMap.created_at).toLocaleString()}</Typography>
+
+              <Typography variant="h6" sx={{ mt: 2 }}>Предварительный просмотр сетки карты:</Typography>
+              <Box
+                sx={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${selectedMap.width}, 20px)`,
+                  gap: '1px',
+                  border: '1px solid #ccc',
+                  width: selectedMap.width * 20 + selectedMap.width - 1,
+                  height: selectedMap.height * 20 + selectedMap.height - 1,
+                  margin: '0 auto',
+                }}
+              >
+                {selectedMap.grid_data.map((row: number[], rowIndex: number) => (
+                  row.map((cell: number, colIndex: number) => {
+                    return (
                       <Box
                         key={`${rowIndex}-${colIndex}`}
                         sx={{
@@ -835,75 +884,47 @@ const MapEditor: React.FC = () => {
                           backgroundColor: cellTypeColors[cell as CellType],
                           border: '0.5px solid #ccc',
                         }}
-                        onMouseDown={() => handleMouseDown(rowIndex, colIndex)}
-                        onMouseEnter={() => handleMouseEnter(rowIndex, colIndex)}
-                        onMouseUp={handleMouseUp}
                       />
-                    ))
-                  ))}
-                </Box>
-              </>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenEditDialog(false)}>Отмена</Button>
-            <Button onClick={handleSaveEditedMap} variant="contained">Сохранить</Button>
-          </DialogActions>
-        </Dialog>
+                    );
+                  })
+                ))}
+              </Box>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseViewDialog}>Закрыть</Button>
+        </DialogActions>
+      </Dialog>
 
-        {/* View Map Template Dialog */}
-        <Dialog open={openViewDialog} onClose={handleCloseViewDialog} maxWidth="md" fullWidth>
-          <DialogTitle>Просмотр шаблона карты: {selectedMap?.name}</DialogTitle>
-          <DialogContent>
-            {selectedMap && (
-              <>
-                <Typography variant="body1">Описание: {selectedMap.description || 'Нет описания'}</Typography>
-                <Typography variant="body1">Размеры: {selectedMap.width}x{selectedMap.height}</Typography>
-                <Typography variant="body1">Сложность: {selectedMap.difficulty}</Typography>
-                <Typography variant="body1">Макс. игроков: {selectedMap.max_players}</Typography>
-                <Typography variant="body1">Создан: {new Date(selectedMap.created_at).toLocaleString()}</Typography>
-                
-                <Typography variant="h6" sx={{ mt: 2 }}>Предварительный просмотр сетки карты:</Typography>
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gridTemplateColumns: `repeat(${selectedMap.width}, 20px)`,
-                    gap: '1px',
-                    border: '1px solid #ccc',
-                    width: selectedMap.width * 20 + selectedMap.width - 1,
-                    height: selectedMap.height * 20 + selectedMap.height - 1,
-                    margin: '0 auto',
-                  }}
-                >
-                  {selectedMap.grid_data.map((row: number[], rowIndex: number) => (
-                    row.map((cell: number, colIndex: number) => {
-                      return (
-                        <Box
-                          key={`${rowIndex}-${colIndex}`}
-                          sx={{
-                            width: '20px',
-                            height: '20px',
-                            backgroundColor: cellTypeColors[cell as CellType],
-                            border: '0.5px solid #ccc',
-                          }}
-                        />
-                      );
-                    })
-                  ))}
-                </Box>
-              </>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={handleCloseViewDialog}>Закрыть</Button>
-          </DialogActions>
-        </Dialog>
+      {/* Create Map Group Dialog */}
+      <Dialog open={openCreateGroupDialog} onClose={() => setOpenCreateGroupDialog(false)}>
+        <DialogTitle>Создать новую группу карт</DialogTitle>
+        <DialogContent>
+          {createGroupError && <Alert severity="error" sx={{ mb: 2 }}>{createGroupError}</Alert>}
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Название группы"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newGroupName}
+            onChange={(e) => setNewGroupName(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenCreateGroupDialog(false)}>Отмена</Button>
+          <Button onClick={handleCreateGroup} variant="contained">Создать</Button>
+        </DialogActions>
+      </Dialog>
 
-        {/* Create Map Group Dialog */}
-        <Dialog open={openCreateGroupDialog} onClose={() => setOpenCreateGroupDialog(false)}>
-          <DialogTitle>Создать новую группу карт</DialogTitle>
-          <DialogContent>
-            {createGroupError && <Alert severity="error" sx={{ mb: 2 }}>{createGroupError}</Alert>}
+      {/* Edit Map Group Dialog */}
+      <Dialog open={openEditGroupDialog} onClose={() => setOpenEditGroupDialog(false)}>
+        <DialogTitle>Редактировать группу карт: {editingGroup?.name}</DialogTitle>
+        <DialogContent>
+          {editGroupError && <Alert severity="error" sx={{ mb: 2 }}>{editGroupError}</Alert>}
+          {editingGroup && (
             <TextField
               autoFocus
               margin="dense"
@@ -911,143 +932,119 @@ const MapEditor: React.FC = () => {
               type="text"
               fullWidth
               variant="outlined"
-              value={newGroupName}
-              onChange={(e) => setNewGroupName(e.target.value)}
+              value={editGroupName}
+              onChange={(e) => setEditGroupName(e.target.value)}
             />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenCreateGroupDialog(false)}>Отмена</Button>
-            <Button onClick={handleCreateGroup} variant="contained">Создать</Button>
-          </DialogActions>
-        </Dialog>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenEditGroupDialog(false)}>Отмена</Button>
+          <Button onClick={handleSaveEditedGroup} variant="contained">Сохранить</Button>
+        </DialogActions>
+      </Dialog>
 
-        {/* Edit Map Group Dialog */}
-        <Dialog open={openEditGroupDialog} onClose={() => setOpenEditGroupDialog(false)}>
-          <DialogTitle>Редактировать группу карт: {editingGroup?.name}</DialogTitle>
-          <DialogContent>
-            {editGroupError && <Alert severity="error" sx={{ mb: 2 }}>{editGroupError}</Alert>}
-            {editingGroup && (
+      {/* Create Map Chain Dialog */}
+      <Dialog open={openCreateChainDialog} onClose={() => setOpenCreateChainDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Создать новую цепочку карт</DialogTitle>
+        <DialogContent>
+          {createChainError && <Alert severity="error" sx={{ mb: 2 }}>{createChainError}</Alert>}
+          <TextField
+            autoFocus
+            margin="dense"
+            label="Название цепочки"
+            type="text"
+            fullWidth
+            variant="outlined"
+            value={newChainName}
+            onChange={(e) => setNewChainName(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            margin="dense"
+            label="Описание цепочки"
+            type="text"
+            fullWidth
+            multiline
+            rows={3}
+            variant="outlined"
+            value={newChainDescription}
+            onChange={(e) => setNewChainDescription(e.target.value)}
+            sx={{ mb: 2 }}
+          />
+          <Autocomplete
+            multiple
+            id="map-templates-for-chain"
+            options={mapTemplates}
+            getOptionLabel={(option) => option.name}
+            value={mapTemplates.filter(template => newChainMapTemplates.includes(template.id))}
+            onChange={(event, newValue) => {
+              setNewChainMapTemplates(newValue.map(template => template.id));
+            }}
+            renderInput={(params) => (
+              <TextField {...params} variant="outlined" label="Выберите шаблоны карт" placeholder="Шаблоны карт" />
+            )}
+            sx={{ mb: 2 }}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenCreateChainDialog(false)}>Отмена</Button>
+          <Button onClick={handleCreateChain} variant="contained">Создать</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Map Chain Dialog */}
+      <Dialog open={openEditChainDialog} onClose={() => setOpenEditChainDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Редактировать цепочку карт: {editingChain?.name}</DialogTitle>
+        <DialogContent>
+          {editChainError && <Alert severity="error" sx={{ mb: 2 }}>{editChainError}</Alert>}
+          {editingChain && (
+            <>
               <TextField
                 autoFocus
                 margin="dense"
-                label="Название группы"
+                label="Название цепочки"
                 type="text"
                 fullWidth
                 variant="outlined"
-                value={editGroupName}
-                onChange={(e) => setEditGroupName(e.target.value)}
+                value={editChainName}
+                onChange={(e) => setEditChainName(e.target.value)}
+                sx={{ mb: 2 }}
               />
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenEditGroupDialog(false)}>Отмена</Button>
-            <Button onClick={handleSaveEditedGroup} variant="contained">Сохранить</Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Create Map Chain Dialog */}
-        <Dialog open={openCreateChainDialog} onClose={() => setOpenCreateChainDialog(false)} maxWidth="md" fullWidth>
-          <DialogTitle>Создать новую цепочку карт</DialogTitle>
-          <DialogContent>
-            {createChainError && <Alert severity="error" sx={{ mb: 2 }}>{createChainError}</Alert>}
-            <TextField
-              autoFocus
-              margin="dense"
-              label="Название цепочки"
-              type="text"
-              fullWidth
-              variant="outlined"
-              value={newChainName}
-              onChange={(e) => setNewChainName(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <TextField
-              margin="dense"
-              label="Описание цепочки"
-              type="text"
-              fullWidth
-              multiline
-              rows={3}
-              variant="outlined"
-              value={newChainDescription}
-              onChange={(e) => setNewChainDescription(e.target.value)}
-              sx={{ mb: 2 }}
-            />
-            <Autocomplete
-              multiple
-              id="map-templates-for-chain"
-              options={mapTemplates}
-              getOptionLabel={(option) => option.name}
-              value={mapTemplates.filter(template => newChainMapTemplates.includes(template.id))}
-              onChange={(event, newValue) => {
-                setNewChainMapTemplates(newValue.map(template => template.id));
-              }}
-              renderInput={(params) => (
-                <TextField {...params} variant="outlined" label="Выберите шаблоны карт" placeholder="Шаблоны карт" />
-              )}
-              sx={{ mb: 2 }}
-            />
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenCreateChainDialog(false)}>Отмена</Button>
-            <Button onClick={handleCreateChain} variant="contained">Создать</Button>
-          </DialogActions>
-        </Dialog>
-
-        {/* Edit Map Chain Dialog */}
-        <Dialog open={openEditChainDialog} onClose={() => setOpenEditChainDialog(false)} maxWidth="md" fullWidth>
-          <DialogTitle>Редактировать цепочку карт: {editingChain?.name}</DialogTitle>
-          <DialogContent>
-            {editChainError && <Alert severity="error" sx={{ mb: 2 }}>{editChainError}</Alert>}
-            {editingChain && (
-              <>
-                <TextField
-                  autoFocus
-                  margin="dense"
-                  label="Название цепочки"
-                  type="text"
-                  fullWidth
-                  variant="outlined"
-                  value={editChainName}
-                  onChange={(e) => setEditChainName(e.target.value)}
-                  sx={{ mb: 2 }}
-                />
-                <TextField
-                  margin="dense"
-                  label="Описание цепочки"
-                  type="text"
-                  fullWidth
-                  multiline
-                  rows={3}
-                  variant="outlined"
-                  value={editChainDescription}
-                  onChange={(e) => setEditChainDescription(e.target.value)}
-                  sx={{ mb: 2 }}
-                />
-                <Autocomplete
-                  multiple
-                  id="edit-map-templates-for-chain"
-                  options={mapTemplates}
-                  getOptionLabel={(option) => option.name}
-                  value={mapTemplates.filter(template => editChainMapTemplates.includes(template.id))}
-                  onChange={(event, newValue) => {
-                    setEditChainMapTemplates(newValue.map(template => template.id));
-                  }}
-                  renderInput={(params) => (
-                    <TextField {...params} variant="outlined" label="Выберите шаблоны карт" placeholder="Шаблоны карт" />
-                  )}
-                  sx={{ mb: 2 }}
-                />
-              </>
-            )}
-          </DialogContent>
-          <DialogActions>
-            <Button onClick={() => setOpenEditChainDialog(false)}>Отмена</Button>
-            <Button onClick={handleSaveEditedChain} variant="contained">Сохранить</Button>
-          </DialogActions>
-        </Dialog>
-      </Box>
-    </GameLayout>
+              <TextField
+                margin="dense"
+                label="Описание цепочки"
+                type="text"
+                fullWidth
+                multiline
+                rows={3}
+                variant="outlined"
+                value={editChainDescription}
+                onChange={(e) => setEditChainDescription(e.target.value)}
+                sx={{ mb: 2 }}
+              />
+              <Autocomplete
+                multiple
+                id="edit-map-templates-for-chain"
+                options={mapTemplates}
+                getOptionLabel={(option) => option.name}
+                value={mapTemplates.filter(template => editChainMapTemplates.includes(template.id))}
+                onChange={(event, newValue) => {
+                  setEditChainMapTemplates(newValue.map(template => template.id));
+                }}
+                renderInput={(params) => (
+                  <TextField {...params} variant="outlined" label="Выберите шаблоны карт" placeholder="Шаблоны карт" />
+                )}
+                sx={{ mb: 2 }}
+              />
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenEditChainDialog(false)}>Отмена</Button>
+          <Button onClick={handleSaveEditedChain} variant="contained">Сохранить</Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
 };
 

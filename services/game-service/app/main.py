@@ -88,6 +88,8 @@ try:
         docs_url=settings.SWAGGER_URL,
         openapi_url=f"{settings.SWAGGER_URL}/openapi.json",
         debug=settings.DEBUG,
+        reload=settings.RELOAD,
+        log_level=settings.LOG_LEVEL.lower(),
         lifespan=lifespan
     )
     

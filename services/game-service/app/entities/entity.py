@@ -85,7 +85,11 @@ class Entity:
             change_direction_interval: float = 1.0 + random.random() * 2.0
             if self.move_timer >= change_direction_interval:
                 # Choose one of four cardinal directions
-                choices = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+                # choices = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+                choices = self.map.get_available_direction(
+                    x=round(self.x / self.settings.cell_size),
+                    y=round(self.y / self.settings.cell_size)
+                )
                 direction = random.choice(choices)
                 self.direction = direction
                 self.move_timer = 0
@@ -123,11 +127,11 @@ class Entity:
         dx: float = dx * self.speed
         dy: float = dy * self.speed
 
-        # Нормализация диагонального движения
-        if dx != 0 and dy != 0:
-            normalize: float = 1 / math.sqrt(2)
-            dx *= normalize
-            dy *= normalize
+        # # Нормализация диагонального движения
+        # if dx != 0 and dy != 0:
+        #     normalize: float = 1 / math.sqrt(2)
+        #     dx *= normalize
+        #     dy *= normalize
 
         # Применяем delta time
         dx *= delta_time * 60
@@ -141,11 +145,11 @@ class Entity:
             #TODO доработать проверку коллизий со стенами в методе получения направления,
             # чтобы сразу отсечь невозможные направления и вернуть только то что возможно
             if not self.check_collision(
-                    x=new_x,
-                    y=new_y,
+                    new_x=new_x,
+                    new_y=new_y,
             ):
-                self.x = new_x
-                self.y = new_y
+                self.x = new_x#round(new_x / self.settings.cell_size) * self.settings.cell_size
+                self.y = new_y#round(new_y / self.settings.cell_size) * self.settings.cell_size
                 return True
         return False
 
@@ -170,16 +174,16 @@ class Entity:
 
     def check_collision(
             self,
-            x: float,
-            y: float,
+            new_x: float,
+            new_y: float,
     ) -> bool:
         """Проверить коллизию сущности"""
         try:
             # Вычисляем клетки сетки, с которыми пересекается сущность
-            grid_left: int = int(x / self.settings.cell_size)
-            grid_right: int = int((x + self.width) / self.settings.cell_size)
-            grid_top: int = int(y / self.settings.cell_size)
-            grid_bottom: int = int((y + self.height) / self.settings.cell_size)
+            grid_left: int = int(new_x / self.settings.cell_size)
+            grid_right: int = int((new_x + self.width) / self.settings.cell_size)
+            grid_top: int = int(new_y / self.settings.cell_size)
+            grid_bottom: int = int((new_y + self.height) / self.settings.cell_size)
 
             # Check all corners in the map
             if (self.map.is_solid(grid_left, grid_top) or
@@ -188,6 +192,12 @@ class Entity:
                     self.map.is_solid(grid_right, grid_bottom)):
                 return True
             return False
+
+            # x_grid = round(new_x / self.settings.cell_size)
+            # y_grid = round(new_y / self.settings.cell_size)
+            # if self.map.is_solid(x_grid, y_grid):
+            #     return True
+            # return False
 
         except Exception as e:
             logger.error(f"Error updating entity {self.id} ({self.name}): {e}", exc_info=True)

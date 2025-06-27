@@ -12,7 +12,7 @@ import {
   TextField,
   Typography
 } from '@mui/material';
-import GameLayout from '../components/GameLayout';
+import Layout from '../components/Layout';
 import {gameApi, webApi} from '../services/api';
 import {Field, Form, Formik} from 'formik';
 import * as Yup from 'yup';
@@ -69,7 +69,6 @@ const CreateGame: React.FC = () => {
       const response = await webApi.post('/games', values);
       if (response.data && response.data.game_id) {
         setSuccess('Игра успешно создана!');
-        // Redirect to the actual game page to join it
         navigate(`/account/game/${response.data.game_id}?openSettings=true`);
       } else {
         setError(response.data?.message || 'Не удалось создать игру.');
@@ -84,109 +83,105 @@ const CreateGame: React.FC = () => {
 
   if (loading && (!entitiesInfo || mapTemplates.length === 0)) {
     return (
-      <GameLayout>
-        <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-          <CircularProgress />
-          <Typography variant="body1" sx={{ ml: 2 }}>Загрузка данных...</Typography>
-        </Box>
-      </GameLayout>
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+        <CircularProgress />
+        <Typography variant="body1" sx={{ ml: 2 }}>Загрузка данных...</Typography>
+      </Box>
     );
   }
 
   return (
-    <GameLayout>
-      <Box sx={{ maxWidth: 600, mx: 'auto', p: 3, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 3 }}>
-        <Typography component="h1" variant="h4" align="center" gutterBottom>
-          Создать новую игру
-        </Typography>
-        
-        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
+    <Box sx={{ maxWidth: 600, mx: 'auto', p: 3, bgcolor: 'background.paper', borderRadius: 2, boxShadow: 3 }}>
+      <Typography component="h1" variant="h4" align="center" gutterBottom>
+        Создать новую игру
+      </Typography>
 
-        <Formik
-          initialValues={{
-            game_mode: GameModeType.CAMPAIGN,
-            max_players: 4,
-            map_template_id: '',
-          }}
-          validationSchema={validationSchema}
-          onSubmit={handleSubmit}
-        >
-          {({ errors, touched, values, handleChange }) => (
-            <Form>
-              <FormControl fullWidth margin="normal" error={touched.game_mode && Boolean(errors.game_mode)}>
-                <InputLabel id="game-mode-label">Режим игры</InputLabel>
-                <Field
-                  as={Select}
-                  labelId="game-mode-label"
-                  id="game_mode"
-                  name="game_mode"
-                  label="Режим игры"
-                  value={values.game_mode}
-                  onChange={handleChange}
-                >
-                  {entitiesInfo?.game_modes &&
-                    (Object.keys(entitiesInfo.game_modes) as Array<keyof typeof entitiesInfo.game_modes>).map((mode) => (
-                      <MenuItem key={mode} value={entitiesInfo.game_modes[mode]}>
-                        {entitiesInfo.game_modes[mode]}
-                      </MenuItem>
-                  ))}
-                </Field>
-                {touched.game_mode && errors.game_mode && (
-                  <Typography variant="caption" color="error">{errors.game_mode}</Typography>
-                )}
-              </FormControl>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
 
+      <Formik
+        initialValues={{
+          game_mode: GameModeType.CAMPAIGN,
+          max_players: 4,
+          map_template_id: '',
+        }}
+        validationSchema={validationSchema}
+        onSubmit={handleSubmit}
+      >
+        {({ errors, touched, values, handleChange }) => (
+          <Form>
+            <FormControl fullWidth margin="normal" error={touched.game_mode && Boolean(errors.game_mode)}>
+              <InputLabel id="game-mode-label">Режим игры</InputLabel>
               <Field
-                as={TextField}
-                name="max_players"
-                label="Максимум игроков"
-                type="number"
-                variant="outlined"
-                fullWidth
-                margin="normal"
-                error={touched.max_players && Boolean(errors.max_players)}
-                helperText={touched.max_players && errors.max_players}
-              />
-              
-              <FormControl fullWidth margin="normal" error={touched.map_template_id && Boolean(errors.map_template_id)}>
-                <InputLabel id="map-template-label">Шаблон карты (опционально)</InputLabel>
-                <Field
-                  as={Select}
-                  labelId="map-template-label"
-                  id="map_template_id"
-                  name="map_template_id"
-                  label="Шаблон карты (опционально)"
-                  value={values.map_template_id}
-                  onChange={handleChange}
-                >
-                  <MenuItem value=""><em>Без выбора</em></MenuItem>
-                  {mapTemplates.map((map) => (
-                    <MenuItem key={map.id} value={map.id}>
-                      {map.name}
-                    </MenuItem>
-                  ))}
-                </Field>
-                {touched.map_template_id && errors.map_template_id && (
-                  <Typography variant="caption" color="error">{errors.map_template_id}</Typography>
-                )}
-              </FormControl>
-
-              <Button
-                type="submit"
-                fullWidth
-                variant="contained"
-                color="primary"
-                disabled={loading}
-                sx={{ mt: 3, mb: 2 }}
+                as={Select}
+                labelId="game-mode-label"
+                id="game_mode"
+                name="game_mode"
+                label="Режим игры"
+                value={values.game_mode}
+                onChange={handleChange}
               >
-                {loading ? <CircularProgress size={24} /> : 'Создать игру'}
-              </Button>
-            </Form>
-          )}
-        </Formik>
-      </Box>
-    </GameLayout>
+                {entitiesInfo?.game_modes &&
+                  (Object.keys(entitiesInfo.game_modes) as Array<keyof typeof entitiesInfo.game_modes>).map((mode) => (
+                    <MenuItem key={mode} value={entitiesInfo.game_modes[mode]}>
+                      {entitiesInfo.game_modes[mode]}
+                    </MenuItem>
+                ))}
+              </Field>
+              {touched.game_mode && errors.game_mode && (
+                <Typography variant="caption" color="error">{errors.game_mode}</Typography>
+              )}
+            </FormControl>
+
+            <Field
+              as={TextField}
+              name="max_players"
+              label="Максимум игроков"
+              type="number"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              error={touched.max_players && Boolean(errors.max_players)}
+              helperText={touched.max_players && errors.max_players}
+            />
+
+            <FormControl fullWidth margin="normal" error={touched.map_template_id && Boolean(errors.map_template_id)}>
+              <InputLabel id="map-template-label">Шаблон карты (опционально)</InputLabel>
+              <Field
+                as={Select}
+                labelId="map-template-label"
+                id="map_template_id"
+                name="map_template_id"
+                label="Шаблон карты (опционально)"
+                value={values.map_template_id}
+                onChange={handleChange}
+              >
+                <MenuItem value=""><em>Без выбора</em></MenuItem>
+                {mapTemplates.map((map) => (
+                  <MenuItem key={map.id} value={map.id}>
+                    {map.name}
+                  </MenuItem>
+                ))}
+              </Field>
+              {touched.map_template_id && errors.map_template_id && (
+                <Typography variant="caption" color="error">{errors.map_template_id}</Typography>
+              )}
+            </FormControl>
+
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="primary"
+              disabled={loading}
+              sx={{ mt: 3, mb: 2 }}
+            >
+              {loading ? <CircularProgress size={24} /> : 'Создать игру'}
+            </Button>
+          </Form>
+        )}
+      </Formik>
+    </Box>
   );
 };
 

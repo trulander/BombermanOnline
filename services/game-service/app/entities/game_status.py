@@ -3,7 +3,7 @@ from enum import Enum
 
 class GameStatus(Enum):
     """Статусы игры"""
-    PENDING = "pending"        # Ожидание игроков
-    ACTIVE = "active"          # Активная игра
-    PAUSED = "paused"          # Приостановлена
-    FINISHED = "finished"      # Завершена 
+    PENDING = "PENDING"        # Ожидание игроков
+    ACTIVE = "ACTIVE"          # Активная игра
+    PAUSED = "PAUSED"          # Приостановлена
+    FINISHED = "FINISHED"      # Завершена

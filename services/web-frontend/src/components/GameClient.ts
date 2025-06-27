@@ -460,8 +460,6 @@ export class GameClient {
 
     private startGameLoop(): void {
         const gameLoop = () => {
-            logger.info('startGameLoop status:', {"state": this.gameState});
-
 
             // Отправляем входные данные на сервер, если мы в игре
             if (this.gameId && this.playerId) {
@@ -478,10 +476,10 @@ export class GameClient {
         // Проверяем время последнего обновления
         const currentTime = performance.now();
         const timeSinceLastUpdate = currentTime - this.lastUpdateTime;
-        console.info("тик update")
+
         //Если на паузе, пропускаем игровой цикл
         if (this.gameState?.status != GameStatus.ACTIVE){
-            logger.info('startGameLoop status != GameStatus.ACTIVE пропускаем');
+            logger.debug('startGameLoop status != GameStatus.ACTIVE пропускаем');
             return
         }
         

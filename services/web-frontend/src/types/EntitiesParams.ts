@@ -1,11 +1,13 @@
+import {EnemyType, PowerUpType, UnitType, WeaponType} from "./Game";
+
 export interface EntitiesInfo {
   cell_types: CellTypes;
   game_modes: GameModes;
   game_statuses: GameStatuses;
-  enemy_types: Record<string, EntityInfo>;
-  power_up_types: Record<string, EntityInfo>;
-  player_units: Record<string, UnitInfo>;
-  weapon_types: Record<string, EntityInfo>;
+  enemy_types: Record<EnemyType, EntityInfo>;
+  power_up_types: Record<PowerUpType, EntityInfo>;
+  player_units: Record<UnitType, UnitInfo>;
+  weapon_types: Record<WeaponType, EntityInfo>;
 }
 
 export interface CellTypes {

@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 class UnitType(Enum):
     """Типы игровых юнитов"""
-    BOMBERMAN = "bomberman"  # Классический бомбермен
-    TANK = "tank"           # Танк с пулями
+    BOMBERMAN = "BOMBERMAN"  # Классический бомбермен
+    TANK = "TANK"           # Танк с пулями
 
 class PlayerUpdate(TypedDict):
     player_id: str

@@ -15,9 +15,9 @@ logger = logging.getLogger(__name__)
 
 
 class WeaponType(Enum):
-    BOMB = "bomb"
-    BULLET = "bullet"
-    MINE = "mine"
+    BOMB = "BOMB"
+    BULLET = "BULLET"
+    MINE = "MINE"
 
 class WeaponAction(Enum):
     PLACEWEAPON1 = "PLACEWEAPON1"

@@ -330,7 +330,7 @@ export class Renderer {
                         break;
                     default:
                         this.ctx.fillStyle = "#FF00FF"; // Magenta для неизвестного типа
-                        logger.warn(`Неизвестный тип ячейки`, {
+                        logger.debug(`Неизвестный тип ячейки`, {
                             cellType,
                             x,
                             y
@@ -475,8 +475,8 @@ export class Renderer {
                     // Bomb pulsating effect
                     const time = performance.now() / 1000;
                     const scale = 0.8 + Math.sin(time * 5) * 0.1;
-                    const size = width * scale;
-                    const offset = (width - size) / 2;
+                    const size = (width + height) / 2;
+                    const offset = (this.cellSize - size) / 2;
 
                     // Draw bomb with smooth movement
                     const renderX = this.getRelativeX(weapon.x) + offsetDiffX;
@@ -485,8 +485,8 @@ export class Renderer {
                     this.ctx.fillStyle = "#333";
                     this.ctx.beginPath();
                     this.ctx.arc(
-                        renderX + width / 2,
-                        renderY + height / 2,
+                        renderX + this.cellSize / 2,
+                        renderY + this.cellSize / 2,
                         size / 2,
                         0,
                         Math.PI * 2
@@ -497,8 +497,8 @@ export class Renderer {
                     this.ctx.strokeStyle = "#999";
                     this.ctx.lineWidth = 2;
                     this.ctx.beginPath();
-                    this.ctx.moveTo(renderX + width / 2, renderY + offset);
-                    this.ctx.lineTo(renderX + width / 2, renderY - 5);
+                    this.ctx.moveTo(renderX + this.cellSize / 2, renderY + offset);
+                    this.ctx.lineTo(renderX + this.cellSize / 2, renderY - 5);
                     this.ctx.stroke();
                 } else {
                     // Draw explosion with smooth movement
@@ -535,8 +535,8 @@ export class Renderer {
                 this.ctx.fillStyle = "#8B0000"; // Dark red for bullets
                 this.ctx.beginPath();
                 this.ctx.arc(
-                    renderX + width / 2,
-                    renderY + height / 2,
+                    renderX + this.cellSize / 2,
+                    renderY + this.cellSize / 2,
                     width / 2,
                     0,
                     Math.PI * 2
@@ -591,8 +591,8 @@ export class Renderer {
             
             const x = enemy.x;
             const y = enemy.y;
-            const centerX = renderX + width / 2;
-            const centerY = renderY + height / 2;
+            const centerX = renderX + this.cellSize / 2;
+            const centerY = renderY + this.cellSize / 2;
 
             // Draw based on type
             switch (enemy.type as EnemyType) {
