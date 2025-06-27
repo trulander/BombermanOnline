@@ -76,7 +76,7 @@ class Map:
         except Exception as e:
             logger.error(f"Error setting cell type at ({x}, {y}): {e}", exc_info=True)
 
-    def get_available_direction(self, x, y) -> list[tuple[int, int]]:
+    def get_available_direction(self, x: int, y: int) -> list[tuple[int, int]]:
         # offsets = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)] # полная сетка с диагональными перемещениями
         offsets = [(-1, 0), (0, -1), (0, 1), (1, 0)]# только верх низ право лево
         neighbors = [(dx, dy) for dx, dy in offsets

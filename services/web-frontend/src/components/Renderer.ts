@@ -437,8 +437,8 @@ export class Renderer {
 
             this.ctx.beginPath();
             this.ctx.arc(
-                renderX + width / 2,
-                renderY + height / 2,
+                renderX + this.cellSize / 2,
+                renderY + this.cellSize / 2,
                 width / 2,
                 0,
                 Math.PI * 2
@@ -588,9 +588,7 @@ export class Renderer {
             // Apply smooth movement
             const renderX = this.getRelativeX(enemy.x) + offsetDiffX;
             const renderY = this.getRelativeY(enemy.y) + offsetDiffY;
-            
-            const x = enemy.x;
-            const y = enemy.y;
+
             const centerX = renderX + this.cellSize / 2;
             const centerY = renderY + this.cellSize / 2;
 

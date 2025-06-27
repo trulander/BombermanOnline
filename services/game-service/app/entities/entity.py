@@ -144,13 +144,33 @@ class Entity:
             new_y: float = self.y + dy
             #TODO доработать проверку коллизий со стенами в методе получения направления,
             # чтобы сразу отсечь невозможные направления и вернуть только то что возможно
-            if not self.check_collision(
-                    new_x=new_x,
-                    new_y=new_y,
-            ):
-                self.x = new_x#round(new_x / self.settings.cell_size) * self.settings.cell_size
-                self.y = new_y#round(new_y / self.settings.cell_size) * self.settings.cell_size
-                return True
+            # Move with collision detection (X axis)
+            collision_x = self.check_collision(new_x, self.y)
+            if not collision_x:
+                self.x = new_x
+
+            # Move with collision detection (Y axis)
+            collision_y = self.check_collision(self.x, new_y)
+            if not collision_y:
+                self.y = new_y
+
+            # If collision occurred, change direction
+            if collision_x or collision_y:
+                self.move_timer = 10
+                self.direction = self.get_direction(delta_time=delta_time)
+            return True
+
+
+            # if not self.check_collision(
+            #         new_x=new_x,
+            #         new_y=new_y,
+            # ):
+            #     self.x = new_x#round(new_x / self.settings.cell_size) * self.settings.cell_size
+            #     self.y = new_y#round(new_y / self.settings.cell_size) * self.settings.cell_size
+            #     return True
+            # else:
+            #     self.move_timer = 10
+            #     self.get_direction(delta_time=delta_time)
         return False
 
 
