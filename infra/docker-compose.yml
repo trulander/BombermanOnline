@@ -147,6 +147,34 @@ services:
         fluentd-address: localhost:24224
         tag: docker.auth-service
 
+  ai-service:
+    build:
+      context: ../services/ai-service
+      dockerfile: Dockerfile
+    volumes:
+      - ../services/ai-service/app:/app/app
+      - ../infra/ai_models:/app/ai_models
+      - ../infra/ai_logs:/app/ai_logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_HOST=redis
+      - NATS_URL=nats://nats:4222
+      - CONSUL_HOST=consul
+      - LOG_LEVEL=DEBUG
+      - LOG_FORMAT=json
+      - MODELS_PATH=/app/ai_models
+      - LOGS_PATH=/app/ai_logs
+    ports:
+      - "5004:5004"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ai.rule=Host(`ai.localhost`)"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.ai-service
+
   web-frontend:
     build:
       context: ../services/web-frontend
@@ -167,6 +195,19 @@ services:
       - AUTH_URL=/auth
     labels:
       - "traefik.enable=true"
+
+  tensorboard:
+    image: tensorflow/tensorboard:latest
+    volumes:
+      - ../infra/ai_logs:/tf/logs
+    ports:
+      - "6006:6006"
+    command: tensorboard --logdir=/tf/logs --host 0.0.0.0 --port 6006
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.tensorboard
 
   postgres:
     image: postgres:15-alpine
@@ -355,3 +396,5 @@ volumes:
   game_logs:
   auth_logs:
   consul_data:
+  ai_models:
+  ai_logs:
