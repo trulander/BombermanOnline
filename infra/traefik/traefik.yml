@@ -1,0 +1,44 @@
+api:
+  insecure: true
+  dashboard: true
+
+entryPoints:
+  web:
+    address: ":80"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: bombermanonline-infra_default
+  file:
+    directory: "/etc/traefik"
+#    watch: true
+  consulCatalog:
+    endpoint:
+      address: "consul:8500"
+    exposedByDefault: true
+
+#    connectByDefault: true
+#    prefix: "traefik.enable=true"
+
+
+log:
+  level: INFO
+
+pilot:
+  enabled: false
+
+accessLog:
+  filePath: "/var/log/traefik/access.log"
+
+#experimental:
+#  plugins:
+#    extractCookie:
+#      moduleName: "github.com/v-electrolux/extractcookie"
+#      version: "v1.0.1"
+
+experimental:
+  localPlugins:
+    extractCookie:
+      moduleName: extractcookie

@@ -1,0 +1,132 @@
+http:
+  routers:
+    # отключаем авторизацию для страниц документаций, для локальной разработки.
+    auth-api_docs:
+      rule: "PathPrefix(`/auth/docs`)"
+      entryPoints:
+        - web
+      service: auth-service@consulcatalog
+      middlewares:
+        - compress
+        - security-headers
+
+    webapi-docs:
+      rule: "PathPrefix(`/webapi/docs`)"
+      entryPoints:
+        - web
+      service: webapi-service@consulcatalog
+      middlewares:
+        - compress
+        - security-headers
+
+    # Game сервис - с проверкой авторизации
+    game-docs:
+      rule: "PathPrefix(`/games/docs`)"
+      entryPoints:
+        - web
+      service: game-service@consulcatalog
+      middlewares:
+        - compress
+        - security-headers
+
+
+    # Auth сервис - API
+    auth-api:
+      rule: "PathPrefix(`/auth`)"
+      entryPoints:
+        - web
+      service: auth-service@consulcatalog
+      middlewares:
+        - compress
+        - security-headers
+
+
+    # WebAPI сервис - с проверкой авторизации
+    webapi:
+      rule: "PathPrefix(`/webapi`)"
+      entryPoints:
+        - web
+      service: webapi-service@consulcatalog
+      middlewares:
+        - compress
+        - security-headers
+        - auth-check
+
+    # WebAPI WebSocket
+    webapi-ws:
+      rule: "PathPrefix(`/webapi/socket.io`)"
+      entryPoints:
+        - web
+      service: webapi-service@consulcatalog
+      middlewares:
+        - extract-cookie-ws_auth_token
+        - websocket
+        - strip-webapi-prefix
+        - auth-check
+
+    # Game сервис - с проверкой авторизации
+    game:
+      rule: "PathPrefix(`/games`)"
+      entryPoints:
+        - web
+      service: game-service@consulcatalog
+      middlewares:
+        - compress
+        - security-headers
+        - auth-check
+
+    # Logger API
+    logger:
+      rule: "PathPrefix(`/logs`)"
+      entryPoints:
+        - web
+      service: logger
+      middlewares:
+        - strip-logs-prefix
+
+    # Web Frontend - для авторизованных пользователей
+    frontend:
+      rule: "PathPrefix(`/`)"
+      entryPoints:
+        - web
+      service: web-frontend
+      middlewares:
+        - compress
+        - security-headers
+#        - auth-redirect
+
+    # Traefik Dashboard
+    dashboard:
+      rule: "Host(`traefik.localhost`)"
+      entryPoints:
+        - web
+      service: api@internal
+
+
+
+  services:
+    # Определение сервисов
+    auth-service:
+      loadBalancer:
+        servers:
+          - url: "http://auth-service:5003"
+
+    webapi-service:
+      loadBalancer:
+        servers:
+          - url: "http://webapi-service:5001"
+
+    game-service:
+      loadBalancer:
+        servers:
+          - url: "http://game-service:5002"
+
+    web-frontend:
+      loadBalancer:
+        servers:
+          - url: "http://web-frontend:3000"
+          
+    logger:
+      loadBalancer:
+        servers:
+          - url: "http://fluent-bit:8888" 

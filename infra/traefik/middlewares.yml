@@ -1,0 +1,71 @@
+http:
+  middlewares:
+    # Заголовки безопасности
+    security-headers:
+      headers:
+        frameDeny: true
+        sslRedirect: false
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: false
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+    
+    # Middleware для сжатия ответов
+    compress:
+      compress: {}
+    
+    # Middleware для удаления префикса /api
+    strip-api-prefix:
+      stripPrefix:
+        prefixes: 
+          - "/api"
+
+    # Middleware для удаления префикса /webapi
+    strip-webapi-prefix:
+      stripPrefix:
+        prefixes:
+          - "/webapi"
+
+    # Middleware для удаления префикса /logs
+    strip-logs-prefix:
+      stripPrefix:
+        prefixes:
+          - "/logs"
+        
+    # Middleware для WebSocket соединений
+    websocket:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "ws"
+    
+    # Middleware для проверки JWT токена
+    auth-check:
+      forwardAuth:
+        address: "http://auth-service:5003/auth/api/v1/auth/check"
+        authResponseHeaders:
+          - "X-User-ID"
+          - "X-User-Role"
+          - "X-User-Email"
+          - "X-User-Name"
+        trustForwardHeader: true
+    
+    # Middleware для редиректа неавторизованных пользователей
+    auth-redirect:
+      forwardAuth:
+        address: "http://localhost/auth/login"
+        authResponseHeaders:
+          - "X-User-ID"
+          - "X-User-Role"
+          - "X-User-Email"
+          - "X-User-Name"
+        trustForwardHeader: true
+
+    extract-cookie-ws_auth_token:
+      plugin:
+        extractCookie:
+          cookieName: ws_auth_token
+          headerNameForCookieValue: "Authorization"
+          cookieValuePrefix: 'Bearer '
+          logLevel: warn

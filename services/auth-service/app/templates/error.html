@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block title %}Ошибка - Bomberman Online{% endblock %}
+
+{% block content %}
+<div class="container error-container">
+    <div class="error-icon">⚠</div>
+    <h1>Ошибка</h1>
+    <p>{{ message }}</p>
+    
+    <div class="links">
+        <a href="/ui/login" class="btn">Перейти на страницу авторизации</a>
+    </div>
+</div>
+{% endblock %} 

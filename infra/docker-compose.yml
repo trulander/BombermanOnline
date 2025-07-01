@@ -1,0 +1,400 @@
+version: "3.9"
+name: bombermanonline-infra
+services:
+  consul:
+    image: hashicorp/consul:1.21
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+#    volumes:
+#      - consul_data:/consul/data
+    command: "agent -server -bootstrap-expect=1 -ui -client=0.0.0.0"
+
+  game-allocator-service:
+      build:
+        context: ../services/game-allocator-service
+        dockerfile: Dockerfile
+      environment:
+        - PYTHONUNBUFFERED=1
+        - REDIS_HOST=redis
+        - CONSUL_HTTP_ADDR=consul:8500
+        - PROMETHEUS_URL=http://prometheus:9090
+        - NATS_URL=nats://nats:4222
+        - CONSUL_HOST=consul
+        - LOG_LEVEL=DEBUG
+        - LOG_FORMAT=json
+      volumes:
+        - ../services/game-allocator-service/app:/app/game-allocator-service/app
+#      depends_on:
+#        - consul
+#        - prometheus
+#        - nats
+      labels:
+        - "traefik.enable=true"
+#        - "traefik.http.routers.allocator.rule=Host(`allocator.localhost`)"
+      logging:
+        driver: "fluentd"
+        options:
+          fluentd-address: localhost:24224
+          tag: docker.game-allocator-service
+
+  webapi-service:
+    build:
+      context: ../services/webapi-service
+      dockerfile: Dockerfile
+#    deploy:
+#      mode: replicated
+#      replicas: 2
+#    command: uv run uvicorn webapi-service.app.main:app --host 0.0.0.0 --port 5001
+    volumes:
+      - ../services/webapi-service/app:/app/webapi-service/app
+      - webapi_logs:/var/log/webapi-service
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_HOST=redis
+      - NATS_URL=nats://nats:4222
+      - AUTH_SERVICE_URL=http://auth-service:5003
+      - CONSUL_HOST=consul
+#    depends_on:
+#      - postgres
+#      - redis
+#      - nats
+#      - auth-service
+#    ports:
+#      - "5001:5001"
+    expose:
+      - "5001"
+    labels:
+      - "traefik.enable=true"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.webapi-service
+
+  game-service:
+    build:
+      context: ../services/game-service
+      dockerfile: Dockerfile
+#    command: uv run --host 0.0.0.0 --port 8001
+#    deploy:
+#      mode: replicated
+#      replicas: 2
+    volumes:
+      - ../services/game-service/app:/app/game-service/app
+      - game_logs:/var/log/game-service
+    environment:
+      - LOG_LEVEL=INFO
+      - PYTHONUNBUFFERED=1
+      - REDIS_HOST=redis
+      - NATS_URL=nats://nats:4222
+      - AUTH_SERVICE_URL=http://auth-service:5003
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=game_service
+      - POSTGRES_USER=bomberman
+      - POSTGRES_PASSWORD=bomberman
+      - LOG_FORMAT=json
+      - CONSUL_HOST=consul
+#    depends_on:
+#      - redis
+#      - nats
+#      - auth-service
+#    ports:
+#      - "5002:5002"
+    expose:
+      - "5002"
+    labels:
+      - "traefik.enable=true"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.game-service
+
+  auth-service:
+    build:
+      context: ../services/auth-service
+      dockerfile: Dockerfile
+#    deploy:
+#      mode: replicated
+#      replicas: 2
+    volumes:
+      - ../services/auth-service/app:/app/auth-service/app
+      - auth_logs:/var/log/auth-service
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_HOST=redis
+      - POSTGRES_HOST=postgres
+      - POSTGRES_PORT=5432
+      - POSTGRES_DB=auth_service
+      - POSTGRES_USER=bomberman
+      - POSTGRES_PASSWORD=bomberman
+      - SECRET_KEY=${AUTH_SECRET_KEY:-your_secret_key_here}
+      - CONSUL_HOST=consul
+#    depends_on:
+#      - postgres
+#      - redis
+#    ports:
+#      - "5003:5003"
+    expose:
+      - "5003"
+    labels:
+      - "traefik.enable=true"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.auth-service
+
+  ai-service:
+    build:
+      context: ../services/ai-service
+      dockerfile: Dockerfile
+    volumes:
+      - ../services/ai-service/app:/app/app
+      - ../infra/ai_models:/app/ai_models
+      - ../infra/ai_logs:/app/ai_logs
+    environment:
+      - PYTHONUNBUFFERED=1
+      - REDIS_HOST=redis
+      - NATS_URL=nats://nats:4222
+      - CONSUL_HOST=consul
+      - LOG_LEVEL=DEBUG
+      - LOG_FORMAT=json
+      - MODELS_PATH=/app/ai_models
+      - LOGS_PATH=/app/ai_logs
+    ports:
+      - "5004:5004"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ai.rule=Host(`ai.localhost`)"
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.ai-service
+
+  web-frontend:
+    build:
+      context: ../services/web-frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../services/web-frontend/public:/app/public
+      - ../services/web-frontend/src:/app/src
+    environment:
+      - NODE_ENV=production
+      - REACT_APP_LOGS_ENDPOINT=/logs
+      - REACT_APP_SERVICE_NAME=web-frontend
+      - REACT_APP_SOCKET_URL=http://localhost
+      - REACT_APP_SOCKET_PATH=/webapi/socket.io
+      - PORT=3000
+      - REACT_APP_LOGS_BATCH_SIZE=10
+      - AUTH_URL=/auth
+    labels:
+      - "traefik.enable=true"
+
+  tensorboard:
+    image: tensorflow/tensorboard:latest
+    volumes:
+      - ../infra/ai_logs:/tf/logs
+    ports:
+      - "6006:6006"
+    command: tensorboard --logdir=/tf/logs --host 0.0.0.0 --port 6006
+    logging:
+      driver: "fluentd"
+      options:
+        fluentd-address: localhost:24224
+        tag: docker.tensorboard
+
+  postgres:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-bomberman}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-bomberman}
+      - POSTGRES_DB=${POSTGRES_DB:-bomberman}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+#    restart: unless-stopped
+
+  redis:
+    image: redis:7.2
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.55.0
+    environment:
+      REDIS_ADDR: redis://redis:6379
+    ports: ["9121:9121"]
+#    depends_on:
+#      - redis
+
+  nats:
+    image: nats:2.10
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    volumes:
+      - nats_data:/data
+
+  prometheus-nats-exporter:
+    image: natsio/prometheus-nats-exporter:latest
+    command: "-varz -connz -subz -routez -gatewayz -healthz -accstatz -leafz -jsz=all http://nats:8222"
+    ports:
+      - "7777:7777"
+#    depends_on:
+#      - nats
+#    restart: unless-stopped
+
+  traefik:
+    image: traefik:3.4.0
+    ports:
+      - "80:80"     # HTTP
+      - "8080:8080" # Веб-интерфейс Traefik Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+      - ./traefik/middlewares.yml:/etc/traefik/middlewares.yml
+      - ./traefik/routers.yml:/etc/traefik/routers.yml
+      - ./traefik/logs:/var/log/traefik
+      - ./traefik/traefik_plugins:/plugins-storage
+      - ./traefik/local-plugins:/plugins-local/src
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+#    restart: unless-stopped
+#    depends_on:
+#      - webapi-service
+#      - game-service
+#      - auth-service
+#      - web-frontend
+#      - fluent-bit
+    labels:
+      - "traefik.enable=true"
+
+  # Системы мониторинга и логирования
+  prometheus:
+    image: prom/prometheus:v2.49.1
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+#    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.localhost`)"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+
+  node-exporter:
+    image: prom/node-exporter:v1.7.0
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+#    restart: unless-stopped
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /dev/disk/:/dev/disk:ro
+    ports:
+      - "8081:8080"
+#    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.5.0
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml
+      - loki_data:/loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml -target=all -log.level=info
+#    restart: unless-stopped
+    networks:
+      default:
+        aliases:
+          - loki.internal
+
+  fluent-bit:
+    image: grafana/fluent-bit-plugin-loki:latest
+    volumes:
+      - ./fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf
+      - ./fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+      - "2020:2020"
+      - "8888:8888"
+    environment:
+      - LOKI_URL=http://loki.internal:3100/loki/api/v1/push
+#    depends_on:
+#      - loki
+#    restart: unless-stopped
+    networks:
+      - default
+
+  grafana:
+    image: grafana/grafana:12.0.0
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_HTTP_PORT=3001
+      - GF_DASHBOARDS_MIN_REFRESH_INTERVAL=5s
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    ports:
+      - "3001:3001"
+#    depends_on:
+#      - prometheus
+#      - loki
+#    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3001"
+
+volumes:
+  postgres_data:
+  redis_data:
+  nats_data:
+  prometheus_data:
+  loki_data:
+  grafana_data:
+  webapi_logs:
+  game_logs:
+  auth_logs:
+  consul_data:
+  ai_models:
+  ai_logs:

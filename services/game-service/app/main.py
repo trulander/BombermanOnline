@@ -1,0 +1,183 @@
+import asyncio
+import logging
+import os
+import socket
+
+import consul
+import uvicorn
+import traceback
+from contextlib import asynccontextmanager
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from starlette_exporter import PrometheusMiddleware, handle_metrics
+from fastapi.responses import JSONResponse
+
+from app.dependenties import nats_repository, redis_repository, postgres_repository, event_service, game_coordinator
+from .config import settings
+from .logging_config import configure_logging
+from .routes.map_routes import router as map_router
+from .routes.team_routes import router as team_router
+from .routes.game_routes import router as game_router
+from .routes.entity_routes import router as entity_router
+
+# Настройка логирования
+configure_logging()
+logger = logging.getLogger(__name__)
+
+
+def register_service():
+    logger.info(f"registering in the consul service")
+    service_name = settings.SERVICE_NAME
+    c = consul.Consul(host=settings.CONSUL_HOST, port=8500)
+    service_id = f"{service_name}-{socket.gethostname()}"
+    c.agent.service.register(
+        name=service_name,
+        service_id=service_id,
+        address=socket.gethostname(),  # Имя сервиса в Docker сети
+        port=settings.PORT,
+        tags=["traefik"],
+        check=consul.Check.http(
+            url=f"http://{socket.gethostname()}:{settings.PORT}/health",
+            interval="10s",
+            timeout="1s"
+        )
+    )
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    try:
+        logger.info("Starting Game service")
+        logger.info(f"Hostname: {settings.HOSTNAME}")
+        register_service()
+        # Инициализируем подключения к базам данных
+        await nats_repository.get_nc()
+        await redis_repository.get_redis()
+        await postgres_repository.connect()
+        
+        # Инициализируем обработчики NATS
+        await game_coordinator.initialize_handlers()
+
+        # Запускаем игровой цикл
+        asyncio.create_task(game_coordinator.start_game_loop())
+        
+        logger.info("Game service started successfully")
+    except Exception as e:
+        logger.critical(f"Failed to start Game service: {e}", exc_info=True)
+        raise
+    
+    yield
+    
+    # Shutdown
+    try:
+        logger.info("Shutting down Game service")
+
+        # Закрываем подключения к базам данных
+        await redis_repository.disconnect()
+        await event_service.disconnect()
+        await postgres_repository.disconnect()
+        
+        logger.info("Game service stopped successfully")
+    except Exception as e:
+        logger.error(f"Error during Game service shutdown: {e}", exc_info=True)
+
+
+try:
+    app = FastAPI(
+        title=settings.APP_TITLE,
+        docs_url=settings.SWAGGER_URL,
+        openapi_url=f"{settings.SWAGGER_URL}/openapi.json",
+        debug=settings.DEBUG,
+        reload=settings.RELOAD,
+        log_level=settings.LOG_LEVEL.lower(),
+        lifespan=lifespan
+    )
+    
+    # Добавляем Prometheus метрики
+    app.add_middleware(
+        PrometheusMiddleware,
+        app_name="game_service",
+        group_paths=True,
+        filter_unhandled_paths=False,
+    )
+    app.add_route("/metrics", handle_metrics)
+    
+    # Настраиваем CORS
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.CORS_ORIGINS,
+        allow_credentials=settings.CORS_CREDENTIALS,
+        allow_methods=settings.CORS_METHODS,
+        allow_headers=settings.CORS_HEADERS,
+    )
+    
+    # Подключаем роуты
+    app.include_router(map_router, prefix=settings.API_V1_STR)
+    app.include_router(team_router, prefix=settings.API_V1_STR)
+    app.include_router(game_router, prefix=settings.API_V1_STR)
+    app.include_router(entity_router, prefix=settings.API_V1_STR)
+    
+    # Добавляем middleware для авторизации
+    @app.middleware("http")
+    async def auth_middleware(request: Request, call_next):
+        # Извлекаем заголовки X-User-* из запроса (установленные Traefik после проверки токена)
+        user_id = request.headers.get("X-User-ID")
+        user_role = request.headers.get("X-User-Role")
+        user_email = request.headers.get("X-User-Email")
+        user_name = request.headers.get("X-User-Name")
+        
+        # Если заголовки присутствуют, добавляем информацию о пользователе в state запроса
+        if user_id and user_role:
+            request.state.user = {
+                "id": user_id,
+                "role": user_role,
+                "email": user_email,
+                "username": user_name
+            }
+            logger.info(f"User {user_name} ({user_role}) authenticated")
+        else:
+            request.state.user = None
+        
+        # Продолжаем обработку запроса
+        return await call_next(request)
+    
+    # Глобальный обработчик исключений
+    @app.exception_handler(Exception)
+    async def global_exception_handler(request: Request, exc: Exception):
+        logger.error(f"Unhandled exception: {exc}", exc_info=True)
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"},
+        )
+    
+    # Простой эндпоинт для проверки статуса сервиса
+    @app.get("/health")
+    async def health_check() -> dict:
+        try:
+            #TODO здесь можно было бы проверить подключение к NATS и базам данных
+            # и вернуть соответствующий статус
+            return {
+                "status": "healthy",
+                "service": "game-service"
+            }
+        except Exception as e:
+            logger.error(f"Health check failed: {e}", exc_info=True)
+            return {"status": "error", "service": "game-service", "message": str(e)}
+
+except Exception as e:
+    logger.critical(f"Failed to initialize application: {str(e)}\n{traceback.format_exc()}")
+    raise
+
+# Запуск приложения, если файл запущен напрямую
+if __name__ == "__main__":
+    try:
+        logger.info(f"Starting server on {settings.HOST}:{settings.PORT}")
+        uvicorn.run(
+            "app.main:app",
+            host=settings.HOST,
+            port=settings.PORT,
+            reload=settings.RELOAD,
+            log_level=settings.LOG_LEVEL.lower(),
+        )
+    except Exception as e:
+        logger.critical(f"Failed to start application: {e}", exc_info=True) 

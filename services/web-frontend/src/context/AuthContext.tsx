@@ -1,0 +1,200 @@
+import React, {createContext, useContext, useEffect, useState} from 'react';
+import {User} from '../types/User';
+import {AuthContextType, LoginCredentials, RegisterData} from '../types/Auth';
+import {authApi} from '../services/api';
+import {tokenService} from '../services/tokenService';
+
+const AuthContext = createContext<AuthContextType>({} as AuthContextType);
+
+export const useAuth = () => useContext(AuthContext);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      // Проверяем наличие токенов
+      if (!tokenService.hasTokens()) {
+        setUser(null);
+        setIsAuthenticated(false);
+        setLoading(false);
+        return;
+      }
+
+      // Если есть токены но нет WebSocket cookie - восстанавливаем cookie
+      const accessToken = tokenService.getAccessToken();
+      
+      if (accessToken) {
+        console.log('Restoring WebSocket cookie from existing tokens');
+        // Восстанавливаем cookie из существующих токенов
+        const tokenData = {
+          access_token: accessToken,
+          refresh_token: tokenService.getRefreshToken() || '',
+          token_type: localStorage.getItem('token_type') || 'bearer',
+          expires_in: parseInt(localStorage.getItem('expires_in') || '1800')
+        };
+        tokenService.saveTokens(tokenData);
+      }
+
+      try {
+        const response = await authApi.get('/users/me');
+        setUser(response.data);
+        setIsAuthenticated(true);
+      } catch (error) {
+        // Если есть refresh token, пробуем обновить токен
+        if (tokenService.getRefreshToken()) {
+          try {
+            const tokenData = await tokenService.refreshToken();
+            if (tokenData) {
+              // После обновления токена, пробуем получить данные пользователя снова
+              const userResponse = await authApi.get('/users/me');
+              setUser(userResponse.data);
+              setIsAuthenticated(true);
+            } else {
+              // Если не удалось обновить токен
+              setUser(null);
+              setIsAuthenticated(false);
+            }
+          } catch (refreshError) {
+            // Если не удалось обновить токен
+            tokenService.clearTokens();
+            setUser(null);
+            setIsAuthenticated(false);
+          }
+        } else {
+          setUser(null);
+          setIsAuthenticated(false);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
+
+  // Функция авторизации
+  const login = async (credentials: LoginCredentials): Promise<boolean> => {
+    try {
+      const response = await authApi.post('/auth/login', credentials);
+      
+      if (response.data) {
+        // Сохраняем токены через сервис
+        tokenService.saveTokens(response.data);
+        
+        // Получаем данные пользователя
+        const userResponse = await authApi.get('/users/me');
+        setUser(userResponse.data);
+        setIsAuthenticated(true);
+        
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Ошибка авторизации:', error);
+      return false;
+    }
+  };
+
+  // Функция регистрации
+  const register = async (data: RegisterData): Promise<boolean> => {
+    try {
+      const response = await authApi.post('/users', data);
+      
+      if (response.data) {
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Ошибка регистрации:', error);
+      return false;
+    }
+  };
+
+  // Функция выхода из системы
+  const logout = async (): Promise<void> => {
+    try {
+      await authApi.post('/auth/logout');
+      
+      // Очищаем токены через сервис
+      tokenService.clearTokens();
+      
+      setUser(null);
+      setIsAuthenticated(false);
+      // Перенаправляем на страницу авторизации
+      window.location.href = '/account/login';
+    } catch (error) {
+      console.error('Ошибка выхода из системы:', error);
+    }
+  };
+
+  // Функция сброса пароля
+  const resetPassword = async (email: string): Promise<boolean> => {
+    try {
+      const response = await authApi.post('/auth/reset-password', { email });
+      
+      if (response.data) {
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Ошибка сброса пароля:', error);
+      return false;
+    }
+  };
+
+  // Функция подтверждения сброса пароля
+  const confirmResetPassword = async (token: string, new_password: string): Promise<boolean> => {
+    try {
+      const response = await authApi.post('/auth/confirm-reset-password', {
+        token,
+        new_password
+      });
+      
+      if (response.data) {
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Ошибка подтверждения сброса пароля:', error);
+      return false;
+    }
+  };
+
+  // Функция обновления профиля
+  const updateProfile = async (data: Partial<User>): Promise<boolean> => {
+    try {
+      const response = await authApi.put('/users/me', data);
+      
+      if (response.data) {
+        setUser(response.data);
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Ошибка обновления профиля:', error);
+      return false;
+    }
+  };
+
+  const value = {
+    user,
+    isAuthenticated,
+    loading,
+    login,
+    register,
+    logout,
+    resetPassword,
+    confirmResetPassword,
+    updateProfile
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}; 
