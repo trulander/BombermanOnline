@@ -28,9 +28,10 @@
 
 ### Сервисы
 
-*   [Auth Service](docs/services/auth-service.md)
-*   [Game Allocator Service](docs/services/game-allocator-service.md)
-*   [Game Service](docs/services/game-service.md)
+*   [AI Service](services/ai-service/README.md)
+*   [Auth Service](services/auth-service/README.md)
+*   [Game Allocator Service](services/game-allocator-service/README.md)
+*   [Game Service](services/game-service/README.md)
     *   [API Эндпоинты](services/game-service/docs/api_endpoints.md)
     *   [Архитектура Сущностей](services/game-service/docs/architecture/entities.md)
     *   [Архитектура Моделей](services/game-service/docs/architecture/models.md)
@@ -43,13 +44,13 @@
     *   [Команды и Действия Игроков](services/game-service/docs/player_commands_and_actions.md)
     *   [Настройка](services/game-service/docs/setup.md)
     *   [Логика Команд](services/game-service/docs/teams_logic.md)
-*   [Web Frontend](docs/services/web-frontend.md)
-    *   [Архитектура Аутентификации WebSocket](services/web-frontend/docs/WEBSOCKET_AUTH_ARCHITECTURE.md)
-    *   [Архитектура Маршрутизации](services/web-frontend/docs/ROUTING_ARCHITECTURE.md)
-    *   [Архитектура Управления Токенами](services/web-frontend/docs/TOKEN_MANAGEMENT_ARCHITECTURE.md)
-*   [WebAPI Service](docs/services/webapi-service.md)
+*   [Web Frontend](services/web-frontend/README.md)
+*   [WebAPI Service](services/webapi-service/README.md)
 
 ## Сервисы
+
+### AI Service
+
 
 ### Web Frontend
 
@@ -123,26 +124,22 @@ REST API сервис для обработки запросов от клиен
 - При логине создается cookie `ws_auth_token` с path `/socket.io/`
 - Cookie автоматически отправляется при WebSocket handshake
 - Безопасная передача токенов без использования query parameters
-- Подробности в [WEBSOCKET_AUTH_ARCHITECTURE.md](services/web-frontend/WEBSOCKET_AUTH_ARCHITECTURE.md)
 
 ### Архитектура маршрутизации
 - **Защищенные маршруты** для авторизованных пользователей (`/account/*`)
 - **Публичные маршруты** для неавторизованных (`/login`, `/register`)
 - **Централизованный контроль доступа** через `ProtectedRoute` и `PublicRoute`
-- Подробности в [ROUTING_ARCHITECTURE.md](services/web-frontend/ROUTING_ARCHITECTURE.md)
 
 ### Управление токенами
 - **Централизованный TokenService** для всех операций с токенами
 - **Отсутствие дублирования** логики между компонентами
 - **Автоматическое управление cookies** для WebSocket
-- Подробности в [TOKEN_MANAGEMENT_ARCHITECTURE.md](services/web-frontend/TOKEN_MANAGEMENT_ARCHITECTURE.md)
 
 ## Запуск проекта
 
 ### Требования
 
 - Docker и Docker Compose
-- Make (опционально)
 
 ### Запуск
 
@@ -327,4 +324,3 @@ npm run build
 
 ## Лицензия
 
-MIT
