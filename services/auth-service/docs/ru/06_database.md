@@ -1,5 +1,7 @@
 # 6. Модели Базы Данных
 
+[![English](https://img.shields.io/badge/lang-English-blue)](../en/06_database.md)
+
 Сервис использует PostgreSQL в качестве основной базы данных. Схема управляется с помощью SQLAlchemy и Alembic. Существуют две основные таблицы: `users` и `refresh_tokens`.
 
 ## Таблица `users`

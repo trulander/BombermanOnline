@@ -1,5 +1,7 @@
 # 5. API и Frontend Эндпоинты
 
+[![English](https://img.shields.io/badge/lang-English-blue)](../en/05_api_endpoints.md)
+
 Сервис предоставляет как RESTful API для программного взаимодействия, так и веб-интерфейс для пользователей.
 
 ## Служебные эндпоинты
