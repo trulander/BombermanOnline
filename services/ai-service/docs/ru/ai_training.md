@@ -1,4 +1,5 @@
 # Обучение моделей AI
+[![English](https://img.shields.io/badge/lang-English-blue)](../en/ai_training.md)
 
 ## Концепция
 

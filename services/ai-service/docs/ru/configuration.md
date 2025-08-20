@@ -1,4 +1,5 @@
 # Конфигурация
+[![English](https://img.shields.io/badge/lang-English-blue)](../en/configuration.md)
 
 Конфигурация сервиса осуществляется через переменные окружения. Файл `app/config.py` использует `pydantic-settings` для их чтения и валидации.
 

@@ -1,4 +1,5 @@
 # Структура проекта
+[![English](https://img.shields.io/badge/lang-English-blue)](../en/project_structure.md)
 
 Ниже представлена структура каталогов и файлов сервиса с описанием их назначения.
 

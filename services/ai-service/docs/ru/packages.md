@@ -1,4 +1,5 @@
 # Зависимости и технологии
+[![English](https://img.shields.io/badge/lang-English-blue)](../en/packages.md)
 
 ## Основной стек
 

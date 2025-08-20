@@ -1,4 +1,5 @@
 # Взаимодействие и Use Cases
+[![English](https://img.shields.io/badge/lang-English-blue)](../en/interaction.md)
 
 ## Основной принцип
 

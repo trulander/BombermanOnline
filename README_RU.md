@@ -27,24 +27,12 @@
 
 *   [Docker Compose Конфигурация](docs/ru/infra/docker-compose.md)
 
-### Сервисы
+### Микро-сервисы
 
 *   [AI Service](services/ai-service/README_RU.md)
 *   [Auth Service](services/auth-service/README_RU.md)
 *   [Game Allocator Service](services/game-allocator-service/README_RU.md)
 *   [Game Service](services/game-service/README_RU.md)
-    *   [API Эндпоинты](services/game-service/docs/ru/api_endpoints.md)
-    *   [Архитектура Сущностей](services/game-service/docs/ru/architecture/entities.md)
-    *   [Архитектура Моделей](services/game-service/docs/ru/architecture/models.md)
-    *   [Обзор Архитектуры](services/game-service/docs/ru/architecture/overview.md)
-    *   [Архитектура Репозиториев](services/game-service/docs/ru/architecture/repositories.md)
-    *   [Архитектура Сервисов](services/game-service/docs/ru/architecture/services.md)
-    *   [Конфигурация](services/game-service/docs/ru/configuration.md)
-    *   [Введение](services/game-service/docs/ru/introduction.md)
-    *   [События NATS](services/game-service/docs/ru/nats_events.md)
-    *   [Команды и Действия Игроков](services/game-service/docs/ru/player_commands_and_actions.md)
-    *   [Настройка](services/game-service/docs/ru/setup.md)
-    *   [Логика Команд](services/game-service/docs/ru/teams_logic.md)
 *   [Web Frontend](services/web-frontend/README_RU.md)
 *   [WebAPI Service](services/webapi-service/README_RU.md)
 
@@ -153,46 +141,6 @@ cd BombermanOnline
 docker-compose up -d
 ```
 
-### Установка зависимостей
-
-```bash
-# Установка зависимостей для всех Python сервисов с помощью uv
-uv sync
-
-# Установка зависимостей для Web Frontend
-cd services/web-frontend
-npm install
-cd ../..
-```
-
-### Запуск отдельных сервисов (для разработки)
-
-Для запуска отдельных сервисов можно использовать следующий подход:
-
-1.  **Запуск инфраструктурных компонентов**:
-
-    ```bash
-    docker-compose -f infra/docker-compose.yml up -d postgres redis nats
-    ```
-
-2.  **Запуск конкретного сервиса (например, game-service)**:
-
-    ```bash
-    # Убедитесь, что вы находитесь в корне проекта BombermanOnline
-    # Запустите сервис с перезагрузкой для отслеживания изменений кода
-    uvicorn app.main:app --host 0.0.0.0 --port 5002 --reload
-    ```
-
-    Повторите для `auth-service` и `webapi-service`, изменив порт и путь к `app.main:app` соответственно.
-
-3.  **Запуск Web Frontend в режиме разработки**:
-
-    ```bash
-    cd services/web-frontend
-    npm start
-    cd ../..
-    ```
-
 ### Доступ к сервисам
 
 После запуска сервисы доступны по следующим адресам:
@@ -216,15 +164,6 @@ cd ../..
 BombermanOnline/
 ├── services/                  # Сервисы
 │   ├── web-frontend/          # Web Frontend
-│   │   ├── src/
-│   │   │   ├── components/    # React компоненты
-│   │   │   ├── pages/         # Страницы приложения
-│   │   │   ├── context/       # React контексты
-│   │   │   ├── services/      # Сервисы (API, InputHandler)
-│   │   │   ├── types/         # TypeScript типы
-│   │   │   └── utils/         # Утилиты (Logger)
-│   │   ├── public/            # Статические файлы
-│   │   └── Dockerfile
 │   ├── webapi-service/        # WebAPI Service
 │   ├── game-service/          # Game Service
 │   └── auth-service/          # Auth Service
@@ -239,37 +178,6 @@ BombermanOnline/
 └── docker-compose.yml         # Основной Docker Compose файл
 ```
 
-### Локальная разработка
-
-Для локальной разработки можно использовать Docker Compose:
-
-```bash
-# Запуск всех сервисов (включая фронтенд в режиме разработки)
-docker-compose up -d
-
-# Запуск отдельного сервиса (пример: только фронтенд в режиме разработки)
-docker-compose up -d web-frontend
-
-# Остановка всех сервисов
-docker-compose down
-```
-
-### Разработка Frontend
-
-```bash
-# Для запуска в режиме разработки через Docker Compose, используйте команду выше `docker-compose up -d web-frontend`
-# Если вы хотите запустить фронтенд без Docker Compose:
-cd services/web-frontend
-
-# Установка зависимостей (если еще не установлены)
-npm install
-
-# Запуск в режиме разработки
-npm start
-
-# Сборка для продакшена
-npm run build
-```
 
 ## Функциональность
 

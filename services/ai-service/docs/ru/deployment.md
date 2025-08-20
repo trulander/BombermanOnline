@@ -1,4 +1,5 @@
 # Развертывание и запуск
+[![English](https://img.shields.io/badge/lang-English-blue)](../en/deployment.md)
 
 ## Локальный запуск (для разработки)
 
