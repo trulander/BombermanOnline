@@ -36,7 +36,7 @@ cp .env-example .env
 4.  **Запустите сервер**:
 *   `uv` запустит Uvicorn в контексте созданного виртуального окружения.
 ```bash
-uv run uvicorn app.main:app --host 0.0.0.0 --port 5001 --reload
+uv run uvicorn webapi-service.app.main:app --host 0.0.0.0 --port 5001 --reload
 ```
 
 5.  **Проверка**:
