@@ -5,30 +5,109 @@
 
 ## Архитектура
 
-Проект состоит из следующих компонентов:
+Проект построен на микросервисной архитектуре. Взаимодействие между сервисами осуществляется через REST API и асинхронную систему обмена сообщениями NATS. Обнаружение сервисов реализовано через Consul.
 
-1. **Web Frontend** - клиентское веб-приложение на TypeScript
-2. **WebAPI Service** - API сервис на FastAPI для обработки запросов от клиента
-3. **Game Service** - сервис для управления игровой логикой на FastAPI
-4. **Auth Service** - сервис авторизации и управления пользователями на FastAPI
-5. **AI Service** - сервис для управления AI-юнитами и обучения AI-моделей на FastAPI
-6. **Инфраструктурные компоненты**:
-   - PostgreSQL - база данных
-   - Redis - кэширование и хранение состояний
-   - NATS - очередь сообщений для коммуникации между сервисами
-   - Traefik - API Gateway и балансировщик нагрузки
-   - Prometheus, Grafana - мониторинг
-   - Loki, Fluent Bit - логирование
+```mermaid
+graph TD
+    subgraph Пользователь
+        Browser["Веб-браузер"]
+    end
+
+    subgraph "Шлюз API"
+        Traefik("Traefik API Gateway")
+    end
+
+    subgraph Микросервисы
+        WebFrontend("Web Frontend")
+        WebAPI("WebAPI Service")
+        GameService("Game Service")
+        AuthService("Auth Service")
+        GameAllocator("Game Allocator Service")
+        AIService("AI Service")
+    end
+
+    subgraph "Хранилища и Шина Данных"
+        PostgreSQL("PostgreSQL")
+        Redis("Redis")
+        NATS("NATS JetStream")
+        Consul("Consul")
+    end
+
+    subgraph "Мониторинг и Логирование"
+        Prometheus("Prometheus")
+        Grafana("Grafana")
+        Loki("Loki")
+        FluentBit("Fluent Bit")
+    end
+
+    Browser -->|HTTP/HTTPS| Traefik
+
+    Traefik -->|/| WebFrontend
+    Traefik -->|/webapi, /games| AuthService
+    AuthService -->|Forward Auth OK| Traefik
+    Traefik -->|/webapi| WebAPI
+    Traefik -->|/games| GameService
+    Traefik -->|/auth| AuthService
+    Traefik -->|/logs| FluentBit
+
+    WebFrontend -->|REST API| WebAPI
+    WebFrontend -->|REST API| AuthService
+    WebFrontend -->|Logs HTTP| FluentBit
+
+    WebAPI -->|REST API| GameService
+    WebAPI -->|Кэш| Redis
+    WebAPI -->|Pub/Sub| NATS
+    WebAPI -->|Service Discovery| Consul
+
+    GameService -->|БД| PostgreSQL
+    GameService -->|Кэш| Redis
+    GameService -->|Pub/Sub| NATS
+    GameService -->|Service Discovery| Consul
+
+    AuthService -->|БД| PostgreSQL
+    AuthService -->|Кэш| Redis
+    AuthService -->|Service Discovery| Consul
+
+    GameAllocator -->|Кэш| Redis
+    GameAllocator -->|Pub/Sub| NATS
+    GameAllocator -->|Service Discovery| Consul
+
+    AIService -->|Pub/Sub| NATS
+    AIService -->|Кэш| Redis
+    AIService -->|Service Discovery| Consul
+
+    %% Сбор логов
+    subgraph "Сбор логов"
+        direction LR
+        WebAPI --o|stdout| FluentBit
+        GameService --o|stdout| FluentBit
+        AuthService --o|stdout| FluentBit
+        GameAllocator --o|stdout| FluentBit
+        AIService --o|stdout| FluentBit
+    end
+    FluentBit -->|Logs| Loki
+
+    %% Сбор метрик
+    subgraph "Сбор метрик"
+        direction LR
+        Prometheus --o|Scrape| WebAPI
+        Prometheus --o|Scrape| GameService
+        Prometheus --o|Scrape| Redis
+        Prometheus --o|Scrape| NATS
+        Prometheus --o|Scrape| cAdvisor
+        Prometheus --o|Scrape| NodeExporter
+    end
+
+    %% Визуализация
+    Grafana -->|Query| Prometheus
+    Grafana -->|Query| Loki
+```
 
 ## Документация
 
-Здесь вы найдете подробную документацию по различным компонентам проекта Bomberman Online:
+Здесь вы найдете подробную документацию по различным компонентам проекта Bomberman Online.
 
-### Инфраструктура
-
-*   [Docker Compose Конфигурация](docs/ru/infra/docker-compose.md)
-
-### Микро-сервисы
+### Микросервисы
 
 *   [AI Service](services/ai-service/README_RU.md)
 *   [Auth Service](services/auth-service/README_RU.md)
@@ -37,100 +116,46 @@
 *   [Web Frontend](services/web-frontend/README_RU.md)
 *   [WebAPI Service](services/webapi-service/README_RU.md)
 
+### Инфраструктура
+
+Детальное описание каждого инфраструктурного компонента, его назначения и конфигурации, основанное на реальных файлах проекта.
+
+*   **[Traefik](docs/ru/infra/traefik/index.md)** (API Gateway и маршрутизация)
+*   **[Prometheus](docs/ru/infra/prometheus/index.md)** (Сбор метрик)
+*   **[Loki и Fluent Bit](docs/ru/infra/loki-fluent-bit/index.md)** (Сбор и хранение логов)
+*   **[Grafana](docs/ru/infra/grafana/index.md)** (Визуализация и дашборды)
+*   **[Consul](docs/ru/infra/consul/index.md)** (Обнаружение сервисов)
+*   **[PostgreSQL](docs/ru/infra/postgres/index.md)** (База данных)
+*   **[Redis](docs/ru/infra/redis/index.md)** (Кэширование)
+*   **[NATS](docs/ru/infra/nats/index.md)** (Шина сообщений)
+*   **[Node Exporter и cAdvisor](docs/ru/infra/node-exporter-cadvisor/index.md)** (Метрики хоста и контейнеров)
+*   **[TensorBoard](docs/ru/infra/tensorboard/index.md)** (Визуализация обучения AI)
+
 ## Сервисы
 
-### AI Service
-
-AI Сервис — компонент платформы Bomberman Online, отвечающий за управление AI-юнитами (врагами и игроками-ботами) в игровых сессиях, а также за обучение моделей искусственного интеллекта. Он симулирует поведение AI-управляемых сущностей в игровом мире, получает состояние игры от `game-service`, принимает решения на основе загруженных моделей и отправляет команды управления обратно через NATS.
-
 ### Web Frontend
-
-Frontend приложение, написанное на TypeScript с использованием:
-- React + Material-UI для пользовательского интерфейса
-- Canvas API для отрисовки игрового поля
-- Axios для HTTP запросов с автоматическим обновлением токенов
-- **REST API** для создания и управления играми (взамен Socket.IO)
+Frontend приложение, написанное на TypeScript с использованием React и Material-UI. Отвечает за весь пользовательский интерфейс, отрисовку игрового поля через Canvas API и взаимодействие с бэкендом по REST API.
 
 ### WebAPI Service
-
-REST API сервис для обработки запросов от клиента:
-- Регистрация и получение игровых комнат
-- Управление игровыми сессиями
-- Обработка WebSocket соединений
+Основной шлюз для клиентских запросов. Обрабатывает HTTP-запросы от `Web Frontend`, управляет WebSocket-соединениями для игры, взаимодействует с другими сервисами для выполнения бизнес-логики (создание игр, получение информации и т.д.).
 
 ### Game Service
-
-Сервис для управления игровой логикой:
-- Создание и управление игровыми сессиями
-- Обработка игровых событий
-- Расчет игровой физики и логики
-- Предоставление REST API для создания, управления и получения информации об играх, командах, сущностях и картах.
+Сердце игровой логики. Управляет состоянием активных игровых сессий: обрабатывает действия игроков, рассчитывает физику, применяет правила игры. Общается с другими сервисами через NATS и REST, сохраняет результаты игр в PostgreSQL.
 
 ### Auth Service
+Отвечает за все, что связано с пользователями: регистрация, аутентификация, управление JWT-токенами и ролями. Предоставляет механизм `Forward Auth` для Traefik, защищая другие сервисы.
 
-Сервис авторизации и управления пользователями:
-- Регистрация и аутентификация пользователей
-- Управление JWT токенами
-- OAuth 2.0 авторизация через внешние провайдеры
-- Управление ролями пользователей
-- Защита API через Traefik Forward Auth
+### Game Allocator Service
+Сервис-распределитель, отвечающий за эффективное распределение игровых сессий по доступным экземплярам `Game Service`. Он отслеживает текущую нагрузку и находит наиболее подходящий сервер для новой игры, обеспечивая масштабируемость и отказоустойчивость.
 
-## Маршрутизация
-
-### Пользовательские маршруты
-
-- **/** - главная страница с описанием игры
-- **/account/login** - страница входа в систему
-- **/account/register** - страница регистрации
-- **/account/reset-password** - сброс пароля
-- **/account/confirm-reset-password** - подтверждение сброса пароля
-- **/account/verify-email** - подтверждение email
-- **/account/dashboard** - личный кабинет пользователя
-- **/account/profile** - редактирование профиля
-- **/account/stats** - игровая статистика пользователя
-- **/account/games/create** - страница создания новой игры
-- **/account/games/:gameId/manage** - страница управления созданной игрой
-- **/account/maps/editor** - страница редактора карт
-- **/account/game/:gameId** - игровая страница (для присоединения к активной игре)
-
-### API маршруты
-
-- **/auth/api/v1/auth/** - эндпоинты авторизации
-- **/auth/api/v1/users/** - управление пользователями
-- **/auth/api/v1/games/** - игровые эндпоинты (для управления играми)
-- **/auth/api/v1/teams/** - эндпоинты для управления командами
-- **/auth/api/v1/maps/** - эндпоинты для управления картами
-- **/auth/api/v1/entities/** - эндпоинты для получения информации о сущностях
-
-## Безопасность
-
-### Система авторизации
-- **JWT токены** для HTTP API и WebSocket соединений
-- **Refresh токены** для автоматического обновления сессий
-- **Ролевая модель** (администраторы, игроки)
-- **Cookie-based авторизация** для WebSocket соединений
-
-### WebSocket авторизация
-Приложение использует **HTTP cookies** для авторизации WebSocket соединений:
-- При логине создается cookie `ws_auth_token` с path `/socket.io/`
-- Cookie автоматически отправляется при WebSocket handshake
-- Безопасная передача токенов без использования query parameters
-
-### Архитектура маршрутизации
-- **Защищенные маршруты** для авторизованных пользователей (`/account/*`)
-- **Публичные маршруты** для неавторизованных (`/login`, `/register`)
-- **Централизованный контроль доступа** через `ProtectedRoute` и `PublicRoute`
-
-### Управление токенами
-- **Централизованный TokenService** для всех операций с токенами
-- **Отсутствие дублирования** логики между компонентами
-- **Автоматическое управление cookies** для WebSocket
+### AI Service
+Управляет поведением AI-юнитов (ботов) в игре. Сервис подписывается на события игрового состояния из NATS, принимает решения на основе обученных моделей и отправляет команды управления для AI обратно в `Game Service` через NATS.
 
 ## Запуск проекта
 
 ### Требования
 
-- Docker и Docker Compose
+-   Docker и Docker Compose
 
 ### Запуск
 
@@ -139,100 +164,41 @@ REST API сервис для обработки запросов от клиен
 git clone https://github.com/yourusername/BombermanOnline.git
 cd BombermanOnline
 
-# Запуск всех сервисов (включая фронтенд)
-docker-compose up -d
+# Запуск всех сервисов
+docker-compose -f docker-compose.yml -f infra/docker-compose.yml up -d --build
 ```
 
 ### Доступ к сервисам
 
 После запуска сервисы доступны по следующим адресам:
 
-- **Игра**: http://localhost/game/:gameId
-- **Создание игры**: http://localhost/account/games/create
-- **Управление игрой**: http://localhost/account/games/:gameId/manage
-- **Редактор карт**: http://localhost/account/maps/editor
-- **Личный кабинет**: http://localhost/account/dashboard
-- **API**: http://localhost/api/
-- **Документация API**: http://localhost/api/docs
-- **Grafana**: http://grafana.localhost/ (admin/admin)
-- **Prometheus**: http://prometheus.localhost/
-- **Traefik Dashboard**: http://traefik.localhost/
-
-## Разработка
-
-### Структура проекта
-
-```
-BombermanOnline/
-├── services/                  # Сервисы
-│   ├── ai-service/            # AI Service
-│   ├── web-frontend/          # Web Frontend
-│   ├── webapi-service/        # WebAPI Service
-│   ├── game-service/          # Game Service
-│   └── auth-service/          # Auth Service
-├── infra/                     # Инфраструктура
-│   ├── docker-compose.yml     # Docker Compose файл инфраструктуры
-│   ├── traefik/               # Конфигурация Traefik
-│   ├── prometheus/            # Конфигурация Prometheus
-│   ├── grafana/               # Конфигурация Grafana
-│   ├── loki/                  # Конфигурация Loki
-│   └── fluent-bit/            # Конфигурация Fluent Bit
-└── README.md                  # Документация
-└── docker-compose.yml         # Основной Docker Compose файл
-```
-
-
-## Функциональность
-
-### Игровые возможности
-
-- Создание и присоединение к игровым комнатам через REST API
-- Управление созданными игровыми сессиями (старт, пауза, возобновление, удаление, управление игроками и командами)
-- Многопользовательская игра в реальном времени
-- Система статистики игроков
-- Профили пользователей с настройками
-- Редактор карт для создания и управления шаблонами карт
-
-### Особенности реализации
-
-- Плавная камера с "мертвой зоной" для отслеживания игрока
-- Оптимизированная передача изменений карты вместо полного состояния
-- Автоматическое переподключение при проблемах с сетью
-- Система логирования с отправкой на сервер
-- Переход от Socket.IO к REST API для управления играми
-
-## Роли пользователей
-
-В системе предусмотрены следующие роли пользователей:
-
-1. **user** - обычный пользователь, может играть в игры
-2. **admin** - администратор, имеет полный доступ ко всем функциям
-3. **moderator** - модератор, может управлять игровыми комнатами и пользователями
-4. **developer** - разработчик, имеет доступ к техническим функциям
+-   **Игра и Frontend**: `http://localhost`
+-   **Traefik Dashboard**: `http://traefik.localhost` (или `http://localhost:8080`)
+-   **Grafana**: `http://grafana.localhost` (admin/admin)
+-   **Prometheus**: `http://prometheus.localhost`
+-   **Consul UI**: `http://localhost:8500`
+-   **TensorBoard**: `http://localhost:6006`
 
 ## Технологии
 
 ### Frontend
 - React 18 + TypeScript
-- Material-UI для компонентов интерфейса
-- Socket.IO Client для реального времени (только для игрового процесса)
-- Axios для HTTP запросов с автоматическим обновлением токенов
-- Canvas API для игровой графики
+- Material-UI
+- Canvas API
+- Axios
 
 ### Backend
-- FastAPI для API сервисов
-- Socket.IO для WebSocket соединений
-- PostgreSQL для основной базы данных
-- Redis для кэширования и состояний
-- NATS для межсервисной коммуникации
-- `uv` для управления зависимостями Python
+- FastAPI
+- PostgreSQL
+- Redis
+- NATS
+- Consul
 
 ### DevOps
 - Docker + Docker Compose
-- Traefik как API Gateway
-- Prometheus + Grafana для мониторинга
-- Loki + Fluent Bit для логирования
-- Dockerfile для каждого сервиса
+- Traefik (API Gateway)
+- Prometheus + Grafana (Мониторинг)
+- Loki + Fluent Bit (Логирование)
 
 ## Лицензия
 

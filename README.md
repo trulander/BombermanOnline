@@ -1,32 +1,111 @@
 # Bomberman Online
 [![Russian](https://img.shields.io/badge/lang-Russian-blue)](README_RU.md)
 
-Multiplayer Bomberman game with online mode.
+Multiplayer Bomberman game with an online mode.
 
 ## Architecture
 
-The project consists of the following components:
+The project is built on a microservice architecture. Service interaction is handled via REST APIs and the NATS asynchronous messaging system. Service discovery is implemented using Consul.
 
-1. **Web Frontend** - client-side web application in TypeScript
-2. **WebAPI Service** - FastAPI API service for handling client requests
-3. **Game Service** - service for managing game logic in FastAPI
-4. **Auth Service** - authentication and user management service in FastAPI
-5. **AI Service** - service for managing AI units and training AI models in FastAPI
-6. **Infrastructure components**:
-   - PostgreSQL - database
-   - Redis - caching and state storage
-   - NATS - message queue for inter-service communication
-   - Traefik - API Gateway and load balancer
-   - Prometheus, Grafana - monitoring
-   - Loki, Fluent Bit - logging
+```mermaid
+graph TD
+    subgraph "User"
+        Browser["Web Browser"]
+    end
+
+    subgraph "API Gateway"
+        Traefik("Traefik API Gateway")
+    end
+
+    subgraph "Microservices"
+        WebFrontend("Web Frontend")
+        WebAPI("WebAPI Service")
+        GameService("Game Service")
+        AuthService("Auth Service")
+        GameAllocator("Game Allocator Service")
+        AIService("AI Service")
+    end
+
+    subgraph "Data Stores & Bus"
+        PostgreSQL("PostgreSQL")
+        Redis("Redis")
+        NATS("NATS JetStream")
+        Consul("Consul")
+    end
+
+    subgraph "Monitoring & Logging"
+        Prometheus("Prometheus")
+        Grafana("Grafana")
+        Loki("Loki")
+        FluentBit("Fluent Bit")
+    end
+
+    Browser -->|HTTP/HTTPS| Traefik
+
+    Traefik -->|/| WebFrontend
+    Traefik -->|/webapi, /games| AuthService
+    AuthService -->|Forward Auth OK| Traefik
+    Traefik -->|/webapi| WebAPI
+    Traefik -->|/games| GameService
+    Traefik -->|/auth| AuthService
+    Traefik -->|/logs| FluentBit
+
+    WebFrontend -->|REST API| WebAPI
+    WebFrontend -->|REST API| AuthService
+    WebFrontend -->|Logs HTTP| FluentBit
+
+    WebAPI -->|REST API| GameService
+    WebAPI -->|Cache| Redis
+    WebAPI -->|Pub/Sub| NATS
+    WebAPI -->|Service Discovery| Consul
+
+    GameService -->|DB| PostgreSQL
+    GameService -->|Cache| Redis
+    GameService -->|Pub/Sub| NATS
+    GameService -->|Service Discovery| Consul
+
+    AuthService -->|DB| PostgreSQL
+    AuthService -->|Cache| Redis
+    AuthService -->|Service Discovery| Consul
+
+    GameAllocator -->|Cache| Redis
+    GameAllocator -->|Pub/Sub| NATS
+    GameAllocator -->|Service Discovery| Consul
+
+    AIService -->|Pub/Sub| NATS
+    AIService -->|Cache| Redis
+    AIService -->|Service Discovery| Consul
+
+    %% Log Collection
+    subgraph "Log Collection"
+        direction LR
+        WebAPI --o|stdout| FluentBit
+        GameService --o|stdout| FluentBit
+        AuthService --o|stdout| FluentBit
+        GameAllocator --o|stdout| FluentBit
+        AIService --o|stdout| FluentBit
+    end
+    FluentBit -->|Logs| Loki
+
+    %% Metrics Collection
+    subgraph "Metrics Collection"
+        direction LR
+        Prometheus --o|Scrape| WebAPI
+        Prometheus --o|Scrape| GameService
+        Prometheus --o|Scrape| Redis
+        Prometheus --o|Scrape| NATS
+        Prometheus --o|Scrape| cAdvisor
+        Prometheus --o|Scrape| NodeExporter
+    end
+
+    %% Visualization
+    Grafana -->|Query| Prometheus
+    Grafana -->|Query| Loki
+```
 
 ## Documentation
 
-Here you will find detailed documentation for various components of the Bomberman Online project:
-
-### Infrastructure
-
-*   [Docker Compose Configuration](docs/en/infra/docker-compose.md)
+Here you will find detailed documentation for the various components of the Bomberman Online project.
 
 ### Microservices
 
@@ -37,100 +116,46 @@ Here you will find detailed documentation for various components of the Bomberma
 *   [Web Frontend](services/web-frontend/README.md)
 *   [WebAPI Service](services/webapi-service/README.md)
 
+### Infrastructure
+
+Detailed descriptions of each infrastructure component, its purpose, and configuration, based on the actual project files.
+
+*   **[Traefik](docs/en/infra/traefik/index.md)** (API Gateway & Routing)
+*   **[Prometheus](docs/en/infra/prometheus/index.md)** (Metrics Collection)
+*   **[Loki & Fluent Bit](docs/en/infra/loki-fluent-bit/index.md)** (Log Collection & Storage)
+*   **[Grafana](docs/en/infra/grafana/index.md)** (Visualization & Dashboards)
+*   **[Consul](docs/en/infra/consul/index.md)** (Service Discovery)
+*   **[PostgreSQL](docs/en/infra/postgres/index.md)** (Database)
+*   **[Redis](docs/en/infra/redis/index.md)** (Caching)
+*   **[NATS](docs/en/infra/nats/index.md)** (Message Bus)
+*   **[Node Exporter & cAdvisor](docs/en/infra/node-exporter-cadvisor/index.md)** (Host & Container Metrics)
+*   **[TensorBoard](docs/en/infra/tensorboard/index.md)** (AI Training Visualization)
+
 ## Services
 
-### AI Service
-
-AI Service is a component of the Bomberman Online platform responsible for managing AI units (enemies and bot players) in game sessions, as well as training artificial intelligence models. It simulates the behavior of AI-controlled entities in the game world, receives game state from `game-service`, makes decisions based on loaded models, and sends control commands back through NATS.
-
 ### Web Frontend
-
-Frontend application written in TypeScript using:
-- React + Material-UI for the user interface
-- Canvas API for rendering the game field
-- Axios for HTTP requests with automatic token refresh
-- **REST API** for creating and managing games (instead of Socket.IO)
+A frontend application written in TypeScript using React and Material-UI. It is responsible for the entire user interface, rendering the game board via the Canvas API, and interacting with the backend through a REST API.
 
 ### WebAPI Service
-
-REST API service for handling client requests:
-- Registration and retrieval of game rooms
-- Management of game sessions
-- Processing WebSocket connections
+The main gateway for client requests. It handles HTTP requests from the `Web Frontend`, manages WebSocket connections for gameplay, and communicates with other services to execute business logic (creating games, retrieving information, etc.).
 
 ### Game Service
-
-Service for managing game logic:
-- Creation and management of game sessions
-- Processing game events
-- Calculation of game physics and logic
-- Providing a REST API for creating, managing, and retrieving information about games, teams, entities, and maps.
+The heart of the game logic. It manages the state of active game sessions: processing player actions, calculating physics, and applying game rules. It communicates with other services via NATS and REST, and saves game results to PostgreSQL.
 
 ### Auth Service
+Responsible for everything related to users: registration, authentication, JWT token and role management. It provides a `Forward Auth` mechanism for Traefik to protect other services.
 
-User authentication and management service:
-- User registration and authentication
-- JWT token management
-- OAuth 2.0 authorization via external providers
-- User role management
-- API protection via Traefik Forward Auth
+### Game Allocator Service
+A dispatcher service responsible for efficiently distributing game sessions across available `Game Service` instances. It monitors the current load and finds the most suitable server for a new game, ensuring scalability and fault tolerance.
 
-## Routing
-
-### User Routes
-
-- **/** - main page with game description
-- **/account/login** - login page
-- **/account/register** - registration page
-- **/account/reset-password** - password reset
-- **/account/confirm-reset-password** - confirm password reset
-- **/account/verify-email** - email verification
-- **/account/dashboard** - user dashboard
-- **/account/profile** - profile editing
-- **/account/stats** - user game statistics
-- **/account/games/create** - new game creation page
-- **/account/games/:gameId/manage** - created game management page
-- **/account/maps/editor** - map editor page
-- **/account/game/:gameId** - game page (to join an active game)
-
-### API Routes
-
-- **/auth/api/v1/auth/** - authentication endpoints
-- **/auth/api/v1/users/** - user management
-- **/auth/api/v1/games/** - game endpoints (for game management)
-- **/auth/api/v1/teams/** - team management endpoints
-- **/auth/api/v1/maps/** - map management endpoints
-- **/auth/api/v1/entities/** - entity information retrieval endpoints
-
-## Security
-
-### Authorization System
-- **JWT tokens** for HTTP API and WebSocket connections
-- **Refresh tokens** for automatic session renewal
-- **Role-based model** (administrators, players)
-- **Cookie-based authorization** for WebSocket connections
-
-### WebSocket Authorization
-The application uses **HTTP cookies** for WebSocket connection authorization:
-- Upon login, a `ws_auth_token` cookie is created with path `/socket.io/`
-- The cookie is automatically sent during WebSocket handshake
-- Secure token transmission without using query parameters
-
-### Routing Architecture
-- **Protected routes** for authorized users (`/account/*`)
-- **Public routes** for unauthorized users (`/login`, `/register`)
-- **Centralized access control** via `ProtectedRoute` and `PublicRoute`
-
-### Token Management
-- **Centralized TokenService** for all token operations
-- **No duplication** of logic between components
-- **Automatic cookie management** for WebSocket
+### AI Service
+Manages the behavior of AI units (bots) in the game. The service subscribes to game state events from NATS, makes decisions based on trained models, and sends control commands for the AI back to the `Game Service` via NATS.
 
 ## Project Startup
 
 ### Requirements
 
-- Docker and Docker Compose
+-   Docker and Docker Compose
 
 ### Startup
 
@@ -139,99 +164,40 @@ The application uses **HTTP cookies** for WebSocket connection authorization:
 git clone https://github.com/yourusername/BombermanOnline.git
 cd BombermanOnline
 
-# Start all services (including frontend)
-docker-compose up -d
+# Start all services
+docker-compose -f docker-compose.yml -f infra/docker-compose.yml up -d --build
 ```
 
 ### Accessing Services
 
 After startup, services are available at the following addresses:
 
-- **Game**: http://localhost/game/:gameId
-- **Create Game**: http://localhost/account/games/create
-- **Manage Game**: http://localhost/account/games/:gameId/manage
-- **Map Editor**: http://localhost/account/maps/editor
-- **User Dashboard**: http://localhost/account/dashboard
-- **API**: http://localhost/api/
-- **API Documentation**: http://localhost/api/docs
-- **Grafana**: http://grafana.localhost/ (admin/admin)
-- **Prometheus**: http://prometheus.localhost/
-- **Traefik Dashboard**: http://traefik.localhost/
-
-## Development
-
-### Project Structure
-
-```
-BombermanOnline/
-├── services/                  # Services
-│   ├── ai-service/            # AI Service
-│   ├── web-frontend/          # Web Frontend
-│   ├── webapi-service/        # WebAPI Service
-│   ├── game-service/          # Game Service
-│   └── auth-service/          # Auth Service
-├── infra/                     # Infrastructure
-│   ├── docker-compose.yml     # Docker Compose infrastructure file
-│   ├── traefik/               # Traefik Configuration
-│   ├── prometheus/            # Prometheus Configuration
-│   ├── grafana/               # Grafana Configuration
-│   ├── loki/                  # Loki Configuration
-│   └── fluent-bit/            # Fluent Bit Configuration
-└── README.md                  # Documentation
-└── docker-compose.yml         # Main Docker Compose file
-```
-
-
-## Functionality
-
-### Game Features
-
-- Create and join game rooms via REST API
-- Manage created game sessions (start, pause, resume, delete, manage players and teams)
-- Real-time multiplayer game
-- Player statistics system
-- User profiles with settings
-- Map editor for creating and managing map templates
-
-### Implementation Details
-
-- Smooth camera with a "dead zone" for player tracking
-- Optimized map change transmission instead of full state
-- Automatic reconnection on network issues
-- Logging system with server submission
-- Transition from Socket.IO to REST API for game management
-
-## User Roles
-
-The system provides the following user roles:
-
-1. **user** - regular user, can play games
-2. **admin** - administrator, has full access to all functions
-3. **moderator** - moderator, can manage game rooms and users
-4. **developer** - developer, has access to technical functions
+-   **Game & Frontend**: `http://localhost`
+-   **Traefik Dashboard**: `http://traefik.localhost` (or `http://localhost:8080`)
+-   **Grafana**: `http://grafana.localhost` (admin/admin)
+-   **Prometheus**: `http://prometheus.localhost`
+-   **Consul UI**: `http://localhost:8500`
+-   **TensorBoard**: `http://localhost:6006`
 
 ## Technologies
 
 ### Frontend
 - React 18 + TypeScript
-- Material-UI for interface components
-- Socket.IO Client for real-time (gameplay only)
-- Axios for HTTP requests with automatic token refresh
-- Canvas API for game graphics
+- Material-UI
+- Canvas API
+- Axios
 
 ### Backend
-- FastAPI for API services
-- Socket.IO for WebSocket connections
-- PostgreSQL for the main database
-- Redis for caching and states
-- NATS for inter-service communication
-- `uv` for Python dependency management
+- FastAPI
+- PostgreSQL
+- Redis
+- NATS
+- Consul
 
 ### DevOps
 - Docker + Docker Compose
-- Traefik as API Gateway
-- Prometheus + Grafana for monitoring
-- Loki + Fluent Bit for logging
-- Dockerfile for each service
+- Traefik (API Gateway)
+- Prometheus + Grafana (Monitoring)
+- Loki + Fluent Bit (Logging)
 
 ## License
