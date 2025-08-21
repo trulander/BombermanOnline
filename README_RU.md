@@ -122,13 +122,18 @@ graph TD
 
 *   **[Traefik](docs/ru/infra/traefik/index.md)** (API Gateway и маршрутизация)
 *   **[Prometheus](docs/ru/infra/prometheus/index.md)** (Сбор метрик)
-*   **[Loki и Fluent Bit](docs/ru/infra/loki-fluent-bit/index.md)** (Сбор и хранение логов)
+*   **[Loki](docs/ru/infra/loki/index.md)** (Агрегация логов)
+*   **[Fluent Bit](docs/ru/infra/fluent-bit/index.md)** (Пересылка логов)
 *   **[Grafana](docs/ru/infra/grafana/index.md)** (Визуализация и дашборды)
 *   **[Consul](docs/ru/infra/consul/index.md)** (Обнаружение сервисов)
 *   **[PostgreSQL](docs/ru/infra/postgres/index.md)** (База данных)
 *   **[Redis](docs/ru/infra/redis/index.md)** (Кэширование)
 *   **[NATS](docs/ru/infra/nats/index.md)** (Шина сообщений)
-*   **[Node Exporter и cAdvisor](docs/ru/infra/node-exporter-cadvisor/index.md)** (Метрики хоста и контейнеров)
+*   **Экспортеры метрик**
+    *   [Node Exporter](docs/ru/infra/node-exporter/index.md)
+    *   [cAdvisor](docs/ru/infra/cadvisor/index.md)
+    *   [Redis Exporter](docs/ru/infra/redis-exporter/index.md)
+    *   [NATS Exporter](docs/ru/infra/prometheus-nats-exporter/index.md)
 *   **[TensorBoard](docs/ru/infra/tensorboard/index.md)** (Визуализация обучения AI)
 
 ## Сервисы

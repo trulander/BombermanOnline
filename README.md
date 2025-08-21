@@ -122,13 +122,18 @@ Detailed descriptions of each infrastructure component, its purpose, and configu
 
 *   **[Traefik](docs/en/infra/traefik/index.md)** (API Gateway & Routing)
 *   **[Prometheus](docs/en/infra/prometheus/index.md)** (Metrics Collection)
-*   **[Loki & Fluent Bit](docs/en/infra/loki-fluent-bit/index.md)** (Log Collection & Storage)
+*   **[Loki](docs/en/infra/loki/index.md)** (Log Aggregation)
+*   **[Fluent Bit](docs/en/infra/fluent-bit/index.md)** (Log Forwarding)
 *   **[Grafana](docs/en/infra/grafana/index.md)** (Visualization & Dashboards)
 *   **[Consul](docs/en/infra/consul/index.md)** (Service Discovery)
 *   **[PostgreSQL](docs/en/infra/postgres/index.md)** (Database)
 *   **[Redis](docs/en/infra/redis/index.md)** (Caching)
 *   **[NATS](docs/en/infra/nats/index.md)** (Message Bus)
-*   **[Node Exporter & cAdvisor](docs/en/infra/node-exporter-cadvisor/index.md)** (Host & Container Metrics)
+*   **Exporters**
+    *   [Node Exporter](docs/en/infra/node-exporter/index.md)
+    *   [cAdvisor](docs/en/infra/cadvisor/index.md)
+    *   [Redis Exporter](docs/en/infra/redis-exporter/index.md)
+    *   [NATS Exporter](docs/en/infra/prometheus-nats-exporter/index.md)
 *   **[TensorBoard](docs/en/infra/tensorboard/index.md)** (AI Training Visualization)
 
 ## Services
