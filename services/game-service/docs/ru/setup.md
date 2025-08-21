@@ -1,3 +1,5 @@
+[![English](https://img.shields.io/badge/lang-English-blue)](../en/setup.md)
+
 # Установка и запуск Game Service
 
 В этом разделе описаны шаги для установки зависимостей, настройки окружения и запуска Game Service.
@@ -112,4 +114,4 @@ docker-compose up -d
 ```bash
 docker-compose up -d game-service
 ```
-Конфигурация для Game Service в `docker-compose.yml` должна включать сборку из его `Dockerfile` и передачу необходимых переменных окружения, а также настройку сети. 
+Конфигурация для Game Service в `docker-compose.yml` должна включать сборку из его `Dockerfile` и передачу необходимых переменных окружения, а также настройку сети.

@@ -1,3 +1,5 @@
+[![English](https://img.shields.io/badge/lang-English-blue)](../../en/architecture/entities.md)
+
 # Игровые сущности (Game Entities)
 
 Этот документ описывает ключевые игровые сущности, их структуру и поведение в `Game Service`.
@@ -85,4 +87,4 @@
 ## 6. Усиления (Power-Ups) (`app/entities/power_up.py`)
 
 *   **`PowerUpType`**: Перечисление типов усилений (например, `BOMB_UP`, `FIRE_UP`, `SPEED_UP`, `PIERCE_BOMB`, `IMMUNITY`).
-*   **`PowerUp`**: Базовый класс для всех усилений, определяющий их эффекты на игроков. 
+*   **`PowerUp`**: Базовый класс для всех усилений, определяющий их эффекты на игроков.

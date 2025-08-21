@@ -1,3 +1,5 @@
+[![English](https://img.shields.io/badge/lang-English-blue)](../en/configuration.md)
+
 # Конфигурация Game Service
 
 Сервис Игр (Game Service) настраивается как на уровне всего приложения (через переменные окружения), так и на уровне каждой отдельной игровой сессии (при её создании).
@@ -20,7 +22,7 @@
 | `CORS_ORIGINS`                 | Список разрешенных источников для CORS (через запятую или JSON список).  | `["*"]` (все источники)              |
 | `CORS_CREDENTIALS`             | Разрешает ли CORS передачу credentials (например, cookie).               | `True`                                 |
 | `CORS_METHODS`                 | Список разрешенных HTTP методов для CORS.                                | `["*"]` (все методы)                 |
-| `CORS_HEADERS`                 | Список разрешенных HTTP заголовков для CORS.                             | `["*"]` (все заголовки)              |
+| `CORS_HEADERS`                 | Список разрешенных HTTP заголовков для CORS.                             | `["*"]` (все заголовки)                 |
 | `POSTGRES_HOST`                | Хост базы данных PostgreSQL.                                               | `localhost`                            |
 | `POSTGRES_PORT`                | Порт базы данных PostgreSQL.                                               | `5432`                                 |
 | `POSTGRES_DB`                  | Имя базы данных в PostgreSQL.                                              | `game_service`                         |
@@ -97,4 +99,4 @@
 | `score_limit`                 | `score_limit`                         | Лимит очков для победы в игре/раунде.                                  | `10`                                |
 | `rounds_count`                | `rounds_count`                        | Количество раундов в игре.                                             | `15`                                |
 
-При создании игры через `GameCoordinator` (`game_create`), если передается объект `GameCreateSettings`, его поля используются для инициализации `GameSettings` для этой игровой сессии. Если `GameCreateSettings` не передан, используются отдельные `kwargs` (`game_id`, `game_mode`, `map_template_id`, `map_chain_id`), а остальные параметры `GameSettings` берутся по умолчанию. 
+При создании игры через `GameCoordinator` (`game_create`), если передается объект `GameCreateSettings`, его поля используются для инициализации `GameSettings` для этой игровой сессии. Если `GameCreateSettings` не передан, используются отдельные `kwargs` (`game_id`, `game_mode`, `map_template_id`, `map_chain_id`), а остальные параметры `GameSettings` берутся по умолчанию.

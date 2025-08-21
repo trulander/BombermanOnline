@@ -1,3 +1,5 @@
+[![English](https://img.shields.io/badge/lang-English-blue)](../../en/architecture/models.md)
+
 # Модели Данных
 
 В этом разделе описываются модели данных, используемые в игровом сервисе. Сюда входят Pydantic модели для валидации данных API и настроек создания игры, а также SQLAlchemy модели для определения структуры таблиц в базе данных. 
@@ -183,4 +185,4 @@
     -   `friendly_fire` (bool): Включен ли "огонь по своим".
     -   `time_limit` (Optional[int]): Лимит времени на игру в секундах.
     -   `score_limit` (Optional[int]): Лимит очков для победы.
-    -   `rounds_count` (Optional[int]): Количество раундов. 
+    -   `rounds_count` (Optional[int]): Количество раундов.

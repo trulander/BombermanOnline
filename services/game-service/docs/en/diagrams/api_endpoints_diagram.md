@@ -1,8 +1,8 @@
-[![English](https://img.shields.io/badge/lang-English-blue)](../../en/diagrams/api_endpoints_diagram.md)
+[![Russian](https://img.shields.io/badge/lang-Russian-blue)](../../ru/diagrams/api_endpoints_diagram.md)
 
-# Диаграмма REST API Endpoints
+# REST API Endpoints Diagram
 
-Эта диаграмма показывает структуру REST API endpoints для управления играми, командами и картами в Game Service.
+This diagram shows the structure of REST API endpoints for managing games, teams, and maps in the Game Service.
 
 ```mermaid
 graph TB
@@ -125,10 +125,10 @@ graph TB
     class NATS,DB,REDIS external
 ```
 
-**Описание потоков данных:**
+**Data Flow Description:**
 
-1. **Управление играми**: Клиенты используют Games API для создания, настройки и управления игровыми сессиями
-2. **Командная система**: Teams API позволяет управлять командами и распределением игроков
-3. **Карты**: Maps API управляет шаблонами, группами и цепочками карт
-4. **Реальное время**: NATS обеспечивает обмен сообщениями в реальном времени для игровых событий
-5. **Персистентность**: PostgreSQL хранит данные, Redis обеспечивает кеширование
+1.  **Game Management**: Clients use the Games API to create, configure, and manage game sessions.
+2.  **Team System**: The Teams API allows managing teams and player distribution.
+3.  **Maps**: The Maps API manages map templates, groups, and chains.
+4.  **Real-time**: NATS provides real-time message exchange for game events.
+5.  **Persistence**: PostgreSQL stores data, Redis provides caching.

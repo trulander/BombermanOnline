@@ -1,8 +1,8 @@
-[![English](https://img.shields.io/badge/lang-English-blue)](../../en/diagrams/class_diagram.md)
+[![Russian](https://img.shields.io/badge/lang-Russian-blue)](../../ru/diagrams/class_diagram.md)
 
-# Диаграмма Классов (Основные Сущности)
+# Class Diagram (Core Entities)
 
-Эта диаграмма иллюстрирует основные классы игровых сущностей и их взаимосвязи в `game-service`.
+This diagram illustrates the main game entity classes and their relationships in `game-service`.
 
 ```mermaid
 classDiagram
@@ -103,7 +103,7 @@ classDiagram
         +GameModeType game_mode
         +int max_players
         +str map_template_id
-        # ... другие настройки ...
+        # ... other settings ...
     }
     
     class Map {
@@ -188,10 +188,10 @@ classDiagram
     
 ```
 
-**Условные обозначения:**
-- `<|--`: Наследование (например, `Player` наследуется от `Entity`).
-- `..>`: Ассоциация или зависимость (например, `Player` использует `Inputs`).
-- `<<Abstract>>`: Абстрактный класс.
-- `<<Enumeration>>`: Перечисление.
-- `<<TypedDict>>`: Типизированный словарь.
-- `<<Pydantic BaseModel>>`: Модель Pydantic.
+**Notation:**
+-   `<|--`: Inheritance (e.g., `Player` inherits from `Entity`).
+-   `..>`: Association or dependency (e.g., `Player` uses `Inputs`).
+-   `<<Abstract>>`: Abstract class.
+-   `<<Enumeration>>`: Enumeration.
+-   `<<TypedDict>>`: Typed dictionary.
+-   `<<Pydantic BaseModel>>`: Pydantic model.

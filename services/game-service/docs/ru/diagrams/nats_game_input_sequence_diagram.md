@@ -1,3 +1,5 @@
+[![English](https://img.shields.io/badge/lang-English-blue)](../../en/diagrams/nats_game_input_sequence_diagram.md)
+
 # Диаграмма Последовательности: Обработка `game.input`
 
 Эта диаграмма показывает последовательность вызовов и взаимодействий компонентов при обработке NATS-события `game.input`.
@@ -46,7 +48,7 @@ sequenceDiagram
 4.  **GameCoordinator** по `game_id` находит нужный экземпляр **GameService** (управляющий конкретной игровой сессией).
 5.  **GameCoordinator** по `player_id` находит объект **Player** внутри этого **GameService**.
 6.  **GameCoordinator** вызывает метод `player.set_inputs(inputs)`, передавая новые состояния кнопок.
-7.  Объект **Player** обновляет свое внутреннее состояние `self.inputs`. Если игрок типа `TANK`, также обновляется его атрибут `self.direction` на основе кнопок движения.
+7.  Объект **Player** обновляет свое внутреннее состояние `self.inputs`. Если игрок типа `TANK`, также обновляется его атрибут `self.direction` на основе нажатых клавиш движения (вверх, вниз, влево, вправо).
 8.  Далее, в рамках основного игрового цикла (`start_game_loop` в **GameCoordinator**), который выполняется периодически:
     -   **GameCoordinator** вызывает `update(delta_time)` у соответствующего **GameService**.
     -   **GameService** делегирует вызов `update(delta_time)` своему текущему **GameModeService**.
@@ -56,4 +58,4 @@ sequenceDiagram
     -   **GameModeService** возвращает обновленное состояние игры в **GameService**.
     -   **GameService** возвращает его в **GameCoordinator**.
 9.  **GameCoordinator** через **EventService** публикует событие `game.update.{game_id}` в **NATS_Server** с полным обновленным состоянием игры.
-10. **NATS_Server** доставляет это обновление всем подписанным **Клиентам**. 
+10. **NATS_Server** доставляет это обновление всем подписанным **Клиентам**.

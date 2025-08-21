@@ -1,3 +1,5 @@
+[![English](https://img.shields.io/badge/lang-English-blue)](../en/api_endpoints.md)
+
 # API-эндпоинты игрового сервиса (Game Service API Endpoints)
 
 Этот документ описывает HTTP API-эндпоинты, предоставляемые сервисом `Game Service`. Все эндпоинты имеют префикс `/games/api/v1`.
@@ -165,4 +167,4 @@
 
 *   `GET /health`
     *   **Описание**: Проверка статуса сервиса.
-    *   **Ответ**: `Dict` с информацией о статусе. 
+    *   **Ответ**: `Dict` с информацией о статусе.

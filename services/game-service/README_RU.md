@@ -48,7 +48,7 @@
     ```bash
     uv pip install .
     # или, если нужны dev-зависимости и для редактируемой установки:
-    # uv pip install -e ".[dev]"
+    # uv pip install -e "".[dev]".
     ```
 
 ## Запуск сервиса
@@ -99,7 +99,7 @@
     -   `DELETE /templates/{id}` - Удалить шаблон карты
     -   Аналогичные операции для групп (`/groups`) и цепочек (`/chains`) карт
 
-Подробную документацию по API можно найти в [docs/api_endpoints.md](docs/ru/api_endpoints.md).
+Подробную документацию по API можно найти в [docs/ru/api_endpoints.md](docs/ru/api_endpoints.md).
 
 ### Запуск с использованием Docker
 
@@ -155,4 +155,37 @@
 
 ## Дополнительная документация
 
-Более подробную информацию о компонентах сервиса, API, событиях и архитектуре можно найти в директории [docs](./docs/).
+Более подробную информацию о компонентах сервиса, API, событиях и архитектуре можно найти в директории [docs/ru](./docs/ru).
+
+### API Эндпоинты
+- [API-эндпоинты игрового сервиса](docs/ru/api_endpoints.md)
+
+### Архитектура
+- [Игровые сущности](docs/ru/architecture/entities.md)
+- [Модели Данных](docs/ru/architecture/models.md)
+- [Обзор архитектуры Game Service](docs/ru/architecture/overview.md)
+- [Слой доступа к данным (Репозитории)](docs/ru/architecture/repositories.md)
+- [Сервисный слой](docs/ru/architecture/services.md)
+
+### Конфигурация
+- [Конфигурация Game Service](docs/ru/configuration.md)
+
+### Диаграммы
+- [Диаграмма REST API Endpoints](docs/ru/diagrams/api_endpoints_diagram.md)
+- [Диаграмма Классов (Основные Сущности)](docs/ru/diagrams/class_diagram.md)
+- [Диаграмма Последовательности: Обработка `game.input`](docs/ru/diagrams/nats_game_input_sequence_diagram.md)
+
+### Введение
+- [Введение в Game Service](docs/ru/introduction.md)
+
+### NATS События
+- [NATS События Game Service](docs/ru/nats_events.md)
+
+### Команды Игрока и Их Обработка
+- [Команды Игрока и Их Обработка](docs/ru/player_commands_and_actions.md)
+
+### Установка и запуск
+- [Установка и запуск Game Service](docs/ru/setup.md)
+
+### Логика Работы Команд
+- [Логика Работы Команд (Teams)](docs/ru/teams_logic.md)
