@@ -3,43 +3,50 @@
 
 ## Назначение в проекте
 
-**Prometheus** — это система **мониторинга и сбора метрик**. Она является центральным компонентом для сбора данных о производительности и состоянии всех сервисов в проекте.
+**Prometheus** — это система мониторинга, отвечающая за сбор и хранение метрик в виде временных рядов. Она является центральным хранилищем данных для Grafana.
 
-Prometheus периодически опрашивает (scrapes) HTTP-эндпоинты `/metrics`, предоставляемые различными сервисами и экспортерами, и сохраняет полученные данные в своей базе временных рядов. Эти данные затем используются в **Grafana** для построения графиков и дашбордов.
-
-## Конфигурация
-
-Основной конфигурационный файл находится в `infra/prometheus/prometheus.yml`.
+## Конфигурация из docker-compose.yml
 
 ```yaml
-global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
-
-scrape_configs:
-  - job_name: "prometheus"
-    static_configs:
-      - targets: ["localhost:9090"]
-
-  # ... другие job ...
+services:
+  prometheus:
+    image: prom/prometheus:v2.49.1
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.localhost`)"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 ```
 
-### Цели для сбора метрик (Scrape Targets)
+-   **`image`**: `prom/prometheus:v2.49.1`.
+-   **`volumes`**:
+    -   `./prometheus/prometheus.yml`: Основной конфигурационный файл, где определены цели для сбора метрик (`scrape_configs`).
+    -   `prometheus_data`: Том для хранения базы данных временных рядов.
+-   **`command`**: Задает конфигурационные флаги, включая путь к конфигу и базе данных.
+-   **`ports`**: `9090:9090` - порт для доступа к веб-интерфейсу Prometheus.
+-   **`labels`**: Настраивают Traefik для предоставления доступа к дашборду по адресу `prometheus.localhost`.
 
-Согласно `prometheus.yml`, настроен сбор метрик со следующих сервисов и экспортеров:
+## Взаимодействие с другими сервисами
 
--   `prometheus`: сам себя (localhost:9090)
--   `webapi-service`: `webapi-service:5001` (интервал 5с)
--   `game-service`: `game-service:5002` (интервал 5с)
--   `node-exporter`: `node-exporter:9100` (метрики хост-машины)
--   `cadvisor`: `cadvisor:8080` (метрики Docker-контейнеров)
--   `redis-exporter`: `redis-exporter:9121` (метрики Redis)
--   `nats-exporter`: `prometheus-nats-exporter:7777` (метрики NATS)
--   `loki`: `loki:3100`
--   `fluent-bit`: `fluent-bit:2020`
--   `grafana`: `grafana:3001`
+-   **Экспортеры**: Prometheus активно опрашивает (`scrape`) эндпоинты `/metrics` у множества сервисов, определенных в `prometheus.yml`:
+    -   `node-exporter` (метрики хоста)
+    -   `cadvisor` (метрики контейнеров)
+    -   `redis-exporter` (метрики Redis)
+    -   `prometheus-nats-exporter` (метрики NATS)
+    -   А также метрики самих сервисов: `webapi-service`, `game-service`, `loki`, `fluent-bit`, `grafana`.
+-   **Grafana**: Служит источником данных для Grafana, которая запрашивает данные с помощью языка PromQL и визуализирует их.
 
-## Доступ через Traefik
+## Доступ
 
--   **URL**: `http://prometheus.localhost`
--   Этот эндпоинт настроен в `docker-compose.yml` через лейблы у сервиса `prometheus` и позволяет получить доступ к веб-интерфейсу Prometheus для выполнения запросов PromQL и проверки состояния целей.
+-   **URL**: `http://prometheus.localhost` (через Traefik).
+-   **Прямой доступ**: `http://localhost:9090`.

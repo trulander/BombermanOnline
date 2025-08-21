@@ -3,40 +3,47 @@
 
 ## Purpose in the Project
 
-**Traefik** is a modern **API Gateway** and **Reverse Proxy** that serves as the single entry point for all HTTP requests into the system.
+**Traefik** is an API Gateway and reverse proxy that serves as the single entry point for all HTTP requests into the system. It is responsible for routing requests to the appropriate microservices, managing SSL certificates (in production), and applying middleware.
 
-Key functions in the project:
-1.  **Request Routing**: Traefik automatically discovers running services and routes incoming requests to the correct container based on rules defined in `infra/traefik/routers.yml`.
-2.  **Consul Integration**: Uses `consulCatalog` to discover services registered in Consul.
-3.  **Middleware**: Applies intermediate handlers to requests, configured in `infra/traefik/middlewares.yml`. This includes adding security headers, compression, and handling authentication checks.
-4.  **Authentication Check**: Through the `auth-check` middleware, it forwards requests to the `auth-service` to validate JWT tokens before granting access to protected resources.
-5.  **WebSocket Authorization**: Uses the `extractCookie` local plugin to extract the `ws_auth_token` from a cookie and pass it in the `Authorization` header to authenticate WebSocket connections.
+## Configuration from docker-compose.yml
 
-## Configuration
+```yaml
+services:
+  traefik:
+    image: traefik:3.4.0
+    ports:
+      - "80:80"     # HTTP
+      - "8080:8080" # Traefik Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+      - ./traefik/middlewares.yml:/etc/traefik/middlewares.yml
+      - ./traefik/routers.yml:/etc/traefik/routers.yml
+      - ./traefik/logs:/var/log/traefik
+      - ./traefik/traefik_plugins:/plugins-storage
+      - ./traefik/local-plugins:/plugins-local/src
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    labels:
+      - "traefik.enable=true"
+```
 
-Traefik's main configuration is split into several files within the `infra/traefik/` directory:
+-   **`image`**: `traefik:3.4.0` - The Traefik image being used.
+-   **`ports`**: Exposes ports `80` (for HTTP traffic) and `8080` (for the dashboard) to the host machine.
+-   **`volumes`**:
+    -   `/var/run/docker.sock`: Allows Traefik to automatically discover other containers.
+    -   `./traefik/...`: Mounts all necessary configuration files (main, middleware, routers) and directories for logs and plugins.
+-   **`command`**: Tells Traefik to use the main configuration file `traefik.yml`.
+-   **`labels`**: `traefik.enable=true` enables processing for Traefik itself to allow access to its dashboard.
 
--   **`traefik.yml`**: The main static configuration file. It defines entry points (`web`), providers (`docker`, `file`, `consulCatalog`), logging settings, and enables the dashboard.
--   **`routers.yml`**: Dynamic configuration that defines routing rules (`rule`) for each endpoint, the `entryPoints` used, and `middlewares` chains.
--   **`middlewares.yml`**: Defines all the middleware used.
+## Interaction with Other Services
 
-### Main Routes (`routers.yml`)
+-   **Providers**: Traefik uses three providers to discover routes: `docker` (for services with labels), `file` (to read `routers.yml` and `middlewares.yml`), and `consulCatalog` (for services registered in Consul).
+-   **Auth Service**: Uses `auth-service` via the `auth-check` middleware to protect endpoints. Traefik forwards the request to `auth-service`, and if it returns a `200 OK` status, the request is allowed to proceed.
+-   **`extractCookie` Local Plugin**: Used for WebSocket authorization. It extracts the token from the `ws_auth_token` cookie and places it into the `Authorization` header.
+-   **Microservices**: Routes requests to all public services (`web-frontend`, `webapi-service`, `auth-service`, etc.) according to the rules in `routers.yml`.
 
--   `/auth/**`: Routes to `auth-service`.
--   `/webapi/**`: Routes to `webapi-service` (protected by `auth-check`).
--   `/webapi/socket.io`: Route for WebSockets, uses `extract-cookie-ws_auth_token` and `auth-check`.
--   `/games/**`: Routes to `game-service` (protected by `auth-check`).
--   `/logs`: Route for receiving logs from the frontend, forwarded to `fluent-bit`.
--   `/`: All other requests are routed to `web-frontend`.
-
-### Key Middlewares (`middlewares.yml`)
-
--   `security-headers`: Adds standard security headers.
--   `compress`: Enables GZIP compression.
--   `auth-check`: `forwardAuth` to the `http://auth-service:5003/auth/api/v1/auth/check` endpoint for token validation.
--   `extract-cookie-ws_auth_token`: A local plugin that takes the `ws_auth_token` cookie and converts it into an `Authorization: Bearer <token>` header.
-
-## Access via Traefik
+## Access
 
 -   **Main Website**: `http://localhost/`
 -   **API Services**: `http://localhost/auth/`, `http://localhost/webapi/`, `http://localhost/games/`

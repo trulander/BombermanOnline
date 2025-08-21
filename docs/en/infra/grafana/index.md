@@ -3,46 +3,51 @@
 
 ## Purpose in the Project
 
-**Grafana** is a platform for **analytics and interactive visualization**. In this project, it serves as a unified center for monitoring, combining metrics from Prometheus and logs from Loki.
+**Grafana** is a platform for data visualization, monitoring, and analysis. It is used as a unified interface to view metrics from Prometheus and logs from Loki.
 
-## Configuration
+## Configuration from docker-compose.yml
 
-Grafana's automatic configuration (provisioning) is located in `infra/grafana/provisioning/`.
+```yaml
+services:
+  grafana:
+    image: grafana/grafana:12.0.0
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_HTTP_PORT=3001
+      - GF_DASHBOARDS_MIN_REFRESH_INTERVAL=5s
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    ports:
+      - "3001:3001"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3001"
+```
 
--   **`datasources/datasources.yml`**:
-    -   Automatically configures two data sources:
-        1.  **`Prometheus`**: `http://prometheus:9090`, set as the default source.
-        2.  **`Loki`**: `http://loki:3100`.
+-   **`image`**: `grafana/grafana:12.0.0`.
+-   **`volumes`**: Mounts directories for Grafana's data and for automatic provisioning of data sources and dashboards.
+-   **`environment`**: Sets numerous variables for Grafana's configuration, including:
+    -   `GF_SECURITY_ADMIN_USER`/`PASSWORD`: Administrator credentials.
+    -   `GF_USERS_ALLOW_SIGN_UP=false`: Disables new user registration.
+    -   `GF_AUTH_ANONYMOUS_ENABLED=true`: Allows anonymous access with the `Viewer` role.
+-   **`labels`**: Configure Traefik to provide access to Grafana at `grafana.localhost`.
 
--   **`dashboards/dashboards.yml`**:
-    -   Tells Grafana to automatically load all dashboards from the `/var/lib/grafana/dashboards` directory (which is mounted from `infra/grafana/dashboards/`).
+## Interaction with Other Services
 
-## Dashboards
-
-The project comes with the following pre-configured dashboards (`infra/grafana/dashboards/*.json`):
-
--   **`complete_dashboard.json`**: A comprehensive dashboard including:
-    -   **Microservices**: RPS and 95th percentile latency for `webapi-service` and `game-service`.
-    -   **System**: Overall host CPU and memory usage.
-    -   **Containers**: CPU and memory usage per container.
-    -   **Redis**: Commands per second and memory usage.
-    -   **Logs**: A panel with the latest logs from Loki.
-
--   **`logs_dashboard.json`**: A specialized dashboard for logs:
-    -   Filters for keywords, log level, and service.
-    -   A panel showing only logs with level `ERROR`, `CRITICAL`, `FATAL`, `WARN`.
-    -   Graphs for log distribution by service and level.
-    -   An alert is configured for critical errors.
-
--   **`microservices.json`**: A dashboard with RPS and latency metrics for `webapi-service` and `game-service`.
-
--   **`nats_dashboard.json`**: NATS metrics, including connection count, CPU usage, message rate, and traffic.
-
--   **`redis_dashboard.json`**: Detailed Redis metrics: client count, throughput, memory usage, key statistics, and cache hits.
-
--   **`socket_dashboard.json`**: Metrics related to WebSockets and NATS, including active connections and games.
+-   **Prometheus**: Grafana uses Prometheus as its primary data source for metrics.
+-   **Loki**: Uses Loki as a data source for displaying and querying logs.
+-   **Provisioning**: On startup, it automatically configures connections to Prometheus and Loki based on files in `./grafana/provisioning/datasources` and loads all dashboards from `./grafana/dashboards`.
 
 ## Access
 
--   **URL**: `http://grafana.localhost` (configured via Traefik in `docker-compose.yml`).
--   **Login/Password**: `admin`/`admin` (set as environment variables in `docker-compose.yml`).
+-   **URL**: `http://grafana.localhost` (via Traefik).
+-   **Direct Access**: `http://localhost:3001`.
+-   **Login/Password**: `admin`/`admin`.

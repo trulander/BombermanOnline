@@ -9,10 +9,9 @@
 -   **`ai-service`** subscribes to these events and sends AI control commands.
 -   **`game-allocator-service`** coordinates the distribution of game sessions.
 
-## Configuration
+## Configuration from docker-compose.yml
 
 ```yaml
-# infra/docker-compose.yml
 services:
   nats:
     image: nats:2.10
@@ -22,6 +21,15 @@ services:
     volumes:
       - nats_data:/data
 ```
+
+- **`image`**: `nats:2.10`
+- **`ports`**: `4222` for clients, `8222` for monitoring.
+- **`volumes`**: `nats_data` for data persistence (e.g., for JetStream).
+
+## Interaction with Other Services
+
+-   **Microservices**: Services requiring asynchronous communication connect to NATS at `nats:4222`.
+-   **Prometheus NATS Exporter**: The exporter connects to the monitoring port `8222` to scrape metrics and provide them to Prometheus.
 
 - **`image`**: `nats:2.10`
 - **`ports`**: `4222` for clients, `8222` for monitoring.

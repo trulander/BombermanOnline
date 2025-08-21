@@ -3,40 +3,47 @@
 
 ## Назначение в проекте
 
-**Traefik** — это современный **API Gateway** и **обратный прокси (Reverse Proxy)**, который служит единой точкой входа для всех HTTP-запросов в систему.
+**Traefik** — это API Gateway и обратный прокси, который служит единой точкой входа для всех HTTP-запросов в систему. Он отвечает за маршрутизацию запросов к соответствующим микросервисам, управление SSL-сертификатами (в production) и применение middleware.
 
-Ключевые функции в проекте:
-1.  **Маршрутизация запросов**: Traefik автоматически обнаруживает запущенные сервисы и направляет входящие запросы на нужный контейнер на основе правил, определенных в `infra/traefik/routers.yml`.
-2.  **Интеграция с Consul**: Использует `consulCatalog` для обнаружения сервисов, зарегистрированных в Consul.
-3.  **Middleware**: Применяет к запросам промежуточные обработчики, настроенные в `infra/traefik/middlewares.yml`. Это включает в себя добавление заголовков безопасности, сжатие, а также проверку аутентификации.
-4.  **Проверка аутентификации**: С помощью middleware `auth-check` перенаправляет запросы на `auth-service` для проверки JWT-токена перед доступом к защищенным ресурсам.
-5.  **Авторизация WebSocket**: Использует локальный плагин `extractCookie` для извлечения `ws_auth_token` из cookie и передачи его в заголовке `Authorization` для аутентификации WebSocket-соединений.
+## Конфигурация из docker-compose.yml
 
-## Конфигурация
+```yaml
+services:
+  traefik:
+    image: traefik:3.4.0
+    ports:
+      - "80:80"     # HTTP
+      - "8080:8080" # Веб-интерфейс Traefik Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/traefik.yml:/etc/traefik/traefik.yml
+      - ./traefik/middlewares.yml:/etc/traefik/middlewares.yml
+      - ./traefik/routers.yml:/etc/traefik/routers.yml
+      - ./traefik/logs:/var/log/traefik
+      - ./traefik/traefik_plugins:/plugins-storage
+      - ./traefik/local-plugins:/plugins-local/src
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    labels:
+      - "traefik.enable=true"
+```
 
-Основная конфигурация Traefik разделена на несколько файлов в директории `infra/traefik/`:
+-   **`image`**: `traefik:3.4.0` - Используемый образ Traefik.
+-   **`ports`**: Пробрасываются порты `80` (для HTTP-трафика) и `8080` (для дашборда) на хост-машину.
+-   **`volumes`**:
+    -   `/var/run/docker.sock`: Позволяет Traefik автоматически обнаруживать другие контейнеры.
+    -   `./traefik/...`: Монтируются все необходимые конфигурационные файлы (основной, middleware, роутеры) и директории для логов и плагинов.
+-   **`command`**: Указывает Traefik использовать основной конфигурационный файл `traefik.yml`.
+-   **`labels`**: `traefik.enable=true` включает обработку самого Traefik для доступа к его дашборду.
 
--   **`traefik.yml`**: Основной статический конфигурационный файл. Определяет точки входа (`web`), провайдеры (`docker`, `file`, `consulCatalog`), настройки логов и включает дашборд.
--   **`routers.yml`**: Динамическая конфигурация, определяющая правила маршрутизации (`rule`) для каждого эндпоинта, используемые `entryPoints` и цепочки `middlewares`.
--   **`middlewares.yml`**: Определяет все используемые middleware.
+## Взаимодействие с другими сервисами
 
-### Основные маршруты (`routers.yml`)
+-   **Providers**: Traefik использует три провайдера для обнаружения маршрутов: `docker` (для сервисов с лейблами), `file` (для чтения `routers.yml` и `middlewares.yml`) и `consulCatalog` (для сервисов, зарегистрированных в Consul).
+-   **Auth Service**: Использует `auth-service` через middleware `auth-check` для защиты эндпоинтов. Traefik перенаправляет запрос на `auth-service`, и если тот возвращает статус `200 OK`, запрос пропускается дальше.
+-   **Локальный плагин `extractCookie`**: Используется для авторизации WebSocket-соединений. Он извлекает токен из cookie `ws_auth_token` и помещает его в заголовок `Authorization`.
+-   **Микросервисы**: Маршрутизирует запросы ко всем публичным сервисам (`web-frontend`, `webapi-service`, `auth-service` и др.) согласно правилам в `routers.yml`.
 
--   `/auth/**`: Маршруты к `auth-service`.
--   `/webapi/**`: Маршруты к `webapi-service` (защищены `auth-check`).
--   `/webapi/socket.io`: Маршрут для WebSocket, использует `extract-cookie-ws_auth_token` и `auth-check`.
--   `/games/**`: Маршруты к `game-service` (защищены `auth-check`).
--   `/logs`: Маршрут для приема логов от фронтенда, перенаправляется на `fluent-bit`.
--   `/`: Все остальные запросы направляются на `web-frontend`.
-
-### Ключевые Middlewares (`middlewares.yml`)
-
--   `security-headers`: Добавляет стандартные заголовки безопасности.
--   `compress`: Включает GZIP-сжатие.
--   `auth-check`: `forwardAuth` на эндпоинт `http://auth-service:5003/auth/api/v1/auth/check` для валидации токена.
--   `extract-cookie-ws_auth_token`: Локальный плагин, который берет cookie `ws_auth_token` и преобразует его в заголовок `Authorization: Bearer <token>`.
-
-## Доступ через Traefik
+## Доступ
 
 -   **Основной сайт**: `http://localhost/`
 -   **API сервисы**: `http://localhost/auth/`, `http://localhost/webapi/`, `http://localhost/games/`

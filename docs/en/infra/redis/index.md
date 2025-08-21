@@ -9,10 +9,9 @@
 -   **`game-service`**: Storing the temporary state of active games.
 -   **`game-allocator-service`**: Tracking the load on `game-service` instances.
 
-## Configuration
+## Configuration from docker-compose.yml
 
 ```yaml
-# infra/docker-compose.yml
 services:
   redis:
     image: redis:7.2
@@ -21,6 +20,16 @@ services:
     volumes:
       - redis_data:/data
 ```
+
+- **`image`**: `redis:7.2`
+- **`ports`**: `6379:6379` - the standard Redis port.
+- **`volumes`**: `redis_data` - a volume to persist data.
+
+## Interaction with Other Services
+
+-   **Microservices**: All main services (`auth`, `game`, `webapi`, etc.) connect to Redis using the hostname `redis` and port `6379`.
+-   **Redis Exporter**: The `redis-exporter` service connects to Redis to collect metrics and provide them to Prometheus.
+
 
 - **`image`**: `redis:7.2`
 - **`ports`**: `6379:6379` - the standard Redis port.

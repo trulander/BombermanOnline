@@ -3,43 +3,50 @@
 
 ## Purpose in the Project
 
-**Prometheus** is a **monitoring and metrics collection** system. It is the central component for gathering performance and health data from all services in the project.
+**Prometheus** is a monitoring system responsible for collecting and storing metrics as time-series data. It serves as the central data store for Grafana.
 
-Prometheus periodically scrapes the `/metrics` HTTP endpoints provided by various services and exporters, and stores the collected data in its time-series database. This data is then used by **Grafana** to build graphs and dashboards.
-
-## Configuration
-
-The main configuration file is located at `infra/prometheus/prometheus.yml`.
+## Configuration from docker-compose.yml
 
 ```yaml
-global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
-
-scrape_configs:
-  - job_name: "prometheus"
-    static_configs:
-      - targets: ["localhost:9090"]
-
-  # ... other jobs ...
+services:
+  prometheus:
+    image: prom/prometheus:v2.49.1
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "9090:9090"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.localhost`)"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 ```
 
-### Scrape Targets
+-   **`image`**: `prom/prometheus:v2.49.1`.
+-   **`volumes`**:
+    -   `./prometheus/prometheus.yml`: The main configuration file where scrape targets are defined.
+    -   `prometheus_data`: A volume for storing the time-series database.
+-   **`command`**: Sets configuration flags, including the path to the config and database.
+-   **`ports`**: `9090:9090` - the port for accessing the Prometheus web UI.
+-   **`labels`**: Configure Traefik to provide access to the dashboard at `prometheus.localhost`.
 
-According to `prometheus.yml`, metrics are configured to be scraped from the following services and exporters:
+## Interaction with Other Services
 
--   `prometheus`: itself (localhost:9090)
--   `webapi-service`: `webapi-service:5001` (5s interval)
--   `game-service`: `game-service:5002` (5s interval)
--   `node-exporter`: `node-exporter:9100` (host machine metrics)
--   `cadvisor`: `cadvisor:8080` (Docker container metrics)
--   `redis-exporter`: `redis-exporter:9121` (Redis metrics)
--   `nats-exporter`: `prometheus-nats-exporter:7777` (NATS metrics)
--   `loki`: `loki:3100`
--   `fluent-bit`: `fluent-bit:2020`
--   `grafana`: `grafana:3001`
+-   **Exporters**: Prometheus actively scrapes the `/metrics` endpoints of numerous services defined in `prometheus.yml`:
+    -   `node-exporter` (host metrics)
+    -   `cadvisor` (container metrics)
+    -   `redis-exporter` (Redis metrics)
+    -   `prometheus-nats-exporter` (NATS metrics)
+    -   As well as the application services themselves: `webapi-service`, `game-service`, `loki`, `fluent-bit`, `grafana`.
+-   **Grafana**: Serves as a data source for Grafana, which queries the data using PromQL and visualizes it.
 
-## Access via Traefik
+## Access
 
--   **URL**: `http://prometheus.localhost`
--   This endpoint is configured in `docker-compose.yml` via labels on the `prometheus` service and provides access to the Prometheus web UI for running PromQL queries and checking target status.
+-   **URL**: `http://prometheus.localhost` (via Traefik).
+-   **Direct Access**: `http://localhost:9090`.

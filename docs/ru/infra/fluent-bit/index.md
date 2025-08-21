@@ -3,12 +3,11 @@
 
 ## Назначение
 
-Сборщик и пересыльщик логов.
+**Fluent Bit** — это легковесный и высокопроизводительный сборщик и пересыльщик логов. Он собирает логи из всех контейнеров, парсит их и отправляет в Loki.
 
-## Конфигурация
+## Конфигурация из docker-compose.yml
 
 ```yaml
-# infra/docker-compose.yml
 services:
   fluent-bit:
     image: grafana/fluent-bit-plugin-loki:latest
@@ -26,7 +25,20 @@ services:
       - LOKI_URL=http://loki.internal:3100/loki/api/v1/push
 ```
 
-- **`image`**: `grafana/fluent-bit-plugin-loki:latest`
-- **`volumes`**: Подключаются файлы конфигурации и сокет Docker.
-- **`ports`**: `24224` для логов от Docker, `8888` для логов от фронтенда.
-- **`environment.LOKI_URL`**: Адрес для отправки логов в Loki.
+-   **`image`**: `grafana/fluent-bit-plugin-loki:latest` - образ с плагином для Loki.
+-   **`volumes`**: Монтируются файлы конфигурации (`fluent-bit.conf`, `parsers.conf`) и сокет Docker для сбора метаданных контейнеров.
+-   **`ports`**:
+    -   `24224`: Принимает логи от Docker-контейнеров по протоколу `forward`.
+    -   `8888`: Принимает логи от `web-frontend` по HTTP.
+    -   `2020`: HTTP-сервер для мониторинга самого Fluent Bit.
+-   **`environment.LOKI_URL`**: Указывает адрес Loki для отправки логов, используя внутреннее сетевое имя `loki.internal`.
+
+## Взаимодействие с другими сервисами
+
+-   **Docker**: Все микросервисы в `docker-compose.yml` имеют настройку `logging.driver: "fluentd"`, которая направляет их `stdout` и `stderr` в Fluent Bit.
+-   **Loki**: Является единственным получателем (`output`) обработанных логов от Fluent Bit.
+-   **Web Frontend**: Отправляет свои логи на порт `8888`.
+
+## Доступ
+
+-   Сервис является внутренним и не имеет прямого доступа через Traefik.
