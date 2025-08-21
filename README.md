@@ -118,7 +118,7 @@ Here you will find detailed documentation for the various components of the Bomb
 
 ### Infrastructure
 
-Detailed descriptions of each infrastructure component, its purpose, and configuration, based on the actual project files.
+Detailed descriptions of each infrastructure component, its purpose, and configuration.
 
 *   **[Traefik](docs/en/infra/traefik/index.md)** (API Gateway & Routing)
 *   **[Prometheus](docs/en/infra/prometheus/index.md)** (Metrics Collection)
