@@ -187,17 +187,25 @@ docker-compose -f docker-compose.yml -f infra/docker-compose.yml up -d --build
 ## Технологии
 
 ### Frontend
-- React 18 + TypeScript
-- Material-UI
-- Canvas API
-- Axios
+- **Фреймворк**: React 18 с TypeScript
+- **UI-компоненты**: Material-UI
+- **Маршрутизация**: React Router
+- **Управление состоянием и формы**: Formik и Yup
+- **Взаимодействие с API**: Axios (для REST), Socket.IO Client (для WebSocket)
+- **Отрисовка**: Canvas API для игрового поля
 
 ### Backend
-- FastAPI
-- PostgreSQL
-- Redis
-- NATS
-- Consul
+- **Фреймворк**: FastAPI (с Uvicorn)
+- **База данных**: PostgreSQL (с SQLAlchemy и Alembic)
+- **Кэш в памяти**: Redis
+- **Обмен сообщениями**: NATS (для асинхронной коммуникации)
+- **Обнаружение сервисов**: Consul
+- **Обмен данными в реальном времени**: WebSockets (через `python-socketio`)
+- **Аутентификация**: JWT с `python-jose` и `passlib`
+- **AI и машинное обучение**:
+  - **Обучение**: Stable Baselines3
+  - **Среда**: Gymnasium
+  - **Визуализация**: TensorBoard
 
 ### DevOps
 - Docker + Docker Compose

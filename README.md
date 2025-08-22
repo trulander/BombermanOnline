@@ -187,17 +187,25 @@ After startup, services are available at the following addresses:
 ## Technologies
 
 ### Frontend
-- React 18 + TypeScript
-- Material-UI
-- Canvas API
-- Axios
+- **Framework**: React 18 with TypeScript
+- **UI Components**: Material-UI
+- **Routing**: React Router
+- **State Management & Forms**: Formik & Yup
+- **API Communication**: Axios (for REST), Socket.IO Client (for WebSockets)
+- **Rendering**: Canvas API for the game board
 
 ### Backend
-- FastAPI
-- PostgreSQL
-- Redis
-- NATS
-- Consul
+- **Framework**: FastAPI (with Uvicorn)
+- **Database**: PostgreSQL (with SQLAlchemy and Alembic)
+- **In-Memory Cache**: Redis
+- **Messaging**: NATS (for asynchronous communication)
+- **Service Discovery**: Consul
+- **Real-time Communication**: WebSockets (via `python-socketio`)
+- **Authentication**: JWT with `python-jose` and `passlib`
+- **AI & Machine Learning**:
+  - **Training**: Stable Baselines3
+  - **Environment**: Gymnasium
+  - **Visualization**: TensorBoard
 
 ### DevOps
 - Docker + Docker Compose
