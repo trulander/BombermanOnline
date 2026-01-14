@@ -197,7 +197,7 @@ services:
       - "traefik.enable=true"
 
   tensorboard:
-    image: tensorflow/tensorboard:latest
+    image: tensorflow/tensorflow:2.20.0
     volumes:
       - ../infra/ai_logs:/tf/logs
     ports:

@@ -5,7 +5,7 @@ description = "AI service for Bomberman Online"
 requires-python = "==3.12.7"
 dependencies = [
     "fastapi>=0.115.0",
-    "uvicorn[standard]>=0.34.0",
+    "uvicorn>=0.34.0",
     "nats-py>=2.10.0",
     "redis[hiredis]>=6.0.0",
     "redis-dict>=3.2.0",

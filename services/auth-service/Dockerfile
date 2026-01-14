@@ -7,7 +7,7 @@ WORKDIR /app
 RUN pip install --no-cache-dir uv
 
 # Копирование файлов зависимостей
-COPY pyproject.toml ./
+COPY pyproject.toml uv.lock ./
 
 # Устанавливаем зависимости через uv (с флагом --system)
 RUN uv sync

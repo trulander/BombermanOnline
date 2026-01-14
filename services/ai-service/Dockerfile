@@ -2,7 +2,12 @@ FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
-# Устанавливаем uv
+RUN apt-get update && apt-get install -y \
+    swig \
+    build-essential \
+    cmake \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN pip install uv
 
 # Копируем pyproject.toml и uv.lock для установки зависимостей
@@ -18,4 +23,4 @@ COPY app ./app
 # EXPOSE 5004
 
 # Команда для запуска приложения
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5004"] 
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5004"]
