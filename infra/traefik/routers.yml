@@ -1,5 +1,49 @@
 http:
   routers:
+    # Traefik Dashboard - должен быть первым для специфичного хоста
+    dashboard:
+      rule: "Host(`traefik.localhost`)"
+      entryPoints:
+        - web
+      service: api@internal
+
+    # Logger API
+    logger:
+      rule: "PathPrefix(`/logs`)"
+      entryPoints:
+        - web
+      service: logger
+      middlewares:
+        - strip-logs-prefix
+
+    # Grafana
+    grafana:
+      rule: "PathPrefix(`/grafana`)"
+      entryPoints:
+        - web
+      service: grafana@docker
+
+    # pgAdmin
+    pgadmin:
+      rule: "PathPrefix(`/pgadmin`)"
+      entryPoints:
+        - web
+      service: pgadmin@docker
+#      middlewares:
+#        - strip-pgadmin-prefix
+
+    # WebAPI WebSocket - должен быть перед общим /webapi
+    webapi-ws:
+      rule: "PathPrefix(`/webapi/socket.io`)"
+      entryPoints:
+        - web
+      service: webapi-service@consulcatalog
+      middlewares:
+        - extract-cookie-ws_auth_token
+        - websocket
+        - strip-webapi-prefix
+        - auth-check
+
     # отключаем авторизацию для страниц документаций, для локальной разработки.
     auth-api_docs:
       rule: "PathPrefix(`/auth/docs`)"
@@ -29,7 +73,6 @@ http:
         - compress
         - security-headers
 
-
     # Auth сервис - API
     auth-api:
       rule: "PathPrefix(`/auth`)"
@@ -40,7 +83,6 @@ http:
         - compress
         - security-headers
 
-
     # WebAPI сервис - с проверкой авторизации
     webapi:
       rule: "PathPrefix(`/webapi`)"
@@ -50,18 +92,6 @@ http:
       middlewares:
         - compress
         - security-headers
-        - auth-check
-
-    # WebAPI WebSocket
-    webapi-ws:
-      rule: "PathPrefix(`/webapi/socket.io`)"
-      entryPoints:
-        - web
-      service: webapi-service@consulcatalog
-      middlewares:
-        - extract-cookie-ws_auth_token
-        - websocket
-        - strip-webapi-prefix
         - auth-check
 
     # Game сервис - с проверкой авторизации
@@ -75,16 +105,7 @@ http:
         - security-headers
         - auth-check
 
-    # Logger API
-    logger:
-      rule: "PathPrefix(`/logs`)"
-      entryPoints:
-        - web
-      service: logger
-      middlewares:
-        - strip-logs-prefix
-
-    # Web Frontend - для авторизованных пользователей
+    # Web Frontend - должен быть последним, чтобы не перехватывать специфичные маршруты
     frontend:
       rule: "PathPrefix(`/`)"
       entryPoints:
@@ -93,19 +114,12 @@ http:
       middlewares:
         - compress
         - security-headers
-#        - auth-redirect
-
-    # Traefik Dashboard
-    dashboard:
-      rule: "Host(`traefik.localhost`)"
-      entryPoints:
-        - web
-      service: api@internal
 
 
 
   services:
-    # Определение сервисов
+    # Fallback сервисы для старта (до регистрации в Consul)
+    # Traefik автоматически переключится на Consul Catalog, когда сервисы зарегистрируются
     auth-service:
       loadBalancer:
         servers:
@@ -121,6 +135,7 @@ http:
         servers:
           - url: "http://game-service:5002"
 
+    # Статические сервисы (не регистрируются в Consul)
     web-frontend:
       loadBalancer:
         servers:

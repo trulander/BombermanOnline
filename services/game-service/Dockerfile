@@ -17,12 +17,13 @@ COPY pyproject.toml uv.lock ./
 # Устанавливаем зависимости через uv (с флагом --system)
 RUN uv pip install --no-cache-dir --system -e .
 RUN uv sync
-## Копируем исходный код
-#COPY . .
 
 # Создаем директорию для логов
 RUN mkdir -p /app/logs
 
 WORKDIR /app/game-service
-# Запускаем приложение
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5002"]
+
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

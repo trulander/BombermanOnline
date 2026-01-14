@@ -29,6 +29,8 @@ services:
 #        - consul
 #        - prometheus
 #        - nats
+      expose:
+        - "5006"
       labels:
         - "traefik.enable=true"
 #        - "traefik.http.routers.allocator.rule=Host(`allocator.localhost`)"
@@ -42,9 +44,9 @@ services:
     build:
       context: ../services/webapi-service
       dockerfile: Dockerfile
-#    deploy:
-#      mode: replicated
-#      replicas: 2
+    deploy:
+      mode: replicated
+      replicas: 2
 #    command: uv run uvicorn webapi-service.app.main:app --host 0.0.0.0 --port 5001
     volumes:
       - ../services/webapi-service/app:/app/webapi-service/app
@@ -76,10 +78,11 @@ services:
     build:
       context: ../services/game-service
       dockerfile: Dockerfile
-#    command: uv run --host 0.0.0.0 --port 8001
-#    deploy:
-#      mode: replicated
-#      replicas: 2
+#    command: sleep infinity
+#    command: uv run uvicorn app.main:app --host 0.0.0.0 --port 5002
+    deploy:
+      mode: replicated
+      replicas: 2
     volumes:
       - ../services/game-service/app:/app/game-service/app
       - game_logs:/var/log/game-service
@@ -116,9 +119,9 @@ services:
     build:
       context: ../services/auth-service
       dockerfile: Dockerfile
-#    deploy:
-#      mode: replicated
-#      replicas: 2
+    deploy:
+      mode: replicated
+      replicas: 2
     volumes:
       - ../services/auth-service/app:/app/auth-service/app
       - auth_logs:/var/log/auth-service
@@ -179,8 +182,8 @@ services:
     build:
       context: ../services/web-frontend
       dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     volumes:
       - ../services/web-frontend/public:/app/public
       - ../services/web-frontend/src:/app/src
@@ -188,7 +191,7 @@ services:
       - NODE_ENV=production
       - REACT_APP_LOGS_ENDPOINT=/logs
       - REACT_APP_SERVICE_NAME=web-frontend
-      - REACT_APP_SOCKET_URL=http://localhost
+      - REACT_APP_SOCKET_URL=http://localhost:3000
       - REACT_APP_SOCKET_PATH=/webapi/socket.io
       - PORT=3000
       - REACT_APP_LOGS_BATCH_SIZE=10
@@ -220,6 +223,22 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 #    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@admin.com}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin}
+      - PGADMIN_CONFIG_SERVER_MODE=True
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+      - SCRIPT_NAME=/pgadmin
+    expose:
+      - "80"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
 
   redis:
     image: redis:7.2
@@ -254,9 +273,9 @@ services:
 #    restart: unless-stopped
 
   traefik:
-    image: traefik:3.4.0
+    image: traefik:3.6.6
     ports:
-      - "80:80"     # HTTP
+      - "3000:80"     # HTTP
       - "8080:8080" # Веб-интерфейс Traefik Dashboard
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -368,21 +387,21 @@ services:
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
-      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_SERVER_ROOT_URL=http://localhost:3000/grafana/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=true
       - GF_USERS_ALLOW_SIGN_UP=false
       - GF_SERVER_HTTP_PORT=3001
       - GF_DASHBOARDS_MIN_REFRESH_INTERVAL=5s
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
-    ports:
-      - "3001:3001"
+    expose:
+      - "3001"
 #    depends_on:
 #      - prometheus
 #      - loki
 #    restart: unless-stopped
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.localhost`)"
       - "traefik.http.services.grafana.loadbalancer.server.port=3001"
 
 volumes:
@@ -392,6 +411,7 @@ volumes:
   prometheus_data:
   loki_data:
   grafana_data:
+  pgadmin_data:
   webapi_logs:
   game_logs:
   auth_logs:

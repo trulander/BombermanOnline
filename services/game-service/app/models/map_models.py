@@ -1,18 +1,14 @@
-from typing import List, Optional, Dict, Tuple, Any, TYPE_CHECKING, TypedDict
+from typing import List, Optional
 from datetime import datetime
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, Integer, String, Text, JSON, Boolean, DateTime, Float
-from sqlalchemy.ext.declarative import declarative_base
 
 from app.entities import EnemyType, PowerUpType, CellType
 from app.entities.game_status import GameStatus
 from app.entities.player import UnitType
 from app.entities.weapon import WeaponType
+from app.models.base_model import Base
 
-if TYPE_CHECKING:
-    from app.models.game_models import GameTeamInfo
-
-Base = declarative_base()
 
 # SQLAlchemy модели для базы данных
 class MapTemplateORM(Base):

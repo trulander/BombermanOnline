@@ -23,6 +23,13 @@ RUN mkdir -p ./app/templates ./app/static
 #COPY alembic.ini ./
 
 # Порт, который будет слушать приложение
-EXPOSE 5003
+#EXPOSE 5003
 
-CMD ["uv", "run", "uvicorn", "auth-service.app.main:app", "--host", "0.0.0.0", "--port", "5003"]
+#CMD ["uv", "run", "uvicorn", "auth-service.app.main:app", "--host", "0.0.0.0", "--port", "5003"]
+
+WORKDIR /app/auth-service
+
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]

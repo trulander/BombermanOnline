@@ -18,16 +18,15 @@ providers:
     endpoint:
       address: "consul:8500"
     exposedByDefault: true
-
-#    connectByDefault: true
-#    prefix: "traefik.enable=true"
+    prefix: "traefik"
+    refreshInterval: 15s
+    requireConsistent: false
+    stale: false
 
 
 log:
   level: INFO
 
-pilot:
-  enabled: false
 
 accessLog:
   filePath: "/var/log/traefik/access.log"

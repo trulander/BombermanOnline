@@ -33,6 +33,18 @@ http:
       stripPrefix:
         prefixes:
           - "/logs"
+
+    # Middleware для удаления префикса /grafana
+    strip-grafana-prefix:
+      stripPrefix:
+        prefixes:
+          - "/grafana"
+
+    # Middleware для удаления префикса /pgadmin
+    strip-pgadmin-prefix:
+      stripPrefix:
+        prefixes:
+          - "/pgadmin"
         
     # Middleware для WebSocket соединений
     websocket:

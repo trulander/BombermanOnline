@@ -4,7 +4,7 @@ from starlette.middleware.cors import CORSMiddleware
 import typer
 import subprocess
 
-from .config import settings
+from config import settings
 
 app = typer.Typer()
 
