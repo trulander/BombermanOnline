@@ -5,7 +5,9 @@
 
 **Consul** is used in the project as a key component for **Service Discovery**.
 
-Microservices (`webapi-service`, `game-service`, `auth-service`, etc.) register with Consul upon startup. This allows them to find each other by service name (e.g., `auth-service`) instead of hard-coded IP addresses, which is critical for a distributed system. Traefik also uses Consul (via the `consulCatalog` provider) to dynamically discover backends.
+Microservices (`webapi-service`, `game-service`, `auth-service`, `game-allocator-service`, `ai-service`, etc.) register with Consul upon startup. This allows them to find each other by service name (e.g., `auth-service`) instead of hard-coded IP addresses, which is critical for a distributed system. Traefik also uses Consul (via the `consulCatalog` provider) to dynamically discover backends.
+
+All services register with Consul using HTTP healthcheck endpoints (e.g., `/health`), allowing Consul to automatically check instance health and exclude non-working instances from available ones.
 
 ## Configuration
 

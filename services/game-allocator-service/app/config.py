@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     # FastAPI settings
     SERVICE_NAME: str = "game-allocator-service"
     APP_TITLE: str = "Bomberman Game Allocator Service"
+    PORT: int = 5005
 
     GAME_CACHE_TTL: int = 60
 

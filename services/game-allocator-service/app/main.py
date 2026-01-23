@@ -8,6 +8,8 @@ import json
 import consul
 from prometheus_api_client import PrometheusConnect
 
+from aiohttp import web
+
 from config import settings
 from logging_config import configure_logging
 from nats_repository import NatsRepository
@@ -17,6 +19,29 @@ from nats.aio.msg import Msg
 
 
 logger = logging.getLogger(__name__)
+
+
+async def health_check_handler(request: web.Request) -> web.Response:
+    return web.json_response({
+        "status": "healthy",
+        "service": settings.SERVICE_NAME
+    })
+
+
+def create_healthcheck_server() -> web.Application:
+    app = web.Application()
+    app.router.add_get("/health", health_check_handler)
+    return app
+
+
+async def start_healthcheck_server(port: int) -> None:
+    app = create_healthcheck_server()
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", port)
+    await site.start()
+    logger.info(f"Healthcheck server started on 0.0.0.0:{port}")
+
 
 class NatsEvents(Enum):
     GAME_ID_ASSIGN_GAME_SERVER = "game.assign.request"
@@ -159,6 +184,7 @@ class GameAllocatorService:
         await self.nats_repository.get_nc()
         await self.redis_repository.get_redis()
         await self.initialize_handlers()
+        asyncio.create_task(start_healthcheck_server(port=settings.PORT))
         await asyncio.Event().wait()
 
 
@@ -170,14 +196,15 @@ def register_service():
     c.agent.service.register(
         name=service_name,
         service_id=service_id,
-        # address=socket.gethostname(),  # Имя сервиса в Docker сети
-        # port=settings.PORT,
+        address=socket.gethostname(),
+        port=settings.PORT,
         tags=["traefik"],
-        # check=consul.Check.http(
-        #     url=f"http://{socket.gethostname()}:{settings.PORT}/health",
-        #     interval="10s",
-        #     timeout="1s"
-        # )
+        check=consul.Check.http(
+            url=f"http://{socket.gethostname()}:{settings.PORT}/health",
+            interval="10s",
+            timeout="1s",
+            deregister="60s"
+        )
     )
 
 

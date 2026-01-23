@@ -7,7 +7,7 @@
 
 -   **`auth-service`**: Caching sessions and tokens.
 -   **`game-service`**: Storing the temporary state of active games.
--   **`game-allocator-service`**: Tracking the load on `game-service` instances.
+-   **`game-allocator-service`**: Caching game distribution across `game-service` instances and tracking load on instances.
 
 ## Configuration from docker-compose.yml
 

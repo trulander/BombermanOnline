@@ -9,8 +9,9 @@ The main task of the `game-allocator-service` is to ensure load balancing and op
 
 ## Technologies Used
 
-*   **Python 3.9**: Programming language.
+*   **Python 3.12**: Programming language.
 *   **`asyncio`**: Asynchronous I/O for high-performance network operations.
+*   **aiohttp**: Asynchronous HTTP framework for implementing healthcheck endpoint.
 *   **NATS**: Lightweight, high-performance messaging system used for asynchronous communication between microservices.
 *   **Prometheus API Client (`prometheus-api-client`)**: For programmatically querying load metrics from Prometheus.
 *   **Consul (`py-consul`)**: For service discovery and obtaining a list of healthy game server instances.
@@ -39,7 +40,19 @@ services/game-allocator-service/
 
 ## NATS Events and API Endpoints
 
-The `game-allocator-service` primarily interacts via NATS events. It subscribes to requests and publishes responses.
+The `game-allocator-service` primarily interacts via NATS events. It subscribes to requests and publishes responses. The service also provides an HTTP endpoint for health checks.
+
+### HTTP Endpoints
+
+*   **`GET /health`**:
+    *   **Description**: Endpoint for service health check. Used by Consul for healthcheck.
+    *   **Response (JSON)**:
+        ```json
+        {
+            "status": "healthy",
+            "service": "game-allocator-service"
+        }
+        ```
 
 ### Requests
 
@@ -93,7 +106,7 @@ After processing the `game.instances.request`, the service publishes a response 
 
 ## Interaction with Other Services
 
-*   **Consul**: Used to discover all registered `game-service` instances and check their health.
+*   **Consul**: Used to discover all registered `game-service` instances and check their health. The service also registers itself in Consul with an HTTP healthcheck on the `/health` endpoint, allowing Consul to automatically check instance health and exclude non-working instances from available ones.
 *   **Prometheus**: Queries load metrics (CPU, RAM) for each `game-service` instance to make allocation decisions.
 *   **Redis**: Used as a cache to temporarily store the relationship between `game_id` and `instance_id` (game server IP address).
 *   **NATS**: The primary communication channel for receiving game allocation requests and sending responses.
@@ -105,6 +118,7 @@ Service configuration is managed via environment variables defined in `app/confi
 
 *   `SERVICE_NAME`: Service name, default `game-allocator-service`.
 *   `APP_TITLE`: Application title, default `Bomberman Game Allocator Service`.
+*   `PORT`: Port for HTTP healthcheck endpoint, default `5005`.
 *   `GAME_CACHE_TTL`: Game instance cache time-to-live in seconds, default `60`.
 *   `REDIS_HOST`: Redis host, default `localhost`.
 *   `REDIS_PORT`: Redis port, default `6379`.
@@ -140,7 +154,7 @@ Service configuration is managed via environment variables defined in `app/confi
 
 ### Development Mode Startup (without Docker)
 
-1.  **Install Python 3.9 and UV.**
+1.  **Install Python 3.12 and UV.**
 2.  **Install dependencies**: Navigate to the `services/game-allocator-service` directory and run:
     ```bash
     uv sync

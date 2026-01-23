@@ -36,7 +36,8 @@ def register_service():
         check=consul.Check.http(
             url=f"http://{socket.gethostname()}:{settings.PORT}/health",
             interval="10s",
-            timeout="1s"
+            timeout="1s",
+            deregister="60s"
         )
     )
 
