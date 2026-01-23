@@ -57,6 +57,11 @@ The `game-allocator-service` primarily interacts via NATS events. It subscribes 
         }
         ```
 
+*   **`game.instances.request`**:
+    *   **Description**: Request to get a list of all healthy `Game Service` instances.
+    *   **Sender**: Typically `webapi-service` when it needs to aggregate data from all game service instances (e.g., when getting a list of all games).
+    *   **Payload (JSON)**: Empty object `{}`
+
 ### Responses
 
 After processing the `game.assign.request`, the service publishes a response to the topic specified in the `msg.reply` of the NATS message.
@@ -67,6 +72,22 @@ After processing the `game.assign.request`, the service publishes a response to 
     {
         "success": true | false,
         "instance_id": "<IP address or ID of the game server instance>" // Upon successful allocation
+    }
+    ```
+
+After processing the `game.instances.request`, the service publishes a response to the topic specified in the `msg.reply` of the NATS message.
+
+*   **Payload (JSON)**:
+
+    ```json
+    {
+        "success": true | false,
+        "instances": [
+            {
+                "address": "<IP address or hostname>",
+                "port": 5002
+            }
+        ] // List of all healthy Game Service instances
     }
     ```
 

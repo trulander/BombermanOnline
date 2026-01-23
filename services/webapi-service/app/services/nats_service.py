@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import Dict, Any, Callable, TYPE_CHECKING
+from typing import Any, Callable, TYPE_CHECKING
 
 import nats
 from nats.aio.client import Client as NATS
@@ -21,7 +21,7 @@ class NatsService:
         try:
             self.game_cache: "GameInstanceCache" = game_cache
             self._nc: NATS | None = None
-            self.socket_event_handlers: Dict[str, Dict[str, Callable]] = {}
+            self.socket_event_handlers: dict[str, dict[str, Callable]] = {}
             logger.info("NatsService initialized")
         except Exception as e:
             logger.error(f"Error initializing NatsService: {e}", exc_info=True)
@@ -148,7 +148,28 @@ class NatsService:
             logger.warning(f"Failed to create game: {result.get('message')}")
         return result["instance_id"]
 
-    async def create_game(self, game_id: str, init_params: GameCreateSettings) -> Dict[str, Any]:
+    async def get_game_service_instances(self) -> list[dict[str, Any]]:
+        """Получить список всех инстансов game-service"""
+        try:
+            nc = await self.get_nc()
+            response = await nc.request(
+                subject="game.instances.request",
+                payload=json.dumps({}).encode(),
+                timeout=5.0
+            )
+            result = json.loads(response.data.decode())
+            if result.get('success'):
+                instances = result.get('instances', [])
+                logger.debug(f"Retrieved {len(instances)} game-service instances")
+                return instances
+            else:
+                logger.warning(f"Failed to get game-service instances: {result.get('message')}")
+                return []
+        except Exception as e:
+            logger.error(f"Error getting game-service instances: {e}", exc_info=True)
+            return []
+
+    async def create_game(self, game_id: str, init_params: GameCreateSettings) -> dict[str, Any]:
         """Отправка запроса на создание игры"""
         try:
             nc = await self.get_nc()
@@ -182,7 +203,7 @@ class NatsService:
             return {"success": False, "message": error_msg}
 
     
-    async def join_game(self, game_id: str, player_id: str) -> Dict[str, Any]:
+    async def join_game(self, game_id: str, player_id: str) -> dict[str, Any]:
         """Отправка запроса на присоединение к игре"""
         try:
             game_service_address = await self.game_cache.get_instance(game_id=game_id)
@@ -209,7 +230,7 @@ class NatsService:
             return {"success": False, "message": error_msg}
 
     
-    async def send_input(self, game_id: str, player_id: str, inputs: Dict[str, bool]) -> None:
+    async def send_input(self, game_id: str, player_id: str, inputs: dict[str, bool]) -> None:
         """Отправка ввода игрока"""
         logger.debug(f"Sending input for player {player_id} in game {game_id}: {inputs}")
         try:
@@ -230,7 +251,7 @@ class NatsService:
             logger.error(f"Error sending input: {e}", exc_info=True)
 
 
-    async def place_weapon(self, game_id: str, player_id: str, weapon_type: str = "bomb") -> Dict[str, Any]:
+    async def place_weapon(self, game_id: str, player_id: str, weapon_type: str = "bomb") -> dict[str, Any]:
         """Отправка запроса на применение оружия"""
         logger.info(f"Player {player_id} placing weapon {weapon_type} in game {game_id}")
 
@@ -261,7 +282,7 @@ class NatsService:
             return {"success": False, "message": error_msg}
 
     
-    async def get_game_state(self, game_id: str) -> Dict[str, Any]:
+    async def get_game_state(self, game_id: str) -> dict[str, Any]:
         """Получение состояния игры"""
         logger.debug(f"Getting state for game {game_id}")
 
@@ -289,7 +310,7 @@ class NatsService:
             return {"success": False, "message": error_msg}
 
     
-    async def disconnect_player(self, game_id: str, player_id: str) -> Dict[str, Any]:
+    async def disconnect_player(self, game_id: str, player_id: str) -> dict[str, Any]:
         """Отправка запроса на отключение игрока"""
         logger.info(f"Disconnecting player {player_id} from game {game_id}")
             

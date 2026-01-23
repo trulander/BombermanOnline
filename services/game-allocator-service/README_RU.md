@@ -57,6 +57,11 @@ services/game-allocator-service/
         }
         ```
 
+*   **`game.instances.request`**:
+    *   **Описание**: Запрос на получение списка всех здоровых экземпляров `Game Service`.
+    *   **Отправитель**: Обычно `webapi-service`, когда ему нужно агрегировать данные со всех экземпляров game-service (например, при получении списка всех игр).
+    *   **Payload (JSON)**: Пустой объект `{}`
+
 ### Ответы
 
 После обработки запроса `game.assign.request`, сервис публикует ответ на тему, указанную в `msg.reply` NATS-сообщения.
@@ -67,6 +72,22 @@ services/game-allocator-service/
     {
         "success": true | false,
         "instance_id": "<IP-адрес или ID экземпляра игрового сервера>" // При успешном распределении
+    }
+    ```
+
+После обработки запроса `game.instances.request`, сервис публикует ответ на тему, указанную в `msg.reply` NATS-сообщения.
+
+*   **Payload (JSON)**:
+
+    ```json
+    {
+        "success": true | false,
+        "instances": [
+            {
+                "address": "<IP-адрес или hostname>",
+                "port": 5002
+            }
+        ] // Список всех здоровых экземпляров Game Service
     }
     ```
 

@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 class NatsEvents(Enum):
     GAME_ID_ASSIGN_GAME_SERVER = "game.assign.request"
+    GAME_INSTANCES_REQUEST = "game.instances.request"
 
 
 class GameAllocatorService:
@@ -115,6 +116,8 @@ class GameAllocatorService:
         match event:
             case NatsEvents.GAME_ID_ASSIGN_GAME_SERVER:
                 cb = subscribe_wrapper(handler=self._handler_game_id_assign)
+            case NatsEvents.GAME_INSTANCES_REQUEST:
+                cb = subscribe_wrapper(handler=self._handler_game_instances_request)
             case _:
                 pass
 
@@ -131,9 +134,24 @@ class GameAllocatorService:
                 "instance_id": instance_id
             }
 
+    async def _handler_game_instances_request(self, data: dict) -> dict:
+        logger.debug("_handler_game_instances_request - getting game-service instances")
+        _, services = self.consul.health.service("game-service", passing=True)
+        if not services:
+            logger.warning("No healthy game-service instances found")
+            return {"success": True, "instances": []}
+        
+        instances = [
+            {"address": s["Service"]["Address"], "port": s["Service"]["Port"]}
+            for s in services
+        ]
+        logger.debug(f"_handler_game_instances_request - found {len(instances)} instances")
+        return {"success": True, "instances": instances}
+
 
     async def initialize_handlers(self) -> None:
         await self.subscribe_handler(event=NatsEvents.GAME_ID_ASSIGN_GAME_SERVER)
+        await self.subscribe_handler(event=NatsEvents.GAME_INSTANCES_REQUEST)
 
 
     async def run(self):

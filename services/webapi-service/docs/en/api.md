@@ -9,6 +9,42 @@ All API endpoints are available under the prefix `/api/v1`.
 
 ### Resource: Games (`/games`)
 
+#### `GET /games`
+
+Gets a list of all games from all `Game Service` instances.
+
+*   **Description**: Aggregates games from all available `Game Service` instances. The service requests a list of instances from `Game Allocator Service` via NATS, then makes parallel HTTP requests to each instance to collect games, and finally merges and filters the results.
+*   **Query Parameters**:
+    *   `status` (Optional[GameStatus]): Filter by game status (`PENDING`, `ACTIVE`, `PAUSED`, `FINISHED`).
+    *   `game_mode` (Optional[GameModeType]): Filter by game mode (`CAMPAIGN`, `FREE_FOR_ALL`, `CAPTURE_THE_FLAG`).
+    *   `has_free_slots` (Optional[bool]): Filter by availability of free slots.
+    *   `min_players` (Optional[int]): Minimum number of players.
+    *   `max_players` (Optional[int]): Maximum number of players.
+    *   `limit` (int): Number of records per page (default 20, max 100).
+    *   `offset` (int): Offset for pagination (default 0).
+*   **Successful Response (200 OK)**:
+
+    ```json
+    [
+      {
+        "game_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+        "status": "ACTIVE",
+        "game_mode": "CAMPAIGN",
+        "current_players_count": 2,
+        "max_players": 4,
+        "level": 1,
+        "created_at": "2024-01-01T12:00:00Z"
+      }
+    ]
+    ```
+*   **Error Response (500 Internal Server Error)**:
+
+    ```json
+    {
+      "detail": "Error message from the service"
+    }
+    ```
+
 #### `POST /games`
 
 Creates a new game session.

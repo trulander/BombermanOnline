@@ -3,7 +3,7 @@ import {useNavigate} from 'react-router-dom';
 import {Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Grid, Typography} from '@mui/material';
 import {PlayArrow} from '@mui/icons-material';
 // import Layout from '../components/Layout'; // Using the general layout
-import {gameApi} from '../services/api';
+import {webApi} from '../services/api';
 
 import {GameListItem, GameStatus} from "../types/Game"; // Reusing types from ManageGame
 
@@ -16,7 +16,7 @@ const GameList: React.FC = () => {
   const fetchGames = async () => {
     try {
       setLoading(true);
-      const response = await gameApi.get<GameListItem[]>('/games');
+      const response = await webApi.get<GameListItem[]>('/games');
       setGames(response.data);
       setError(null);
     } catch (err: any) {

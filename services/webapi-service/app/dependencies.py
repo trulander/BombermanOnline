@@ -5,6 +5,7 @@ import logging
 from .services.game_cache import GameInstanceCache
 from .services.game_service import GameService
 from .services.nats_service import NatsService
+from .services.game_aggregator_service import GameAggregatorService
 from .repositories.redis_repository import RedisRepository
 # from .services.socketio_service import SocketIOService
 
@@ -17,6 +18,7 @@ try:
     game_cache = GameInstanceCache(redis_repository=redis_repository)
     nats_service = NatsService(game_cache=game_cache)
     game_service = GameService(nats_service)
+    game_aggregator_service = GameAggregatorService(nats_service=nats_service)
 
     logger.info("Singleton instances initialized successfully")
 except Exception as e:
@@ -65,4 +67,15 @@ async def get_game_cache() -> AsyncGenerator[GameInstanceCache, None]:
         yield game_cache
     except Exception as e:
         logger.error(f"Error providing game cache dependency: {e}", exc_info=True)
+        raise
+
+async def get_game_aggregator_service() -> AsyncGenerator[GameAggregatorService, None]:
+    """
+    Get game aggregator service instance
+    """
+    try:
+        logger.debug("Providing game aggregator service dependency")
+        yield game_aggregator_service
+    except Exception as e:
+        logger.error(f"Error providing game aggregator service dependency: {e}", exc_info=True)
         raise

@@ -85,6 +85,53 @@ sequenceDiagram
 8.  **Game Service** обрабатывает действия игрока, обновляет игровое состояние и публикует его в тему `game.update.{game_id}`.
 9.  WebAPI, будучи подписанным на эту тему, получает обновление и немедленно пересылает его всем клиентам в соответствующей игровой комнате через WebSocket.
 
+## Диаграмма последовательности: Получение списка игр
+
+Этот сценарий показывает, как WebAPI агрегирует игры со всех экземпляров `Game Service` для предоставления единого списка.
+
+```mermaid
+sequenceDiagram
+    participant Frontend
+    participant WebAPI as WebAPI Service
+    participant NATS
+    participant Allocator as Game Allocator Service
+    participant Consul
+    participant GS1 as Game Service 1
+    participant GS2 as Game Service 2
+    participant GSN as Game Service N
+
+    Frontend->>+WebAPI: GET /api/v1/games
+    WebAPI->>+NATS: Request game.instances.request
+    NATS->>+Allocator: Получает запрос
+    Allocator->>Consul: Получить здоровые инстансы
+    Consul-->>Allocator: [instance1, instance2, ...]
+    Allocator-->>-NATS: Response {"instances": [...]}
+    NATS-->>-WebAPI: Получает список инстансов
+    
+    par Параллельные HTTP запросы
+        WebAPI->>GS1: GET /games/api/v1/games/
+        GS1-->>WebAPI: [game1, game2, ...]
+    and
+        WebAPI->>GS2: GET /games/api/v1/games/
+        GS2-->>WebAPI: [game3, game4, ...]
+    and
+        WebAPI->>GSN: GET /games/api/v1/games/
+        GSN-->>WebAPI: [gameN, ...]
+    end
+    
+    WebAPI->>WebAPI: Объединить и применить фильтры
+    WebAPI-->>-Frontend: Объединенный список игр
+```
+
+**Описание процесса:**
+1.  **Frontend** отправляет HTTP GET запрос на `/api/v1/games` с опциональными параметрами фильтрации.
+2.  **WebAPI Service** запрашивает список всех здоровых экземпляров `Game Service` у `Game Allocator Service` через NATS, используя событие `game.instances.request`.
+3.  **Game Allocator Service** запрашивает у **Consul** список здоровых экземпляров `game-service`.
+4.  Allocator возвращает список инстансов (адреса и порты) в WebAPI через NATS.
+5.  WebAPI делает параллельные HTTP-запросы к каждому экземпляру `Game Service`, запрашивая их список игр с теми же параметрами фильтрации.
+6.  Каждый экземпляр **Game Service** возвращает свой список игр.
+7.  WebAPI объединяет все результаты, применяет пагинацию (limit/offset) и возвращает единый список клиенту.
+
 ## Диаграмма последовательности: Проксирование HTTP-запросов
 
 Этот сценарий показывает, как WebAPI перенаправляет стандартные HTTP-запросы (например, для получения детальной статистики по игре) напрямую в `Game Service`.

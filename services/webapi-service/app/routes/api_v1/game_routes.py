@@ -2,13 +2,36 @@ from fastapi import APIRouter, Depends, HTTPException, status
 import logging
 
 from ...models.game import JoinGameRequest, JoinGameResponse, InputRequest, PlaceWeaponRequest, \
-    GameCreateSettings
+    GameCreateSettings, GameListItem, GameFilter
 from ...services.game_service import GameService
-from ...dependencies import get_game_service
+from ...dependencies import get_game_service, get_game_aggregator_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
+
+@router.get("/", response_model=list[GameListItem])
+async def get_games(
+    filter: GameFilter = Depends(GameFilter),
+    aggregator_service = Depends(get_game_aggregator_service),
+):
+    """
+    Получить список всех игр со всех инстансов game-service
+    """
+    try:
+        all_games = await aggregator_service.get_all_games(game_filter=filter)
+        
+        all_games_list = [GameListItem(**game) for game in all_games]
+        
+        total_games = all_games_list[filter.offset:filter.offset + filter.limit]
+        logger.info(f"Returning {len(total_games)} games (filtered from {len(all_games_list)} total)")
+        return total_games
+    except Exception as e:
+        logger.error(f"Error getting games list: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error getting games list: {str(e)}"
+        )
 
 @router.post("/", response_model=dict)
 async def create_game(

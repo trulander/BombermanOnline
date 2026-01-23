@@ -9,6 +9,42 @@
 
 ### Ресурс: Игры (`/games`)
 
+#### `GET /games`
+
+Получает список всех игр со всех экземпляров `Game Service`.
+
+*   **Описание**: Агрегирует игры со всех доступных экземпляров `Game Service`. Сервис запрашивает список инстансов у `Game Allocator Service` через NATS, затем делает параллельные HTTP-запросы к каждому инстансу для сбора игр, и в итоге объединяет и фильтрует результаты.
+*   **Параметры запроса**:
+    *   `status` (Optional[GameStatus]): Фильтр по статусу игры (`PENDING`, `ACTIVE`, `PAUSED`, `FINISHED`).
+    *   `game_mode` (Optional[GameModeType]): Фильтр по игровому режиму (`CAMPAIGN`, `FREE_FOR_ALL`, `CAPTURE_THE_FLAG`).
+    *   `has_free_slots` (Optional[bool]): Фильтр по наличию свободных слотов.
+    *   `min_players` (Optional[int]): Минимальное количество игроков.
+    *   `max_players` (Optional[int]): Максимальное количество игроков.
+    *   `limit` (int): Количество записей на страницу (по умолчанию 20, максимум 100).
+    *   `offset` (int): Смещение для пагинации (по умолчанию 0).
+*   **Успешный ответ (200 OK)**:
+
+    ```json
+    [
+      {
+        "game_id": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+        "status": "ACTIVE",
+        "game_mode": "CAMPAIGN",
+        "current_players_count": 2,
+        "max_players": 4,
+        "level": 1,
+        "created_at": "2024-01-01T12:00:00Z"
+      }
+    ]
+    ```
+*   **Ответ с ошибкой (500 Internal Server Error)**:
+
+    ```json
+    {
+      "detail": "Сообщение об ошибке от сервиса"
+    }
+    ```
+
 #### `POST /games`
 
 Создает новую игровую сессию.

@@ -1,8 +1,40 @@
 from uuid import uuid4
+from datetime import datetime
 from pydantic import BaseModel, Field, field_validator
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
+from enum import Enum
 
 from ..entities.game_mode import GameModeType
+
+
+class GameStatus(Enum):
+    """Статусы игры"""
+    PENDING = "PENDING"
+    ACTIVE = "ACTIVE"
+    PAUSED = "PAUSED"
+    FINISHED = "FINISHED"
+
+
+class GameListItem(BaseModel):
+    """Краткая информация об игре для списка"""
+    game_id: str
+    status: GameStatus
+    game_mode: GameModeType
+    current_players_count: int
+    max_players: int
+    level: int
+    created_at: datetime | None = None
+
+
+class GameFilter(BaseModel):
+    """Фильтры для поиска игр"""
+    status: GameStatus| None = None
+    game_mode: GameModeType | None = None
+    has_free_slots: bool | None = None
+    min_players: int | None = Field(None, ge=0, le=8)
+    max_players: int | None = Field(None, ge=1, le=8)
+    limit: int = Field(20, ge=1, le=100)
+    offset: int = Field(0, ge=0)
 
 
 class GameCreateSettings(BaseModel):

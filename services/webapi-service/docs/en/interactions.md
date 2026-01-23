@@ -85,6 +85,53 @@ sequenceDiagram
 8.  The **Game Service** processes the player's actions, updates the game state, and publishes it to the `game.update.{game_id}` topic.
 9.  The WebAPI, being subscribed to this topic, receives the update and immediately forwards it to all clients in the corresponding game room via WebSocket.
 
+## Sequence Diagram: Getting List of Games
+
+This scenario shows how the WebAPI aggregates games from all `Game Service` instances to provide a unified list.
+
+```mermaid
+sequenceDiagram
+    participant Frontend
+    participant WebAPI as WebAPI Service
+    participant NATS
+    participant Allocator as Game Allocator Service
+    participant Consul
+    participant GS1 as Game Service 1
+    participant GS2 as Game Service 2
+    participant GSN as Game Service N
+
+    Frontend->>+WebAPI: GET /api/v1/games
+    WebAPI->>+NATS: Request game.instances.request
+    NATS->>+Allocator: Receives request
+    Allocator->>Consul: Get healthy instances
+    Consul-->>Allocator: [instance1, instance2, ...]
+    Allocator-->>-NATS: Response {"instances": [...]}
+    NATS-->>-WebAPI: Receives list of instances
+    
+    par Parallel HTTP Requests
+        WebAPI->>GS1: GET /games/api/v1/games/
+        GS1-->>WebAPI: [game1, game2, ...]
+    and
+        WebAPI->>GS2: GET /games/api/v1/games/
+        GS2-->>WebAPI: [game3, game4, ...]
+    and
+        WebAPI->>GSN: GET /games/api/v1/games/
+        GSN-->>WebAPI: [gameN, ...]
+    end
+    
+    WebAPI->>WebAPI: Merge and apply filters
+    WebAPI-->>-Frontend: Unified list of games
+```
+
+**Process Description:**
+1.  The **Frontend** sends an HTTP GET request to `/api/v1/games` with optional filter parameters.
+2.  The **WebAPI Service** requests a list of all healthy `Game Service` instances from `Game Allocator Service` via NATS using the `game.instances.request` event.
+3.  The **Game Allocator Service** queries **Consul** to get the list of healthy `game-service` instances.
+4.  The Allocator returns the list of instances (addresses and ports) to WebAPI via NATS.
+5.  The WebAPI makes parallel HTTP requests to each `Game Service` instance, requesting their list of games with the same filter parameters.
+6.  Each **Game Service** instance returns its own list of games.
+7.  The WebAPI merges all results, applies pagination (limit/offset), and returns the unified list to the client.
+
 ## Sequence Diagram: HTTP Request Proxying
 
 This scenario shows how the WebAPI forwards standard HTTP requests (e.g., to get detailed game statistics) directly to the `Game Service`.
