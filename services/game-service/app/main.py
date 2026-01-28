@@ -13,6 +13,7 @@ from starlette_exporter import PrometheusMiddleware, handle_metrics
 from fastapi.responses import JSONResponse
 
 from app.dependenties import nats_repository, redis_repository, postgres_repository, event_service, game_coordinator
+from app.grpc_server import stop_grpc, start_grpc
 from .config import settings
 from .logging_config import configure_logging
 from .routes.map_routes import router as map_router
@@ -61,6 +62,9 @@ async def lifespan(app: FastAPI):
 
         # Запускаем игровой цикл
         asyncio.create_task(game_coordinator.start_game_loop())
+
+        # Старт gRPC и сохраняем инстанс
+        grpc_server = await start_grpc()
         
         logger.info("Game service started successfully")
     except Exception as e:
@@ -72,6 +76,8 @@ async def lifespan(app: FastAPI):
     # Shutdown
     try:
         logger.info("Shutting down Game service")
+
+        await stop_grpc(grpc_server)
 
         # Закрываем подключения к базам данных
         await redis_repository.disconnect()

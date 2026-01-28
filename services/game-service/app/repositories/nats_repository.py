@@ -130,3 +130,15 @@ class NatsRepository:
         #шардируем евенты с HOSTNAME для распределения по инстансам сервиса
         sharded_subject = f"{subject}.{settings.HOSTNAME}"
         await nc.subscribe(sharded_subject, cb=callback)
+
+    async def request(self, subject: str, payload: bytes, timeout: float = 5.0):
+        """
+        Отправка запроса в NATS с ожиданием ответа
+        """
+        nc = await self.get_nc()
+        try:
+            response = await nc.request(subject=subject, payload=payload, timeout=timeout)
+            return response
+        except Exception as e:
+            logger.error(f"Error making NATS request to {subject}: {e}", exc_info=True)
+            raise
