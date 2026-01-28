@@ -51,7 +51,9 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_PASSWORD: str | None = None
 
-    NATS_URL: str = "nats://localhost:4222"
+    # gRPC settings
+    GRPC_HOST: str = "0.0.0.0"
+    GRPC_PORT: int = 50051
 
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"
@@ -59,6 +61,10 @@ class Settings(BaseSettings):
 
     MODELS_PATH: Path = Path("./app/ai_models")
     LOGS_PATH: Path = Path("./app/ai_logs")
+
+    # NATS settings for game-allocator-service
+    NATS_URL: str = "nats://localhost:4222"
+    GAME_ALLOCATOR_SERVICE_NATS_SUBJECT: str = "game.instances.request"
 
 @lru_cache()
 def get_settings() -> Settings:

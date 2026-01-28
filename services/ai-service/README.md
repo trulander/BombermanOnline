@@ -5,13 +5,14 @@ AI Service is a component of the Bomberman Online platform responsible for manag
 
 ## Service Purpose
 
-The service simulates the behavior of AI-controlled entities in the game world. It receives the game state from `game-service`, makes decisions based on loaded models, and sends control commands back via NATS.
+The service simulates the behavior of AI-controlled entities in the game world. It receives the game state from `game-service`, makes decisions based on loaded models, and sends control commands back via gRPC.
 
 ## Technologies Used
 
 *   **Python 3.12**
 *   **FastAPI** & **Uvicorn**
-*   **NATS (`nats-py`)** for asynchronous interaction
+*   **gRPC** for synchronous interaction
+*   **NATS (`nats-py`)** for asynchronous interaction for require game-service instances from game-allocation-service
 *   **Redis (`redis-py`)** for caching
 *   **Gymnasium**, **Stable-Baselines3**, **TensorBoard** for model training
 *   **Pydantic** for validation and configuration
