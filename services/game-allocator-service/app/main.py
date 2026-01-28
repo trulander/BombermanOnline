@@ -46,6 +46,7 @@ async def start_healthcheck_server(port: int) -> None:
 class NatsEvents(Enum):
     GAME_ID_ASSIGN_GAME_SERVER = "game.assign.request"
     GAME_INSTANCES_REQUEST = "game.instances.request"
+    AI_INSTANCES_REQUEST = "ai.instances.request"
 
 
 class GameAllocatorService:
@@ -138,15 +139,21 @@ class GameAllocatorService:
 
             return callback_wrapper
 
+        cb = None
         match event:
             case NatsEvents.GAME_ID_ASSIGN_GAME_SERVER:
                 cb = subscribe_wrapper(handler=self._handler_game_id_assign)
             case NatsEvents.GAME_INSTANCES_REQUEST:
                 cb = subscribe_wrapper(handler=self._handler_game_instances_request)
+            case NatsEvents.AI_INSTANCES_REQUEST:
+                cb = subscribe_wrapper(handler=self._handler_ai_instances_request)
             case _:
                 pass
 
-        await self.nats_repository.subscribe(subject=event.value, callback=cb)
+        if cb:
+            await self.nats_repository.subscribe(subject=event.value, callback=cb)
+        else:
+            logger.error(f"No match handler for event: {event}")
 
 
     async def _handler_game_id_assign(self, data: dict) -> dict:
@@ -166,17 +173,34 @@ class GameAllocatorService:
             logger.warning("No healthy game-service instances found")
             return {"success": True, "instances": []}
         
+        instances = []
+        for s in services:
+            port = s["Service"]["Port"]
+            grpc_port = port + 1
+            instances.append({"address": s["Service"]["Address"], "port": grpc_port})
+        
+        logger.debug(f"_handler_game_instances_request - found {len(instances)} instances")
+        return {"success": True, "instances": instances}
+
+    async def _handler_ai_instances_request(self, data: dict) -> dict:
+        logger.debug("_handler_ai_instances_request - getting ai-service instances")
+        _, services = self.consul.health.service("ai-service", passing=True)
+        if not services:
+            logger.warning("No healthy ai-service instances found")
+            return {"success": True, "instances": []}
+        
         instances = [
-            {"address": s["Service"]["Address"], "port": s["Service"]["Port"]}
+            {"address": s["Service"]["Address"], "port": s["Service"]["Port"] + 1}
             for s in services
         ]
-        logger.debug(f"_handler_game_instances_request - found {len(instances)} instances")
+        logger.debug(f"_handler_ai_instances_request - found {len(instances)} instances")
         return {"success": True, "instances": instances}
 
 
     async def initialize_handlers(self) -> None:
         await self.subscribe_handler(event=NatsEvents.GAME_ID_ASSIGN_GAME_SERVER)
         await self.subscribe_handler(event=NatsEvents.GAME_INSTANCES_REQUEST)
+        await self.subscribe_handler(event=NatsEvents.AI_INSTANCES_REQUEST)
 
 
     async def run(self):
