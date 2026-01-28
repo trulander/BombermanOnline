@@ -85,6 +85,7 @@ services:
       replicas: 2
     volumes:
       - ../services/game-service/app:/app/game-service/app
+      - ../shared:/app/game-service/app/shared
       - game_logs:/var/log/game-service
     environment:
       - LOG_LEVEL=INFO
@@ -106,7 +107,8 @@ services:
 #    ports:
 #      - "5002:5002"
     expose:
-      - "5002"
+      - "5002" #fastapi
+      - "50051" # gRPC
     labels:
       - "traefik.enable=true"
     logging:
@@ -155,7 +157,8 @@ services:
       context: ../services/ai-service
       dockerfile: Dockerfile
     volumes:
-      - ../services/ai-service/app:/app/app
+      - ../services/ai-service/app:/app/ai-service/app
+      - ../shared:/app/ai-service/app/shared
       - ../infra/ai_models:/app/ai_models
       - ../infra/ai_logs:/app/ai_logs
     environment:
@@ -167,8 +170,11 @@ services:
       - LOG_FORMAT=json
       - MODELS_PATH=/app/ai_models
       - LOGS_PATH=/app/ai_logs
-    ports:
-      - "5004:5004"
+#    ports:
+#      - "5004:5004"
+    expose:
+      - "5004" #fastapi
+      - "50051" # gRPC
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.ai.rule=Host(`ai.localhost`)"
