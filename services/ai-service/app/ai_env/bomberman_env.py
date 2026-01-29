@@ -1,8 +1,12 @@
+import logging
+
 import numpy as np
 import gymnasium as gym
 from gymnasium import spaces
 
 from app.services.grpc_client import GameServiceGRPCClient
+
+logger = logging.getLogger(__name__)
 
 
 class BombermanEnv(gym.Env[np.ndarray, int]):
@@ -49,4 +53,15 @@ class BombermanEnv(gym.Env[np.ndarray, int]):
             observation = np.zeros(self.observation_space.shape, dtype=np.float32)
         self._last_obs = observation
         return observation, float(reward), bool(terminated), bool(truncated), info or {}
+
+    def render(
+        self,
+        *,
+        mode: str = "human",
+    ) -> None:
+        logger.info("render called", extra={"mode": mode})
+        return None
+
+    def close(self) -> None:
+        logger.info("close called")
 
