@@ -19,6 +19,12 @@ The service simulates the behavior of AI-controlled entities in the game world. 
 *   **Numpy** for data manipulation
 *   **`uv`** for dependency management
 
+## Training and Inference Skeleton
+
+-   Training and inference are triggered via gRPC, no HTTP training endpoint is used.
+-   Gymnasium `BombermanEnv` proxies `reset/step` to the gRPC client for `game-service` (stubs for now).
+-   Stable-Baselines3 saves models to `MODELS_PATH`, TensorBoard logs are written to `LOGS_PATH` and read by `tensorboard` in `infra/docker-compose.yml`.
+
 ## Documentation
 
 All detailed service documentation is divided into the following sections:
@@ -29,3 +35,4 @@ All detailed service documentation is divided into the following sections:
 *   **[Interaction and Use Cases](docs/en/interaction.md)**: Description of NATS API, diagrams, and use cases.
 *   **[AI Model Training](docs/en/ai_training.md)**: Details of the reinforcement learning process.
 *   **[Configuration](docs/en/configuration.md)**: Full list of environment variables.
+*   **[Training and Inference Flow](docs/ru/examples/ai_service_flow.md)**: Interaction diagram.

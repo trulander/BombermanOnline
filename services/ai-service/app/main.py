@@ -9,6 +9,9 @@ from app.repositories.nats_repository import NatsRepository
 from app.repositories.redis_repository import RedisRepository
 
 from app.services.grpc_server import start_grpc, stop_grpc
+from app.services.grpc_client import GameServiceGRPCClient
+from app.training.trainer import TrainingService
+from app.inference.inference_service import InferenceService
 
 from starlette.datastructures import State
 import consul
@@ -56,7 +59,15 @@ async def lifespan(app: FastAPI):
     )
     await app.state.nats_repository.aconnect()
 
-    app.state.grpc_server = start_grpc()
+    app.state.grpc_client = GameServiceGRPCClient()
+    app.state.training_service = TrainingService(
+        grpc_client=app.state.grpc_client,
+    )
+    app.state.inference_service = InferenceService()
+    app.state.grpc_server = start_grpc(
+        training_service=app.state.training_service,
+        inference_service=app.state.inference_service,
+    )
 
     logger.info("AI Service started up.")
     yield

@@ -10,4 +10,4 @@
 .idea
 .env
 access.log
-__pycache__
+/services/web-frontend/node_modules/

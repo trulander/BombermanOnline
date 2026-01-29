@@ -1,5 +1,4 @@
 import logging
-from typing import Optional, Tuple
 
 import grpc
 import numpy as np
@@ -9,23 +8,31 @@ from .game_service_finder import GameServiceFinder
 
 try:
     from app.shared.proto import bomberman_ai_pb2, bomberman_ai_pb2_grpc
-except ImportError as e:
+    PROTO_AVAILABLE = True
+except ImportError:
+    bomberman_ai_pb2 = None
+    bomberman_ai_pb2_grpc = None
+    PROTO_AVAILABLE = False
     logger = logging.getLogger(__name__)
-    logger.warning("Proto files not generated yet. Run generate.sh in services/shared/proto/")
-    raise Exception(e)
+    logger.warning(
+        msg="Proto files not generated yet. Run generate.sh in services/shared/proto/",
+    )
 
 
 logger = logging.getLogger(__name__)
 
 
 class GameServiceGRPCClient:
-    def __init__(self, game_service_finder=None):
-        self.channel: Optional[grpc.Channel] = None
-        # self.stub: Optional[bomberman_ai_pb2_grpc.GameServiceStub] = None
+    def __init__(
+        self,
+        game_service_finder: GameServiceFinder | None = None,
+    ) -> None:
+        self.channel: grpc.aio.Channel | None = None
+        self.stub = None
         self.game_service_finder = game_service_finder
-        self.current_instance: Optional[dict] = None
+        self.current_instance: dict | None = None
 
-    def connect(self):
+    def connect(self) -> None:
         if self.channel is None:
             if not self.current_instance:
                 if self.game_service_finder:
@@ -39,11 +46,12 @@ class GameServiceGRPCClient:
                     raise ConnectionError("No game-service instances available")
 
             address = f"{self.current_instance['address']}:{self.current_instance['port']}"
-            self.channel = grpc.aio.insecure_channel(address)
-            # self.stub = bomberman_ai_pb2_grpc.GameServiceStub(self.channel)
+            self.channel = grpc.aio.insecure_channel(target=address)
+            if PROTO_AVAILABLE and bomberman_ai_pb2_grpc is not None:
+                self.stub = bomberman_ai_pb2_grpc.GameServiceStub(self.channel)
             logger.info(f"Connected to game-service gRPC at {address}")
 
-    def disconnect(self):
+    def disconnect(self) -> None:
         if self.channel:
             self.channel.close()
             self.channel = None
@@ -52,11 +60,18 @@ class GameServiceGRPCClient:
 
     def step(
         self,
-    ) -> Tuple[np.ndarray, float, bool, bool, dict]:
-        pass
+        action: int,
+        session_id: str | None,
+    ) -> tuple[np.ndarray | None, float, bool, bool, dict]:
+        if not PROTO_AVAILABLE or self.stub is None:
+            return None, 0.0, False, False, {}
+        return None, 0.0, False, False, {}
 
     def reset(
         self,
-    ) -> Tuple[np.ndarray, dict, str]:
-        pass
+        options: dict[str, object] | None = None,
+    ) -> tuple[np.ndarray | None, dict, str]:
+        if not PROTO_AVAILABLE or self.stub is None:
+            return None, {}, "stub-session"
+        return None, {}, "stub-session"
 
