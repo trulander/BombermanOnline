@@ -218,10 +218,32 @@ services:
         fluentd-address: localhost:24224
         tag: docker.tensorboard
 
-  postgres:
-    image: postgres:15-alpine
+  pgbouncer:
+    container_name: pgbouncer
+    image: edoburu/pgbouncer:v1.25.1-p0
+    environment:
+#      - DATABASE_URL="postgres://bomberman:bomberman@postgres:5432"
+      - DB_USER=${POSTGRES_USER:-bomberman}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-bomberman}
+      - DB_HOST= postgres
+      - POOL_MODE= transaction
+      - MAX_CLIENT_CONN= 1000
+      - DEFAULT_POOL_SIZE= 25
+      - RESERVE_POOL_SIZE= 5
+      - SERVER_IDLE_TIMEOUT= 60
+      - AUTH_TYPE=scram-sha-256
+      - ADMIN_USERS=bomberman,postgres,dbuser
     ports:
       - "5432:5432"
+    depends_on:
+      - postgres
+#    healthcheck:
+#      test: [ 'CMD', 'pg_isready', '-h', 'localhost' ]
+
+  postgres:
+    image: postgres:15-alpine
+#    ports:
+#      - "5432:5432" #connection goes through pgbouncer
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-bomberman}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-bomberman}
