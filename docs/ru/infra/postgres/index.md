@@ -40,4 +40,4 @@ services:
 
 ## Схема
 
-См. `docs/ru/examples/infra-postgres-pgbouncer.md`.
+См. [диаграмму](../../../ru/examples/infra-postgres-pgbouncer.md).

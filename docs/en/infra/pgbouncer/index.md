@@ -47,5 +47,5 @@ services:
 
 ## Diagram
 
-See `docs/en/examples/infra-postgres-pgbouncer.md`.
+See the [diagram](../../../en/examples/infra-postgres-pgbouncer.md).
 

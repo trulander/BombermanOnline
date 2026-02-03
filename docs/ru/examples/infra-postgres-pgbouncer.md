@@ -1,4 +1,5 @@
 # Схема подключения PostgreSQL через PgBouncer
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](../../en/examples/infra-postgres-pgbouncer.md)
 
 Диаграмма показывает, как PgBouncer располагается между сервисами приложений и PostgreSQL.
 
