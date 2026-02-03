@@ -28,6 +28,7 @@ graph TD
 
     subgraph "Data Stores & Bus"
         PostgreSQL("PostgreSQL")
+        PgBouncer("PgBouncer")
         Redis("Redis")
         NATS("NATS JetStream")
         Consul("Consul")
@@ -59,14 +60,16 @@ graph TD
     WebAPI -->|Pub/Sub| NATS
     WebAPI -->|Service Discovery| Consul
 
-    GameService -->|DB| PostgreSQL
+    GameService -->|DB| PgBouncer
     GameService -->|Cache| Redis
     GameService -->|Pub/Sub| NATS
     GameService -->|Service Discovery| Consul
 
-    AuthService -->|DB| PostgreSQL
+    AuthService -->|DB| PgBouncer
     AuthService -->|Cache| Redis
     AuthService -->|Service Discovery| Consul
+
+    PgBouncer -->|Pool| PostgreSQL
 
     GameAllocator -->|Cache| Redis
     GameAllocator -->|Pub/Sub| NATS
@@ -76,7 +79,6 @@ graph TD
     AIService -->|Cache| Redis
     AIService -->|Service Discovery| Consul
 
-    %% Log Collection
     subgraph "Log Collection"
         direction LR
         WebAPI --o|stdout| FluentBit
@@ -87,7 +89,6 @@ graph TD
     end
     FluentBit -->|Logs| Loki
 
-    %% Metrics Collection
     subgraph "Metrics Collection"
         direction LR
         Prometheus --o|Scrape| WebAPI
@@ -98,7 +99,6 @@ graph TD
         Prometheus --o|Scrape| NodeExporter
     end
 
-    %% Visualization
     Grafana -->|Query| Prometheus
     Grafana -->|Query| Loki
 ```
@@ -127,6 +127,7 @@ Detailed descriptions of each infrastructure component, its purpose, and configu
 *   **[Grafana](docs/en/infra/grafana/index.md)** (Visualization & Dashboards)
 *   **[Consul](docs/en/infra/consul/index.md)** (Service Discovery)
 *   **[PostgreSQL](docs/en/infra/postgres/index.md)** (Database)
+*   **[PgBouncer](docs/en/infra/pgbouncer/index.md)** (Connection Pooler)
 *   **[Redis](docs/en/infra/redis/index.md)** (Caching)
 *   **[NATS](docs/en/infra/nats/index.md)** (Message Bus)
 *   **Exporters**
@@ -196,7 +197,7 @@ After startup, services are available at the following addresses:
 
 ### Backend
 - **Framework**: FastAPI (with Uvicorn)
-- **Database**: PostgreSQL (with SQLAlchemy and Alembic)
+- **Database**: PostgreSQL (via PgBouncer, with SQLAlchemy and Alembic)
 - **In-Memory Cache**: Redis
 - **Messaging**: NATS (for asynchronous communication)
 - **Service Discovery**: Consul

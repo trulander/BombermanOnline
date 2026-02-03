@@ -3,7 +3,7 @@
 
 ## Purpose in the Project
 
-**PostgreSQL** is the primary relational database in the project, used for **persistent data storage**.
+**PostgreSQL** is the primary relational database in the project, used for **persistent data storage**. Database connections are handled through **PgBouncer**, which sits in front of PostgreSQL.
 
 -   **`auth-service`**: stores user data, roles, and sessions.
 -   **`game-service`**: stores information about completed games, player statistics, map templates, etc.
@@ -16,8 +16,6 @@ The `postgres` service is defined in `infra/docker-compose.yml`:
 services:
   postgres:
     image: postgres:15-alpine
-    ports:
-      - "5432:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-bomberman}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-bomberman}
@@ -27,10 +25,19 @@ services:
 ```
 
 -   **`image`**: `postgres:15-alpine`.
--   **`ports`**: `5432:5432` - the standard PostgreSQL port.
 -   **`environment`**: Define the default username, password, and database name.
 -   **`volumes`**: `postgres_data` - a volume to persist data across restarts.
 
+## Connection Flow
+
+-   Application services connect to PgBouncer.
+-   PgBouncer forwards pooled connections to PostgreSQL.
+
 ## Access
 
--   Direct access to the database is available on port `5432` from the host machine. It is not routed through Traefik.
+-   Direct access from the host is available on port `5432` through PgBouncer.
+-   PostgreSQL itself is not exposed directly.
+
+## Diagram
+
+See `docs/en/examples/infra-postgres-pgbouncer.md`.

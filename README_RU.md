@@ -28,6 +28,7 @@ graph TD
 
     subgraph "Хранилища и Шина Данных"
         PostgreSQL("PostgreSQL")
+        PgBouncer("PgBouncer")
         Redis("Redis")
         NATS("NATS JetStream")
         Consul("Consul")
@@ -59,14 +60,16 @@ graph TD
     WebAPI -->|Pub/Sub| NATS
     WebAPI -->|Service Discovery| Consul
 
-    GameService -->|БД| PostgreSQL
+    GameService -->|БД| PgBouncer
     GameService -->|Кэш| Redis
     GameService -->|Pub/Sub| NATS
     GameService -->|Service Discovery| Consul
 
-    AuthService -->|БД| PostgreSQL
+    AuthService -->|БД| PgBouncer
     AuthService -->|Кэш| Redis
     AuthService -->|Service Discovery| Consul
+
+    PgBouncer -->|Pool| PostgreSQL
 
     GameAllocator -->|Кэш| Redis
     GameAllocator -->|Pub/Sub| NATS
@@ -76,7 +79,6 @@ graph TD
     AIService -->|Кэш| Redis
     AIService -->|Service Discovery| Consul
 
-    %% Сбор логов
     subgraph "Сбор логов"
         direction LR
         WebAPI --o|stdout| FluentBit
@@ -87,7 +89,6 @@ graph TD
     end
     FluentBit -->|Logs| Loki
 
-    %% Сбор метрик
     subgraph "Сбор метрик"
         direction LR
         Prometheus --o|Scrape| WebAPI
@@ -98,7 +99,6 @@ graph TD
         Prometheus --o|Scrape| NodeExporter
     end
 
-    %% Визуализация
     Grafana -->|Query| Prometheus
     Grafana -->|Query| Loki
 ```
@@ -127,6 +127,7 @@ graph TD
 *   **[Grafana](docs/ru/infra/grafana/index.md)** (Визуализация и дашборды)
 *   **[Consul](docs/ru/infra/consul/index.md)** (Обнаружение сервисов)
 *   **[PostgreSQL](docs/ru/infra/postgres/index.md)** (База данных)
+*   **[PgBouncer](docs/ru/infra/pgbouncer/index.md)** (Пул соединений)
 *   **[Redis](docs/ru/infra/redis/index.md)** (Кэширование)
 *   **[NATS](docs/ru/infra/nats/index.md)** (Шина сообщений)
 *   **Экспортеры метрик**
@@ -196,7 +197,7 @@ docker-compose -f docker-compose.yml -f infra/docker-compose.yml up -d --build
 
 ### Backend
 - **Фреймворк**: FastAPI (с Uvicorn)
-- **База данных**: PostgreSQL (с SQLAlchemy и Alembic)
+- **База данных**: PostgreSQL (через PgBouncer, с SQLAlchemy и Alembic)
 - **Кэш в памяти**: Redis
 - **Обмен сообщениями**: NATS (для асинхронной коммуникации)
 - **Обнаружение сервисов**: Consul
