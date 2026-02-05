@@ -83,7 +83,7 @@ class GameAllocatorService:
     async def assign_game_instance(self, game_id: str, game_settings: dict):
         logger.debug(f"assign_game_instance - game_id:{game_id}, game_settings:{game_settings}")
         # Получить здоровые инстансы из Consul
-        _, services = self.consul.health.service("game-service", passing=True)
+        _, services = self.consul.health.service("game-service-rest", passing=True)
         if not services:
             return None
 
@@ -168,7 +168,7 @@ class GameAllocatorService:
 
     async def _handler_game_instances_request(self, data: dict) -> dict:
         logger.debug("_handler_game_instances_request - getting game-service instances")
-        _, services = self.consul.health.service("game-service", passing=True)
+        _, services = self.consul.health.service("game-service-rest", passing=True)
         if not services:
             logger.warning("No healthy game-service instances found")
             return {"success": True, "instances": []}
@@ -184,7 +184,7 @@ class GameAllocatorService:
 
     async def _handler_ai_instances_request(self, data: dict) -> dict:
         logger.debug("_handler_ai_instances_request - getting ai-service instances")
-        _, services = self.consul.health.service("ai-service", passing=True)
+        _, services = self.consul.health.service("ai-service-rest", passing=True)
         if not services:
             logger.warning("No healthy ai-service instances found")
             return {"success": True, "instances": []}
