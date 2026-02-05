@@ -31,10 +31,13 @@ services:
 #        - LOG_FORMAT=json
       volumes:
         - ../services/game-allocator-service/app:/app/game-allocator-service/app
-#      depends_on:
-#        - consul
-#        - prometheus
-#        - nats
+      depends_on:
+        - consul
+        - prometheus
+        - nats
+        - infisical
+        - redis
+        - fluent-bit
       expose:
         - "5005"
       labels:
@@ -68,11 +71,12 @@ services:
 #      - REDIS_HOST=redis
 #      - NATS_URL=nats://nats:4222
 #      - CONSUL_HOST=consul
-#    depends_on:
-#      - postgres
-#      - redis
-#      - nats
-#      - auth-service
+    depends_on:
+      - infisical
+      - consul
+      - redis
+      - nats
+      - fluent-bit
 #    ports:
 #      - "5001:5001"
     expose:
@@ -116,10 +120,14 @@ services:
 #      - POSTGRES_PASSWORD=bomberman
 #      - LOG_FORMAT=json
 #      - CONSUL_HOST=consul
-#    depends_on:
-#      - redis
-#      - nats
-#      - auth-service
+    depends_on:
+      - redis
+      - nats
+      - consul
+      - pgbouncer
+      - infisical
+      - fluent-bit
+
 #    ports:
 #      - "5002:5002"
     expose:
@@ -159,9 +167,12 @@ services:
 #      - POSTGRES_PASSWORD=bomberman
 #      - SECRET_KEY=${AUTH_SECRET_KEY:-your_secret_key_here}
 #      - CONSUL_HOST=consul
-#    depends_on:
-#      - postgres
-#      - redis
+    depends_on:
+      - redis
+      - consul
+      - pgbouncer
+      - infisical
+      - fluent-bit
 #    ports:
 #      - "5003:5003"
     expose:
@@ -198,6 +209,12 @@ services:
 #      - LOG_FORMAT=json
 #      - MODELS_PATH=/app/ai_models
 #      - LOGS_PATH=/app/ai_logs
+    depends_on:
+      - redis
+      - nats
+      - consul
+      - infisical
+      - fluent-bit
 #    ports:
 #      - "5004:5004"
     expose:
@@ -236,6 +253,9 @@ services:
 #      - PORT=3000
 #      - REACT_APP_LOGS_BATCH_SIZE=10
 #      - AUTH_URL=/auth
+    depends_on:
+      - infisical
+      - fluent-bit
     labels:
       - "traefik.enable=true"
 
@@ -254,6 +274,8 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.tensorboard.loadbalancer.server.port=6006"
+    depends_on:
+      - fluent-bit
 
   pgbouncer:
     container_name: pgbouncer
@@ -309,6 +331,9 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.pgadmin.loadbalancer.server.port=80"
+    depends_on:
+      - postgres
+      - pgbouncer
 
   redis:
     image: redis:7.2
@@ -338,8 +363,8 @@ services:
     command: "-varz -connz -subz -routez -gatewayz -healthz -accstatz -leafz -jsz=all http://nats:8222"
     ports:
       - "7777:7777"
-#    depends_on:
-#      - nats
+    depends_on:
+      - nats
 #    restart: unless-stopped
 
   traefik:
@@ -400,6 +425,8 @@ services:
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     ports:
       - "9100:9100"
+    depends_on:
+      - nats
 #    restart: unless-stopped
 
   cadvisor:
