@@ -5,7 +5,7 @@ Multiplayer Bomberman game with an online mode.
 
 ## Architecture
 
-The project is built on a microservice architecture. Service interaction is handled via REST APIs and the NATS asynchronous messaging system. Service discovery is implemented using Consul.
+The project is built on a microservice architecture. Service interaction is handled via REST APIs and the NATS asynchronous messaging system. Service discovery is implemented using Consul. Secrets are stored in Infisical and injected at startup.
 
 ```mermaid
 graph TD
@@ -32,6 +32,10 @@ graph TD
         Redis("Redis")
         NATS("NATS JetStream")
         Consul("Consul")
+    end
+
+    subgraph "Secrets Management"
+        Infisical("Infisical")
     end
 
     subgraph "Monitoring & Logging"
@@ -78,6 +82,13 @@ graph TD
     AIService -->|Pub/Sub| NATS
     AIService -->|Cache| Redis
     AIService -->|Service Discovery| Consul
+
+    WebFrontend -.->|Secrets| Infisical
+    WebAPI -.->|Secrets| Infisical
+    GameService -.->|Secrets| Infisical
+    AuthService -.->|Secrets| Infisical
+    GameAllocator -.->|Secrets| Infisical
+    AIService -.->|Secrets| Infisical
 
     subgraph "Log Collection"
         direction LR
@@ -130,6 +141,7 @@ Detailed descriptions of each infrastructure component, its purpose, and configu
 *   **[PgBouncer](docs/en/infra/pgbouncer/index.md)** (Connection Pooler)
 *   **[Redis](docs/en/infra/redis/index.md)** (Caching)
 *   **[NATS](docs/en/infra/nats/index.md)** (Message Bus)
+*   **[Infisical](docs/en/infra/infisical/index.md)** (Secrets Management)
 *   **Exporters**
     *   [Node Exporter](docs/en/infra/node-exporter/index.md)
     *   [cAdvisor](docs/en/infra/cadvisor/index.md)
@@ -157,6 +169,10 @@ A dispatcher service responsible for efficiently distributing game sessions acro
 ### AI Service
 Manages the behavior of AI units (bots) in the game. The service subscribes to game state events from NATS, makes decisions based on trained models, and sends control commands for the AI back to the `Game Service` via NATS.
 
+## Secrets Management
+
+Secrets are managed in Infisical. Each service includes a `.env-example` file with all supported variables; these files can be imported into Infisical as a base configuration. Docker entrypoints log in to Infisical and run the services with the injected environment variables.
+
 ## Project Startup
 
 ### Requirements
@@ -178,12 +194,13 @@ docker-compose -f docker-compose.yml -f infra/docker-compose.yml up -d --build
 
 After startup, services are available at the following addresses:
 
--   **Game & Frontend**: `http://localhost`
--   **Traefik Dashboard**: `http://traefik.localhost` (or `http://localhost:8080`)
+-   **Game & Frontend**: `http://localhost:3000`
+-   **Traefik Dashboard**: `http://localhost:8080`
 -   **Grafana**: `http://grafana.localhost` (admin/admin)
 -   **Prometheus**: `http://prometheus.localhost`
 -   **Consul UI**: `http://localhost:8500`
 -   **TensorBoard**: `http://localhost:6006`
+-   **Infisical UI**: `http://infisical.localhost:3000`
 
 ## Technologies
 
@@ -213,5 +230,6 @@ After startup, services are available at the following addresses:
 - Traefik (API Gateway)
 - Prometheus + Grafana (Monitoring)
 - Loki + Fluent Bit (Logging)
+- Infisical (Secrets Management)
 
 ## License

@@ -1,0 +1,506 @@
+{
+  "info": {
+    "name": "Game Service REST",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["health"]
+        }
+      }
+    },
+    {
+      "name": "Entities Info",
+      "request": {
+        "method": "GET",
+        "url": {
+          "raw": "{{baseUrl}}/games/api/v1/entities/info",
+          "host": ["{{baseUrl}}"],
+          "path": ["games", "api", "v1", "entities", "info"]
+        }
+      }
+    },
+    {
+      "name": "Games",
+      "item": [
+        {
+          "name": "List Games",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/games",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "games"]
+            }
+          }
+        },
+        {
+          "name": "Get Game",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/games/{{game_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "games", "{{game_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Game",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"game_mode\": \"CAMPAIGN\",\n  \"map_template_id\": null,\n  \"map_chain_id\": null,\n  \"enable_enemies\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/games",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "games"]
+            }
+          }
+        },
+        {
+          "name": "Update Game Settings",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"max_players\": 4,\n  \"player_start_lives\": 3,\n  \"enable_enemies\": true,\n  \"map_chain_id\": null,\n  \"map_template_id\": null,\n  \"respawn_enabled\": false,\n  \"friendly_fire\": false,\n  \"time_limit\": 300,\n  \"score_limit\": 10,\n  \"rounds_count\": 15\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/games/{{game_id}}/settings",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "games", "{{game_id}}", "settings"]
+            }
+          }
+        },
+        {
+          "name": "Update Game Status",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"action\": \"start\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/games/{{game_id}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "games", "{{game_id}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Add Player",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player_id\": \"{{player_id}}\",\n  \"unit_type\": \"BOMBERMAN\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/games/{{game_id}}/players",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "games", "{{game_id}}", "players"]
+            }
+          }
+        },
+        {
+          "name": "Remove Player",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/games/{{game_id}}/players/{{player_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "games", "{{game_id}}", "players", "{{player_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Game",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/games/{{game_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "games", "{{game_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Teams",
+      "item": [
+        {
+          "name": "Get Teams",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/teams/{{game_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "teams", "{{game_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Team",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Team A\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/teams/{{game_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "teams", "{{game_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Team",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Team A\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/teams/{{game_id}}/{{team_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "teams", "{{game_id}}", "{{team_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Team",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/teams/{{game_id}}/{{team_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "teams", "{{game_id}}", "{{team_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Add Player to Team",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player_id\": \"{{player_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/teams/{{game_id}}/{{team_id}}/players",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "teams", "{{game_id}}", "{{team_id}}", "players"]
+            }
+          }
+        },
+        {
+          "name": "Remove Player from Team",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/teams/{{game_id}}/{{team_id}}/players/{{player_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "teams", "{{game_id}}", "{{team_id}}", "players", "{{player_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Distribute Players",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/teams/{{game_id}}/distribute",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "teams", "{{game_id}}", "distribute"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Maps",
+      "item": [
+        {
+          "name": "Create Template",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Template 1\",\n  \"description\": null,\n  \"width\": 15,\n  \"height\": 15,\n  \"grid_data\": [[0]],\n  \"difficulty\": 1,\n  \"max_players\": 4,\n  \"min_players\": 1,\n  \"estimated_play_time\": 300,\n  \"tags\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "templates"]
+            }
+          }
+        },
+        {
+          "name": "List Templates",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/templates",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "templates"]
+            }
+          }
+        },
+        {
+          "name": "Get Template",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/templates/{{template_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "templates", "{{template_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Template",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Template 1\",\n  \"description\": null,\n  \"width\": 15,\n  \"height\": 15,\n  \"grid_data\": [[0]],\n  \"difficulty\": 1,\n  \"max_players\": 4,\n  \"min_players\": 1,\n  \"estimated_play_time\": 300,\n  \"tags\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/templates/{{template_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "templates", "{{template_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Template",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/templates/{{template_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "templates", "{{template_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Group",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Group 1\",\n  \"description\": null,\n  \"map_ids\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/groups",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "groups"]
+            }
+          }
+        },
+        {
+          "name": "List Groups",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/groups",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "groups"]
+            }
+          }
+        },
+        {
+          "name": "Get Group",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/groups/{{group_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "groups", "{{group_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Group",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Group 1\",\n  \"description\": null,\n  \"map_ids\": []\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/groups/{{group_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "groups", "{{group_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Group",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/groups/{{group_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "groups", "{{group_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Create Chain",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Chain 1\",\n  \"description\": null,\n  \"map_ids\": [],\n  \"difficulty_progression\": 1.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/chains",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "chains"]
+            }
+          }
+        },
+        {
+          "name": "List Chains",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/chains",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "chains"]
+            }
+          }
+        },
+        {
+          "name": "Get Chain",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/chains/{{chain_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "chains", "{{chain_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Update Chain",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Chain 1\",\n  \"description\": null,\n  \"map_ids\": [],\n  \"difficulty_progression\": 1.0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/chains/{{chain_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "chains", "{{chain_id}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Chain",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/games/api/v1/maps/chains/{{chain_id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["games", "api", "v1", "maps", "chains", "{{chain_id}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
+

@@ -22,8 +22,23 @@ AI Сервис — компонент платформы Bomberman Online, от
 ## Базовый каркас обучения и инференса
 
 -   gRPC запускает обучение и инференс, HTTP эндпоинт для обучения не используется.
--   Gymnasium окружение `BombermanEnv` проксирует `reset/step` в gRPC клиент к `game-service` (пока заглушки).
+-   Gymnasium окружение `BombermanEnv` проксирует `reset/step` в gRPC клиент к `game-service` в режиме тренировки.
 -   Stable-Baselines3 сохраняет модели в `MODELS_PATH`, TensorBoard логи пишутся в `LOGS_PATH` и читаются из `tensorboard` в `infra/docker-compose.yml`.
+
+## gRPC тренировка
+
+-   `Reset` создает новую тренировочную сессию в `game-service` и возвращает `session_id` и наблюдение.
+-   `Step` принимает `action` и `delta_seconds` (по умолчанию 0.33 сек) и возвращает новое наблюдение, `reward`, `terminated`, `truncated`.
+-   Наблюдение — вектор из окна карты `15x15` (225 значений) + 6 скаляров: `x_norm`, `y_norm`, `lives_norm`, `enemy_norm`, `map_width_norm`, `map_height_norm`.
+-   Действия: `0` — no-op, `1` — up, `2` — down, `3` — left, `4` — right, `5` — place_weapon_1.
+
+## Postman
+
+Файлы для импорта в Postman находятся в `services/ai-service/postman`:
+
+- `ai-service-rest.postman_collection.json` — REST эндпоинты
+- `ai-service.postman_environment.json` — окружение
+
 
 ## Документация
 
@@ -36,3 +51,17 @@ AI Сервис — компонент платформы Bomberman Online, от
 *   **[Обучение моделей AI](docs/ru/ai_training.md)**: Детали процесса обучения с подкреплением.
 *   **[Конфигурация](docs/ru/configuration.md)**: Полный список переменных окружения.
 *   **[Поток обучения и инференса](docs/ru/examples/ai_service_flow.md)**: Диаграмма взаимодействий.
+*   **[Поток тренировки](docs/ru/examples/ai_training_flow.md)**: Диаграмма тренировки через gRPC.
+
+## Управление секретами
+
+Секреты хранятся в Infisical. Файл `.env-example` содержит все доступные переменные и может быть импортирован в Infisical как базовая конфигурация. Docker entrypoint входит в Infisical и запускает сервис с подставленными переменными окружения.
+
+## Тестирование
+
+Из директории `services/ai-service`:
+
+```bash
+uv pip install .
+uv run pytest
+```

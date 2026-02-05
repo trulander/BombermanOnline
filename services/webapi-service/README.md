@@ -25,6 +25,10 @@ This documentation has been expanded and divided into several files for more det
 *   [**Configuration**](./docs/en/configuration.md): Guide to configuring the service.
 *   [**Deployment**](./docs/en/deployment.md): Instructions for running the service.
 
+## Secrets Management
+
+Secrets are managed in Infisical. The `.env-example` file contains all available variables and can be imported into Infisical as a base configuration. The Docker entrypoint logs in to Infisical and runs the service with injected environment variables.
+
 ## 3. Technologies Used
 
 *   **FastAPI**: Web framework for building APIs.

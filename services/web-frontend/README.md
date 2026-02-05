@@ -28,6 +28,10 @@ This service represents the user interface for the Bomberman Online game. It pro
     docker run -p 3000:3000 bomberman-web-frontend
     ```
 
+## Secrets Management
+
+Secrets are managed in Infisical. The `.env-example` file contains all available variables and can be imported into Infisical as a base configuration. The Docker entrypoint logs in to Infisical and runs the service with injected environment variables.
+
 ## Documentation
 
 More detailed project documentation can be found in the [`docs/`](./docs/) directory:

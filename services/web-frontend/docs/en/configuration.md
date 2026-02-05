@@ -1,7 +1,18 @@
 # Configuration
 [![Русский](https://img.shields.io/badge/lang-Русский-blue.svg)](../ru/configuration.md)
 
-The `web-frontend` service is configured using environment variables. This allows for flexible adaptation of the application for different environments (local development, production).
+The `web-frontend` service is configured using environment variables. This allows for flexible adaptation of the application for different environments (local development, production). In Docker, secrets can be injected through Infisical.
+
+## Secrets Management (Infisical)
+
+The `.env-example` file contains all available variables and can be imported into Infisical as a base configuration. The Docker entrypoint logs in to Infisical and runs the service with injected environment variables. The required variables are:
+
+- `INFISICAL_MACHINE_CLIENT_ID`
+- `INFISICAL_MACHINE_CLIENT_SECRET`
+- `INFISICAL_PROJECT_ID`
+- `INFISICAL_SECRET_ENV`
+- `INFISICAL_API_URL`
+- `INFISICAL_PATH`
 
 ## Environment Variables
 

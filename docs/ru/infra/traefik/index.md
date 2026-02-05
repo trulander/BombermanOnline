@@ -10,10 +10,10 @@
 ```yaml
 services:
   traefik:
-    image: traefik:3.4.0
+    image: traefik:3.6.6
     ports:
-      - "80:80"     # HTTP
-      - "8080:8080" # Веб-интерфейс Traefik Dashboard
+      - "3000:80"
+      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/traefik.yml:/etc/traefik/traefik.yml
@@ -28,8 +28,8 @@ services:
       - "traefik.enable=true"
 ```
 
--   **`image`**: `traefik:3.4.0` - Используемый образ Traefik.
--   **`ports`**: Пробрасываются порты `80` (для HTTP-трафика) и `8080` (для дашборда) на хост-машину.
+-   **`image`**: `traefik:3.6.6` - Используемый образ Traefik.
+-   **`ports`**: Пробрасываются порты `3000` (для HTTP-трафика) и `8080` (для дашборда) на хост-машину.
 -   **`volumes`**:
     -   `/var/run/docker.sock`: Позволяет Traefik автоматически обнаруживать другие контейнеры.
     -   `./traefik/...`: Монтируются все необходимые конфигурационные файлы (основной, middleware, роутеры) и директории для логов и плагинов.
@@ -42,9 +42,44 @@ services:
 -   **Auth Service**: Использует `auth-service` через middleware `auth-check` для защиты эндпоинтов. Traefik перенаправляет запрос на `auth-service`, и если тот возвращает статус `200 OK`, запрос пропускается дальше.
 -   **Локальный плагин `extractCookie`**: Используется для авторизации WebSocket-соединений. Он извлекает токен из cookie `ws_auth_token` и помещает его в заголовок `Authorization`.
 -   **Микросервисы**: Маршрутизирует запросы ко всем публичным сервисам (`web-frontend`, `webapi-service`, `auth-service` и др.) согласно правилам в `routers.yml`.
+-   **Infisical**: Маршрутизирует UI Infisical по правилу хоста `infisical.localhost`.
+
+## Маршрутизируемые сервисы (Traefik)
+
+Следующие маршруты настроены в `infra/traefik/routers.yml`:
+
+-   **Web Frontend**: `/`
+-   **WebAPI REST**: `/webapi`
+-   **WebAPI WebSocket**: `/webapi/socket.io`
+-   **WebAPI Docs**: `/webapi/docs`
+-   **Auth Service**: `/auth`
+-   **Auth Docs**: `/auth/docs`
+-   **Game Service REST**: `/games`
+-   **Game Service Docs**: `/games/docs`
+-   **Game Service gRPC**: `/games/grpc`
+-   **AI Service gRPC**: `/ai/grpc`
+-   **Сбор логов**: `/logs` (Fluent Bit logger API)
+-   **Grafana**: `/grafana`
+-   **pgAdmin**: `/pgadmin`
+-   **Traefik Dashboard**: `traefik.localhost`
+-   **Infisical UI**: `infisical.localhost`
+
+Следующие маршруты настроены через Docker labels в `infra/docker-compose.yml`:
+
+-   **Prometheus**: `prometheus.localhost`
 
 ## Доступ
 
 -   **Основной сайт**: `http://localhost/`
--   **API сервисы**: `http://localhost/auth/`, `http://localhost/webapi/`, `http://localhost/games/`
--   **Дашборд Traefik**: `http://traefik.localhost` (согласно `routers.yml`, также доступен по `http://localhost:8080` из `docker-compose.yml`).
+-   **WebAPI**: `http://localhost/webapi/`
+-   **WebAPI Docs**: `http://localhost/webapi/docs`
+-   **Auth**: `http://localhost/auth/`
+-   **Auth Docs**: `http://localhost/auth/docs`
+-   **Game Service**: `http://localhost/games/`
+-   **Game Service Docs**: `http://localhost/games/docs`
+-   **Grafana**: `http://localhost/grafana`
+-   **pgAdmin**: `http://localhost/pgadmin`
+-   **Prometheus**: `http://prometheus.localhost`
+-   **Logs**: `http://localhost/logs`
+-   **Infisical UI**: `http://infisical.localhost:3000`
+-   **Дашборд Traefik**: `http://traefik.localhost` (также доступен по `http://localhost:8080`).

@@ -6,7 +6,17 @@ The Game Service is configured both at the application level (via environment va
 
 ## 1. Global Service Settings (Environment Variables)
 
-These settings are defined via environment variables and determine the behavior of the entire service. The `.env` file (created from `.env-example`) is used to set them.
+These settings are defined via environment variables and determine the behavior of the entire service. The `.env` file (created from `.env-example`) is used to set them. In Docker, secrets can be injected by Infisical.
+
+**Infisical variables:**
+- `INFISICAL_MACHINE_CLIENT_ID`
+- `INFISICAL_MACHINE_CLIENT_SECRET`
+- `INFISICAL_PROJECT_ID`
+- `INFISICAL_SECRET_ENV`
+- `INFISICAL_API_URL`
+- `INFISICAL_PATH`
+
+You can import `services/game-service/.env-example` into Infisical to bootstrap the configuration.
 
 **Key Environment Variables:**
 

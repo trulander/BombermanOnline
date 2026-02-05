@@ -29,6 +29,16 @@ Building and running the service in Docker is the preferred method for productio
       auth-service
     ```
 
+    For Docker-based startup, secrets are loaded from Infisical. Provide the Infisical access variables and set a service-specific `INFISICAL_PATH`. You can import `services/auth-service/.env-example` into Infisical to create a base configuration.
+
+    Required variables:
+    - `INFISICAL_MACHINE_CLIENT_ID`
+    - `INFISICAL_MACHINE_CLIENT_SECRET`
+    - `INFISICAL_PROJECT_ID`
+    - `INFISICAL_SECRET_ENV`
+    - `INFISICAL_API_URL`
+    - `INFISICAL_PATH`
+
     > **Note:** For a full list of environment variables, see the [Configuration](./04_configuration.md) section.
 
 ## Local Development Setup
@@ -51,7 +61,7 @@ For development and debugging, the service can be run locally.
 
 2.  **Set up environment variables:**
 
-    Create a `.env` file in the project's root directory and specify the necessary variables (see [Configuration](./04_configuration.md)).
+    Create a `.env` file in the project's root directory and specify the necessary variables (see [Configuration](./04_configuration.md)), or run locally with Infisical by providing the `INFISICAL_*` variables.
 
 3.  **Apply migrations:**
 

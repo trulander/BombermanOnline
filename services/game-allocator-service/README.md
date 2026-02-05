@@ -131,6 +131,10 @@ Service configuration is managed via environment variables defined in `app/confi
 *   `LOG_FORMAT`: Logging format (`text` or `json`), default `text`.
 *   `TRACE_CALLER`: Whether to include caller information in logs, default `True`.
 
+## Secrets Management
+
+Secrets are managed in Infisical. The `.env-example` file lists all available variables and can be imported into Infisical as a base configuration. The Docker entrypoint logs in to Infisical and runs the service with injected environment variables.
+
 ## Startup and Deployment Instructions
 
 ### Local Startup (with Docker Compose)

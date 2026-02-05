@@ -20,6 +20,10 @@ All detailed documentation on architecture, API, deployment, and configuration h
 - [7. Migration Management](./docs/en/07_migrations.md)
 - [8. Architecture and Logic](./docs/en/08_architecture.md)
 
+## Secrets Management
+
+Secrets are managed in Infisical. The `.env-example` file contains all available variables and can be imported into Infisical as a base configuration. The Docker entrypoint logs in to Infisical and runs the service with injected environment variables.
+
 ## Technologies Used
 
 - **Python 3.12**

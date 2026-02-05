@@ -2,7 +2,18 @@
 
 [![Russian](https://img.shields.io/badge/lang-Russian-blue)](../ru/04_configuration.md)
 
-The service is configured using environment variables. They can be loaded from a `.env` file or passed directly at startup.
+The service is configured using environment variables. They can be loaded from a `.env` file or passed directly at startup. Secrets can also be injected by Infisical when running in Docker.
+
+### Secrets Management (Infisical)
+
+- `INFISICAL_MACHINE_CLIENT_ID`
+- `INFISICAL_MACHINE_CLIENT_SECRET`
+- `INFISICAL_PROJECT_ID`
+- `INFISICAL_SECRET_ENV`
+- `INFISICAL_API_URL`
+- `INFISICAL_PATH`
+
+You can import `services/auth-service/.env-example` into Infisical to bootstrap the configuration.
 
 ### Core Settings
 

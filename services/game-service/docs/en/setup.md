@@ -54,6 +54,8 @@ The service is configured using environment variables.
 
     A complete list of variables and their default values can be found in `app/config.py`.
 
+    Secrets can also be managed in Infisical. The `.env-example` file can be imported into Infisical as a base configuration. For Docker startup, provide the `INFISICAL_*` variables and set `INFISICAL_PATH` for the service.
+
 ## Database Migrations
 
 Before the first launch of the application or after changes to the database models, you need to apply Alembic migrations.
@@ -96,7 +98,7 @@ Detailed instructions for building and running the Docker image are provided in 
     ```
 
 2.  **Run the container:**
-    You need to pass environment variables, for example, via `--env-file` or individually via `-e`.
+    You need to pass environment variables, for example, via `--env-file` or individually via `-e`. In Docker, secrets are injected through Infisical, so provide `INFISICAL_*` variables and set `INFISICAL_PATH`.
     ```bash
     docker run -p 5002:5002 --env-file .env bomberman-game-service
     ```

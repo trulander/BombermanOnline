@@ -3,6 +3,19 @@
 
 The `WebAPI Service` is configured using environment variables. For development convenience, you can use an `.env` file in the service's root directory. The `.env-example` file provides a template for all necessary variables.
 
+## Secrets Management (Infisical)
+
+When running in Docker, secrets are injected by Infisical. Provide the following variables for the entrypoint:
+
+- `INFISICAL_MACHINE_CLIENT_ID`
+- `INFISICAL_MACHINE_CLIENT_SECRET`
+- `INFISICAL_PROJECT_ID`
+- `INFISICAL_SECRET_ENV`
+- `INFISICAL_API_URL`
+- `INFISICAL_PATH`
+
+You can import `services/webapi-service/.env-example` into Infisical to bootstrap the configuration.
+
 ## Main Variables
 
 | Variable                | Description                                                           | Default Value (`config.py`)      |

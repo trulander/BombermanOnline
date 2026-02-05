@@ -2,7 +2,18 @@
 
 [![English](https://img.shields.io/badge/lang-English-blue)](../en/04_configuration.md)
 
-Сервис настраивается с помощью переменных окружения. Они могут быть загружены из `.env` файла или переданы напрямую при запуске.
+Сервис настраивается с помощью переменных окружения. Они могут быть загружены из `.env` файла или переданы напрямую при запуске. В Docker-режиме секреты также подставляются через Infisical.
+
+### Управление секретами (Infisical)
+
+- `INFISICAL_MACHINE_CLIENT_ID`
+- `INFISICAL_MACHINE_CLIENT_SECRET`
+- `INFISICAL_PROJECT_ID`
+- `INFISICAL_SECRET_ENV`
+- `INFISICAL_API_URL`
+- `INFISICAL_PATH`
+
+Файл `services/auth-service/.env-example` можно импортировать в Infisical для базовой конфигурации.
 
 ### Основные настройки
 

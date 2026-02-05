@@ -31,7 +31,7 @@ uv sync
 ```bash
 cp .env-example .env
 ```
-*   Edit `.env`, specifying the correct addresses for `REDIS_HOST`, `NATS_URL`, and `CONSUL_HOST`.
+*   Edit `.env`, specifying the correct addresses for `REDIS_HOST`, `NATS_URL`, and `CONSUL_HOST`, or use Infisical by providing the `INFISICAL_*` variables.
 
 4.  **Start the server**:
 *   `uv` will run Uvicorn in the context of the created virtual environment.
@@ -61,7 +61,7 @@ docker build -t bomberman-webapi-service .
 
 ### Running the Docker Container
 
-You can run the service in a container, passing all necessary environment variables via the `-e` flag.
+You can run the service in a container, passing all necessary environment variables via the `-e` flag. In Docker, secrets are injected through Infisical, so pass the `INFISICAL_*` variables and set `INFISICAL_PATH` for the service. The `.env-example` file can be imported into Infisical as a base configuration.
 
 ```bash
 docker run -p 5001:5001 \

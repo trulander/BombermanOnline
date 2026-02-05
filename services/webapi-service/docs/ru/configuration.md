@@ -3,6 +3,19 @@
 
 Сервис `WebAPI Service` настраивается с помощью переменных окружения. Для удобства разработки можно использовать файл `.env` в корневой директории сервиса. Файл `.env-example` предоставляет шаблон для всех необходимых переменных.
 
+## Управление секретами (Infisical)
+
+В Docker-режиме секреты подставляются через Infisical. Для entrypoint требуются:
+
+- `INFISICAL_MACHINE_CLIENT_ID`
+- `INFISICAL_MACHINE_CLIENT_SECRET`
+- `INFISICAL_PROJECT_ID`
+- `INFISICAL_SECRET_ENV`
+- `INFISICAL_API_URL`
+- `INFISICAL_PATH`
+
+Файл `services/webapi-service/.env-example` можно импортировать в Infisical для базовой конфигурации.
+
 ## Основные переменные
 
 | Переменная              | Описание                                                              | Значение по умолчанию (`config.py`) |

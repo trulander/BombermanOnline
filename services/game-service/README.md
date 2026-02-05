@@ -16,6 +16,7 @@ The Game Service is a key component of the Bomberman Online platform, responsibl
 -   **Real-time:** Interaction via NATS for asynchronous processing of game events.
 -   **REST API:** Full management of games, teams, and maps.
 -   **Persistence:** Store map data in PostgreSQL and cache in Redis.
+-   **AI Training gRPC:** Separate training mode with `reset/step` without the global game loop.
 
 ## Technologies
 
@@ -119,7 +120,7 @@ Detailed API documentation can be found in [docs/en/api_endpoints.md](docs/en/ap
 
 ## Environment Variables
 
-The service is configured using environment variables. An example file with environment variables can be found in `services/game-service/.env-example`. Key variables:
+The service is configured using environment variables. An example file with environment variables can be found in `services/game-service/.env-example`. This file can be imported into Infisical as a base configuration for secrets. Key variables:
 
 -   `API_V1_STR`: Prefix for API V1.
 -   `HOST`, `PORT`: Host and port for FastAPI.
@@ -127,8 +128,28 @@ The service is configured using environment variables. An example file with envi
 -   `POSTGRES_HOST`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`: PostgreSQL connection settings.
 -   `REDIS_HOST`, `REDIS_PORT`, `REDIS_DB`, `REDIS_PASSWORD`: Redis connection settings.
 -   `NATS_URL`: URL for connecting to NATS.
+-   `AI_SERVICE_GRPC_HOST`, `AI_SERVICE_GRPC_PORT`: ai-service gRPC address for AI inference.
 -   `LOG_LEVEL`, `LOG_FORMAT`, `TRACE_CALLER`: Logging settings.
 -   `GAME_UPDATE_FPS`: Game loop update frequency (frames per second).
+-   `AI_ACTION_INTERVAL`: Interval between AI inference requests (seconds).
+
+## Secrets Management
+
+Secrets are managed in Infisical. The Docker entrypoint logs in to Infisical using the `INFISICAL_*` variables and runs the service with injected environment variables. The `.env-example` file can be imported into Infisical to bootstrap the configuration.
+
+## AI Training gRPC
+
+-   `Reset` creates a standalone training game and returns `session_id` and observation.
+-   `Step` advances the game by `delta_seconds` (default 0.33 sec) and returns observation, `reward`, `terminated`, `truncated`.
+-   Training games are not included in the common list and do not use the global game loop.
+-   Entities with `ai=True` trigger inference calls to `ai-service` in the classic loop.
+
+## Postman
+
+Файлы для импорта в Postman находятся в `services/game-service/postman`:
+
+- `game-service-rest.postman_collection.json` — REST эндпоинты
+- `game-service.postman_environment.json` — окружение- `bomberman_ai.proto` — gRPC контракт для Postman
 
 See `app/config.py` for a complete list and default values.
 
