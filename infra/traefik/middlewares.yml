@@ -15,7 +15,31 @@ http:
     # Middleware для сжатия ответов
     compress:
       compress: {}
-    
+
+    # Middleware для удаления префикса /games/grpc
+    strip-games-grpc-prefix:
+      stripPrefix:
+        prefixes:
+          - "/games/grpc"
+
+    # Middleware для удаления префикса /games
+    strip-games-prefix:
+      stripPrefix:
+        prefixes:
+          - "/games"
+
+    # Middleware для удаления префикса /ai
+    strip-ai-prefix:
+      stripPrefix:
+        prefixes:
+          - "/ai"
+
+    # Middleware для удаления префикса /ai/grpc
+    strip-ai-grpc-prefix:
+      stripPrefix:
+        prefixes:
+          - "/ai/grpc"
+
     # Middleware для удаления префикса /api
     strip-api-prefix:
       stripPrefix:

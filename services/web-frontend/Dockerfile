@@ -1,4 +1,15 @@
-FROM node:18-alpine
+FROM node:18-slim
+
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+        bash \
+    && curl -1sLf https://artifacts-cli.infisical.com/setup.deb.sh | bash \
+    && apt-get update \
+    && apt-get install -y infisical \
+    && rm -rf /var/lib/apt/lists/*
 
 COPY ./package.json ./app/
 COPY ./tsconfig.json ./app/
@@ -19,9 +30,9 @@ ENV NODE_ENV=production \
     REACT_APP_SERVICE_NAME=web-frontend \
     REACT_APP_LOGS_BATCH_SIZE=10
 
+COPY ./entrypoint-docker.sh /usr/local/bin/entrypoint-docker.sh
+RUN chmod +x /usr/local/bin/entrypoint-docker.sh
 
-# Экспортируем порт 3000
 EXPOSE 3000
 
-# Команда запуска
-CMD ["npm", "start"]
+ENTRYPOINT ["/usr/local/bin/entrypoint-docker.sh"]

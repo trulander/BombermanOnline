@@ -30,19 +30,11 @@ class Settings(BaseSettings):
     REDIS_DB: int = 0
     REDIS_PASSWORD: str | None = None
     
-    # PostgreSQL settings
-    POSTGRES_HOST: str = "localhost"
-    POSTGRES_PORT: int = 5432
-    POSTGRES_DB: str = "bomberman"
-    POSTGRES_USER: str = "postgres"
-    POSTGRES_PASSWORD: str = "postgres"
-    
+
     # NATS settings
     NATS_URL: str = "nats://localhost:4222"
     
-    # Game service settings
-    GAME_SERVICE_URL: str = "http://localhost:5002"
-    
+
     # Logging settings
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "text"#json

@@ -23,6 +23,14 @@ http:
         - web
       service: grafana@docker
 
+    # Infisical
+    infisical:
+      rule: "Host(`infisical.localhost`)"
+#      rule: "PathPrefix(`/infisical`)"
+      entryPoints:
+        - web
+      service: infisical@docker
+
     # pgAdmin
     pgadmin:
       rule: "PathPrefix(`/pgadmin`)"
@@ -54,31 +62,21 @@ http:
         - compress
         - security-headers
 
-    webapi-docs:
-      rule: "PathPrefix(`/webapi/docs`)"
-      entryPoints:
-        - web
-      service: webapi-service@consulcatalog
-      middlewares:
-        - compress
-        - security-headers
-
-    # Game сервис - с проверкой авторизации
-    game-docs:
-      rule: "PathPrefix(`/games/docs`)"
-      entryPoints:
-        - web
-      service: game-service@consulcatalog
-      middlewares:
-        - compress
-        - security-headers
-
     # Auth сервис - API
     auth-api:
       rule: "PathPrefix(`/auth`)"
       entryPoints:
         - web
       service: auth-service@consulcatalog
+      middlewares:
+        - compress
+        - security-headers
+
+    webapi-docs:
+      rule: "PathPrefix(`/webapi/docs`)"
+      entryPoints:
+        - web
+      service: webapi-service@consulcatalog
       middlewares:
         - compress
         - security-headers
@@ -95,12 +93,46 @@ http:
         - auth-check
 
     # Game сервис - с проверкой авторизации
-    game:
+    game-docs:
+      rule: "PathPrefix(`/games/docs`)"
+      entryPoints:
+        - web
+      service: game-service-rest@consulcatalog
+      middlewares:
+        - compress
+        - security-headers
+
+    # Game сервис rest api - с проверкой авторизации
+    game-service-rest:
       rule: "PathPrefix(`/games`)"
       entryPoints:
         - web
-      service: game-service@consulcatalog
+      service: game-service-rest@consulcatalog
       middlewares:
+        - compress
+        - security-headers
+        - auth-check
+
+    # Game сервис gRPC - с проверкой авторизации
+    game-service-grpc:
+      rule: "PathPrefix(`/games/grpc`)"
+      entryPoints:
+        - web
+      service: game-service-grpc@consulcatalog
+      middlewares:
+        - strip-games-grpc-prefix
+        - compress
+        - security-headers
+        - auth-check
+
+    # Ai сервис gRPC - с проверкой авторизации
+    ai-service-grpc:
+      rule: "PathPrefix(`/ai/grpc`)"
+      entryPoints:
+        - web
+      service: ai-service-grpc@consulcatalog
+      middlewares:
+        - strip-ai-grpc-prefix
         - compress
         - security-headers
         - auth-check
@@ -130,10 +162,25 @@ http:
         servers:
           - url: "http://webapi-service:5001"
 
-    game-service:
+    game-service-rest:
       loadBalancer:
         servers:
           - url: "http://game-service:5002"
+
+    game-service-grpc:
+      loadBalancer:
+        servers:
+          - url: "h2c://game-service:500051"
+
+    ai-service-rest:
+      loadBalancer:
+        servers:
+          - url: "http://ai-service:5004"
+
+    ai-service-grpc:
+      loadBalancer:
+        servers:
+          - url: "h2c://ai-service:500051"
 
     # Статические сервисы (не регистрируются в Consul)
     web-frontend:

@@ -15,14 +15,20 @@ services:
         context: ../services/game-allocator-service
         dockerfile: Dockerfile
       environment:
-        - PYTHONUNBUFFERED=1
-        - REDIS_HOST=redis
-        - CONSUL_HTTP_ADDR=consul:8500
-        - PROMETHEUS_URL=http://prometheus:9090
-        - NATS_URL=nats://nats:4222
-        - CONSUL_HOST=consul
-        - LOG_LEVEL=DEBUG
-        - LOG_FORMAT=json
+        - INFISICAL_MACHINE_CLIENT_ID=43a8f0c8-0335-457b-bf4b-30c535ea76d6
+        - INFISICAL_MACHINE_CLIENT_SECRET=407096de13aa16fdd086e2a034839cc9032cea65864b873d1f0cd2d2a1462ea0
+        - INFISICAL_PROJECT_ID=75120a62-4e31-4aed-8ea3-20bc53c06d7e
+        - INFISICAL_SECRET_ENV=dev
+        - INFISICAL_API_URL=http://infisical:8080
+        - INFISICAL_PATH=/game-allocator-service
+#        - PYTHONUNBUFFERED=1
+#        - REDIS_HOST=redis
+#        - CONSUL_HTTP_ADDR=consul:8500
+#        - PROMETHEUS_URL=http://prometheus:9090
+#        - NATS_URL=nats://nats:4222
+#        - CONSUL_HOST=consul
+#        - LOG_LEVEL=DEBUG
+#        - LOG_FORMAT=json
       volumes:
         - ../services/game-allocator-service/app:/app/game-allocator-service/app
 #      depends_on:
@@ -52,11 +58,16 @@ services:
       - ../services/webapi-service/app:/app/webapi-service/app
       - webapi_logs:/var/log/webapi-service
     environment:
-      - PYTHONUNBUFFERED=1
-      - REDIS_HOST=redis
-      - NATS_URL=nats://nats:4222
-      - AUTH_SERVICE_URL=http://auth-service:5003
-      - CONSUL_HOST=consul
+      - INFISICAL_MACHINE_CLIENT_ID=8270b339-a88d-415d-b5a1-f087184b671f
+      - INFISICAL_MACHINE_CLIENT_SECRET=56c9c9afce52cfae61064f055cf5322ba2890d39ccbd5137e6d68b853b98ae76
+      - INFISICAL_PROJECT_ID=75120a62-4e31-4aed-8ea3-20bc53c06d7e
+      - INFISICAL_SECRET_ENV=dev
+      - INFISICAL_API_URL=http://infisical:8080
+      - INFISICAL_PATH=/webapi-service
+#      - PYTHONUNBUFFERED=1
+#      - REDIS_HOST=redis
+#      - NATS_URL=nats://nats:4222
+#      - CONSUL_HOST=consul
 #    depends_on:
 #      - postgres
 #      - redis
@@ -88,18 +99,23 @@ services:
       - ../shared:/app/game-service/app/shared
       - game_logs:/var/log/game-service
     environment:
-      - LOG_LEVEL=INFO
-      - PYTHONUNBUFFERED=1
-      - REDIS_HOST=redis
-      - NATS_URL=nats://nats:4222
-      - AUTH_SERVICE_URL=http://auth-service:5003
-      - POSTGRES_HOST=pgbouncer
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=game_service
-      - POSTGRES_USER=bomberman
-      - POSTGRES_PASSWORD=bomberman
-      - LOG_FORMAT=json
-      - CONSUL_HOST=consul
+      - INFISICAL_MACHINE_CLIENT_ID=d8f5e51a-a469-4a2e-8b68-55572af4afe1
+      - INFISICAL_MACHINE_CLIENT_SECRET=f9f6a919d80239906b6aff858d9f61d89a63dabe8b0fde330a3d5adb989b6bb6
+      - INFISICAL_PROJECT_ID=75120a62-4e31-4aed-8ea3-20bc53c06d7e
+      - INFISICAL_SECRET_ENV=dev
+      - INFISICAL_API_URL=http://infisical:8080
+      - INFISICAL_PATH=/game-service
+#      - LOG_LEVEL=INFO
+#      - PYTHONUNBUFFERED=1
+#      - REDIS_HOST=redis
+#      - NATS_URL=nats://nats:4222
+#      - POSTGRES_HOST=pgbouncer
+#      - POSTGRES_PORT=5432
+#      - POSTGRES_DB=game_service
+#      - POSTGRES_USER=bomberman
+#      - POSTGRES_PASSWORD=bomberman
+#      - LOG_FORMAT=json
+#      - CONSUL_HOST=consul
 #    depends_on:
 #      - redis
 #      - nats
@@ -128,15 +144,21 @@ services:
       - ../services/auth-service/app:/app/auth-service/app
       - auth_logs:/var/log/auth-service
     environment:
-      - PYTHONUNBUFFERED=1
-      - REDIS_HOST=redis
-      - POSTGRES_HOST=pgbouncer
-      - POSTGRES_PORT=5432
-      - POSTGRES_DB=auth_service
-      - POSTGRES_USER=bomberman
-      - POSTGRES_PASSWORD=bomberman
-      - SECRET_KEY=${AUTH_SECRET_KEY:-your_secret_key_here}
-      - CONSUL_HOST=consul
+      - INFISICAL_MACHINE_CLIENT_ID=04baedbc-a525-4293-bae6-a9d0601d009a
+      - INFISICAL_MACHINE_CLIENT_SECRET=91940a93328d660ea09588b6e33b9976b8d96ef79431586300c856415ec30123
+      - INFISICAL_PROJECT_ID=75120a62-4e31-4aed-8ea3-20bc53c06d7e
+      - INFISICAL_SECRET_ENV=dev
+      - INFISICAL_API_URL=http://infisical:8080
+      - INFISICAL_PATH=/auth-service
+#      - PYTHONUNBUFFERED=1
+#      - REDIS_HOST=redis
+#      - POSTGRES_HOST=pgbouncer
+#      - POSTGRES_PORT=5432
+#      - POSTGRES_DB=auth_service
+#      - POSTGRES_USER=bomberman
+#      - POSTGRES_PASSWORD=bomberman
+#      - SECRET_KEY=${AUTH_SECRET_KEY:-your_secret_key_here}
+#      - CONSUL_HOST=consul
 #    depends_on:
 #      - postgres
 #      - redis
@@ -162,14 +184,20 @@ services:
       - ../infra/ai_models:/app/ai_models
       - ../infra/ai_logs:/app/ai_logs
     environment:
-      - PYTHONUNBUFFERED=1
-      - REDIS_HOST=redis
-      - NATS_URL=nats://nats:4222
-      - CONSUL_HOST=consul
-      - LOG_LEVEL=DEBUG
-      - LOG_FORMAT=json
-      - MODELS_PATH=/app/ai_models
-      - LOGS_PATH=/app/ai_logs
+      - INFISICAL_MACHINE_CLIENT_ID=f871ae75-4695-4593-b842-3a6c350b37e1
+      - INFISICAL_MACHINE_CLIENT_SECRET=0a1bdb512a9f2849f37d7cd227d3ce74b3082590a758f24b235a20a3c2a513e3
+      - INFISICAL_PROJECT_ID=75120a62-4e31-4aed-8ea3-20bc53c06d7e
+      - INFISICAL_SECRET_ENV=dev
+      - INFISICAL_API_URL=http://infisical:8080
+      - INFISICAL_PATH=/ai-service
+#      - PYTHONUNBUFFERED=1
+#      - REDIS_HOST=redis
+#      - NATS_URL=nats://nats:4222
+#      - CONSUL_HOST=consul
+#      - LOG_LEVEL=DEBUG
+#      - LOG_FORMAT=json
+#      - MODELS_PATH=/app/ai_models
+#      - LOGS_PATH=/app/ai_logs
 #    ports:
 #      - "5004:5004"
     expose:
@@ -194,14 +222,20 @@ services:
       - ../services/web-frontend/public:/app/public
       - ../services/web-frontend/src:/app/src
     environment:
-      - NODE_ENV=production
-      - REACT_APP_LOGS_ENDPOINT=/logs
-      - REACT_APP_SERVICE_NAME=web-frontend
-      - REACT_APP_SOCKET_URL=http://localhost:3000
-      - REACT_APP_SOCKET_PATH=/webapi/socket.io
-      - PORT=3000
-      - REACT_APP_LOGS_BATCH_SIZE=10
-      - AUTH_URL=/auth
+      - INFISICAL_MACHINE_CLIENT_ID=7179351c-96b5-45b4-90d4-e74d20716716
+      - INFISICAL_MACHINE_CLIENT_SECRET=7fa1d2a9c26e44bb91b334ec91843ed7eaf45bdea32a9705d9809c85547406e0
+      - INFISICAL_PROJECT_ID=75120a62-4e31-4aed-8ea3-20bc53c06d7e
+      - INFISICAL_SECRET_ENV=dev
+      - INFISICAL_API_URL=http://infisical:8080
+      - INFISICAL_PATH=/web-frontend
+#      - NODE_ENV=production
+#      - REACT_APP_LOGS_ENDPOINT=/logs
+#      - REACT_APP_SERVICE_NAME=web-frontend
+#      - REACT_APP_SOCKET_URL=http://localhost:3000
+#      - REACT_APP_SOCKET_PATH=/webapi/socket.io
+#      - PORT=3000
+#      - REACT_APP_LOGS_BATCH_SIZE=10
+#      - AUTH_URL=/auth
     labels:
       - "traefik.enable=true"
 
@@ -217,6 +251,9 @@ services:
       options:
         fluentd-address: localhost:24224
         tag: docker.tensorboard
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.tensorboard.loadbalancer.server.port=6006"
 
   pgbouncer:
     container_name: pgbouncer
@@ -251,6 +288,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
 #    restart: unless-stopped
+#    healthcheck:
+#      test: "pg_isready --username=${POSTGRES_USER} && psql --username=${POSTGRES_USER} --list"
+#      interval: 5s
+#      timeout: 10s
+#      retries: 10
 
   pgadmin:
     image: dpage/pgadmin4:latest
@@ -280,8 +322,8 @@ services:
     environment:
       REDIS_ADDR: redis://redis:6379
     ports: ["9121:9121"]
-#    depends_on:
-#      - redis
+    depends_on:
+      - redis
 
   nats:
     image: nats:2.10
@@ -400,8 +442,8 @@ services:
       - "8888:8888"
     environment:
       - LOKI_URL=http://loki.internal:3100/loki/api/v1/push
-#    depends_on:
-#      - loki
+    depends_on:
+      - loki
 #    restart: unless-stopped
     networks:
       - default
@@ -424,13 +466,43 @@ services:
       - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
     expose:
       - "3001"
-#    depends_on:
-#      - prometheus
-#      - loki
+    depends_on:
+      - prometheus
+      - loki
 #    restart: unless-stopped
     labels:
       - "traefik.enable=true"
       - "traefik.http.services.grafana.loadbalancer.server.port=3001"
+
+
+  infisical:
+    container_name: infisical-backend
+    image: infisical/infisical:v0.158.0
+    restart: unless-stopped
+    depends_on:
+      - pgbouncer
+#        condition: service_healthy
+      - redis
+#        condition: service_started
+    pull_policy: always
+#    env_file: .env
+#    ports:
+#      - 3002:8080
+    expose:
+      - "8080"
+    environment:
+#      - NODE_ENV=production
+      - NODE_ENV=development
+      - ENCRYPTION_KEY=f13dbc92aaaf86fa7cb0ed8ac3265f47
+      - AUTH_SECRET=5lrMXKKWCVocS/uerPsl7V+TX/aaUaI7iDkgl3tSmLE=
+      - DB_CONNECTION_URI=postgresql://${POSTGRES_USER:-bomberman}:${POSTGRES_PASSWORD:-bomberman}@pgbouncer:5432/infisical
+      - REDIS_URL=redis://redis:6379
+      - SITE_URL=http://infisical.localhost:3000
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.services.infisical.loadbalancer.server.port=8080"
+      - "traefik.http.routers.infisical.rule=Host(`infisical.localhost`)"
+
 
 volumes:
   postgres_data:

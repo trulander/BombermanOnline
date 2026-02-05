@@ -3,6 +3,16 @@ FROM python:3.12-slim
 # Установка рабочей директории
 WORKDIR /app
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        ca-certificates \
+    && curl -1sLf https://artifacts-cli.infisical.com/setup.deb.sh | bash \
+    && apt-get update \
+    && apt-get install -y infisical \
+#    && apt-get purge -y curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Установка UV
 RUN pip install --no-cache-dir uv
 

@@ -2,11 +2,19 @@ FROM python:3.12-slim-bookworm
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
-    swig \
-    build-essential \
-    cmake \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        swig \
+        build-essential \
+        cmake \
+        curl \
+        ca-certificates \
+    && curl -1sLf https://artifacts-cli.infisical.com/setup.deb.sh | bash \
+    && apt-get update \
+    && apt-get install -y infisical \
+#    && apt-get purge -y curl \
     && rm -rf /var/lib/apt/lists/*
+
 
 RUN pip install uv
 
