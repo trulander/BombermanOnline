@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package bomberman;
+
+service GameService {
+  rpc Reset(TrainingResetRequest) returns (TrainingResetResponse);
+  rpc Step(TrainingStepRequest) returns (TrainingStepResponse);
+}
+
+service AIService {
+  rpc StartTraining(TrainingStartRequest) returns (TrainingStartResponse);
+  rpc InferAction(InferActionRequest) returns (InferActionResponse);
+}
+
+message TrainingStartRequest {}
+message TrainingStartResponse {}
+
+message Observation {
+  repeated float values = 1;
+}
+
+message TrainingResetRequest {
+  int32 map_width = 1;
+  int32 map_height = 2;
+  int32 enemy_count = 3;
+  bool enable_enemies = 4;
+  int32 seed = 5;
+}
+
+message TrainingResetResponse {
+  string session_id = 1;
+  Observation observation = 2;
+  string info_json = 3;
+}
+
+message TrainingStepRequest {
+  string session_id = 1;
+  int32 action = 2;
+  float delta_seconds = 3;
+}
+
+message TrainingStepResponse {
+  Observation observation = 1;
+  float reward = 2;
+  bool terminated = 3;
+  bool truncated = 4;
+  string info_json = 5;
+}
+
+message InferActionRequest {
+  string session_id = 1;
+  string entity_id = 2;
+  Observation observation = 3;
+}
+
+message InferActionResponse {
+  int32 action = 1;
+}

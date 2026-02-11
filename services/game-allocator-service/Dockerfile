@@ -19,7 +19,7 @@ RUN pip install --no-cache-dir uv
 COPY pyproject.toml uv.lock ./
 
 # Устанавливаем зависимости через uv (с флагом --system)
-#RUN uv pip install --no-cache-dir --system -e .
+RUN uv pip install --no-cache-dir --system -e .
 RUN uv sync
 
 
@@ -31,3 +31,4 @@ COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["uv", "run", "app/main.py"]

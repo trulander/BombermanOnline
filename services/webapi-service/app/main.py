@@ -27,15 +27,15 @@ def register_service():
     logger.info(f"registering in the consul service")
     service_name = settings.SERVICE_NAME
     c = consul.Consul(host=settings.CONSUL_HOST, port=8500)
-    service_id = f"{service_name}-{socket.gethostname()}"
+    service_id = f"{service_name}-{settings.HOSTNAME}"
     c.agent.service.register(
         name=service_name,
         service_id=service_id,
-        address=socket.gethostname(),  # Имя сервиса в Docker сети
+        address=settings.HOSTNAME,  # Имя сервиса в Docker сети
         port=settings.PORT,
         tags=["traefik"],
         check=consul.Check.http(
-            url=f"http://{socket.gethostname()}:{settings.PORT}/health",
+            url=f"http://{settings.HOSTNAME}:{settings.PORT}/health",
             interval="10s",
             timeout="1s",
             deregister="60s"

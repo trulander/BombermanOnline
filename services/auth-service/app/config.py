@@ -59,6 +59,7 @@ class Settings(BaseSettings):
     
     # Frontend settings
     TEMPLATES_DIR: str = "app/templates"
+    STATIC_DIR: str = "app/static"
     
     # Roles
     ROLES: list[str] = ["user", "admin", "moderator", "developer"]

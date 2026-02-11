@@ -83,7 +83,7 @@ class GameAllocatorService:
     async def assign_game_instance(self, game_id: str, game_settings: dict):
         logger.debug(f"assign_game_instance - game_id:{game_id}, game_settings:{game_settings}")
         # Получить здоровые инстансы из Consul
-        _, services = self.consul.health.service("game-service-rest", passing=True)
+        _, services = self.consul.health.service("game-service", passing=True)
         if not services:
             return None
 
@@ -168,29 +168,36 @@ class GameAllocatorService:
 
     async def _handler_game_instances_request(self, data: dict) -> dict:
         logger.debug("_handler_game_instances_request - getting game-service instances")
-        _, services = self.consul.health.service("game-service-rest", passing=True)
+        _, services = self.consul.health.service("game-service", passing=True)
         if not services:
             logger.warning("No healthy game-service instances found")
             return {"success": True, "instances": []}
         
-        instances = []
-        for s in services:
-            port = s["Service"]["Port"]
-            grpc_port = port + 1
-            instances.append({"address": s["Service"]["Address"], "port": grpc_port})
+        instances = [
+            {
+                "address": s["Service"]["Address"],
+                "rest_port": int(s["Service"]["Meta"]["rest_api_port"]),
+                "grpc_port": int(s["Service"]["Meta"]["grpc_port"]),
+            }
+            for s in services
+        ]
         
         logger.debug(f"_handler_game_instances_request - found {len(instances)} instances")
         return {"success": True, "instances": instances}
 
     async def _handler_ai_instances_request(self, data: dict) -> dict:
         logger.debug("_handler_ai_instances_request - getting ai-service instances")
-        _, services = self.consul.health.service("ai-service-rest", passing=True)
+        _, services = self.consul.health.service("ai-service", passing=True)
         if not services:
             logger.warning("No healthy ai-service instances found")
             return {"success": True, "instances": []}
         
         instances = [
-            {"address": s["Service"]["Address"], "port": s["Service"]["Port"] + 1}
+            {
+                "address": s["Service"]["Address"],
+                "rest_port": int(s["Service"]["Meta"]["rest_api_port"]),
+                "grpc_port": int(s["Service"]["Meta"]["grpc_port"]),
+            }
             for s in services
         ]
         logger.debug(f"_handler_ai_instances_request - found {len(instances)} instances")

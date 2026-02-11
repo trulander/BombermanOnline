@@ -1,3 +1,5 @@
+import socket
+
 from pydantic import computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -11,13 +13,10 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     RELOAD: bool = True
     SWAGGER_URL: str = "/webapi/docs"
-    HOSTNAME: str = "localhost"
+    HOSTNAME: str = socket.gethostname()
 
     CONSUL_HOST: str = "localhost"
 
-    #TODO доработать логику получения хоста через консул динамически
-    GAME_SERVICE_HOSTNAME: str = "localhost"
-    
     # CORS settings
     CORS_ORIGINS: str = "*"
     CORS_CREDENTIALS: bool = True

@@ -72,7 +72,7 @@ app.add_middleware(
 
 app.add_route("/metrics", metrics)
 # Подключаем статические файлы
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
 # Подключаем маршруты
 app.include_router(root_router)
 app.include_router(api_router, prefix=settings.API_V1_STR)
@@ -88,7 +88,7 @@ def unhandled_exception_handler(
         RequestValidationError)) else status.HTTP_500_INTERNAL_SERVER_ERROR
     if request.url.path.startswith("/ui/"):
         # Для UI-маршрутов используем Jinja2 шаблоны
-        return Jinja2Templates(directory="app/templates").TemplateResponse(
+        return Jinja2Templates(directory=settings.TEMPLATES_DIR).TemplateResponse(
             "error.html",
             {
                 "request": request, "message": str(exception)

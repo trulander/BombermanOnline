@@ -97,7 +97,7 @@ http:
       rule: "PathPrefix(`/games/docs`)"
       entryPoints:
         - web
-      service: game-service-rest@consulcatalog
+      service: game-service@consulcatalog
       middlewares:
         - compress
         - security-headers
@@ -107,7 +107,7 @@ http:
       rule: "PathPrefix(`/games`)"
       entryPoints:
         - web
-      service: game-service-rest@consulcatalog
+      service: game-service@consulcatalog
       middlewares:
         - compress
         - security-headers
@@ -118,7 +118,7 @@ http:
       rule: "PathPrefix(`/games/grpc`)"
       entryPoints:
         - web
-      service: game-service-grpc@consulcatalog
+      service: game-service@consulcatalog
       middlewares:
         - strip-games-grpc-prefix
         - compress
@@ -130,7 +130,7 @@ http:
       rule: "PathPrefix(`/ai/grpc`)"
       entryPoints:
         - web
-      service: ai-service-grpc@consulcatalog
+      service: ai-service@consulcatalog
       middlewares:
         - strip-ai-grpc-prefix
         - compress

@@ -21,7 +21,8 @@ RUN pip install uv
 # Копируем pyproject.toml и uv.lock для установки зависимостей
 COPY pyproject.toml uv.lock ./
 
-# Устанавливаем зависимости
+# Устанавливаем зависимости через uv (с флагом --system)
+RUN uv pip install --no-cache-dir --system -e .
 RUN uv sync
 
 # Копируем остальной код приложения
@@ -39,3 +40,4 @@ COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
+CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "5004"]
