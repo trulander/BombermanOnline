@@ -1,3 +1,4 @@
+import socket
 from typing import Optional
 
 from pydantic import field_validator, computed_field
@@ -16,9 +17,7 @@ class Settings(BaseSettings):
 
     CONSUL_HOST: str = "localhost"
 
-    HOSTNAME: str = "localhost"
-    #TODO доработать логику получения хоста через консул динамически
-    WEBAPI_SERVICE_HOSTNAME: str = "localhost"
+    HOSTNAME: str = socket.gethostname()
 
 
     # CORS settings
@@ -57,6 +56,9 @@ class Settings(BaseSettings):
     # gRPC settings
     GRPC_HOST: str = "0.0.0.0"
     GRPC_PORT: int = 50051
+
+    AI_SERVICE_GRPC_HOST: str = "localhost"
+    AI_SERVICE_GRPC_PORT: int = 50051
     
 
     @computed_field

@@ -8,6 +8,9 @@ from abc import ABC, abstractmethod
 from typing import Dict, List, Tuple, Optional, Any
 
 from .team_service import TeamService
+from .ai_inference_service import AIInferenceService
+from .ai_action_mapper import action_to_inputs, action_to_direction
+from .ai_observation import build_basic_observation
 from ..entities import Entity
 from ..entities.map import Map
 from ..entities.player import Player, UnitType, PlayerUpdate
@@ -27,10 +30,17 @@ logger = logging.getLogger(__name__)
 class GameModeService(ABC):
     """Базовый класс для игровых режимов с общей логикой"""
     
-    def __init__(self, game_settings: GameSettings, map_service: MapService, team_service: TeamService=None):
+    def __init__(
+        self,
+        game_settings: GameSettings,
+        map_service: MapService,
+        team_service: TeamService = None,
+        ai_inference_service: AIInferenceService | None = None,
+    ):
         self.settings: GameSettings = game_settings
         self.map_service: MapService = map_service
         self.team_service = team_service  # TeamService injection
+        self.ai_inference_service: AIInferenceService | None = ai_inference_service
         
         # Состояние игры
         self.players: Dict[str, Player] = {}
@@ -169,12 +179,13 @@ class GameModeService(ABC):
             logger.error(f"Error getting player {player_id}: {e}", exc_info=True)
             return None
     
-    async def update(self) -> dict:
+    async def update(self, *, delta_time: float | None = None) -> dict:
         """Обновить состояние игры и вернуть новое состояние"""
         try:
             # Вычисляем delta time
             current_time: float = time.time()
-            delta_time: float = current_time - self.last_update_time
+            if delta_time is None:
+                delta_time = current_time - self.last_update_time
             self.last_update_time = current_time
 
             # Пропускаем обновление если игра окончена
@@ -183,6 +194,7 @@ class GameModeService(ABC):
                 return {}
 
             result = defaultdict(dict)
+            # await self._apply_ai_actions(delta_time=delta_time)
             # Обновляем игроков
             for player in list(self.players.values()):
                 result["players_update"].update({player.id: self.update_player(player=player, delta_time=delta_time)})
@@ -209,6 +221,74 @@ class GameModeService(ABC):
         except Exception as e:
             logger.error(f"Error in game update: {e}", exc_info=True)
             return {}
+
+    async def _apply_ai_actions(self, *, delta_time: float) -> None:
+        if self.ai_inference_service is None:
+            return
+        if self.map is None:
+            return
+
+        map_width = self.map.width
+        map_height = self.map.height
+        map_grid = self.map.grid
+        enemy_count = len(self.enemies)
+
+        for player in list(self.players.values()):
+            if not player.ai:
+                continue
+            observation = build_basic_observation(
+                map_grid=map_grid,
+                map_width=map_width,
+                map_height=map_height,
+                cell_size=self.settings.cell_size,
+                entity_x=player.x,
+                entity_y=player.y,
+                lives=player.lives,
+                max_lives=self.settings.player_max_lives,
+                enemy_count=enemy_count,
+                window_size=15,
+            )
+            action = await self.ai_inference_service.maybe_infer_action(
+                session_id=None,
+                entity_id=player.id,
+                observation=observation,
+            )
+            if action is None:
+                continue
+            if action == 5:
+                self.place_weapon(
+                    player=player,
+                    weapon_action=WeaponAction.PLACEWEAPON1,
+                )
+                player.set_inputs(inputs=action_to_inputs(action=0))
+            else:
+                player.set_inputs(inputs=action_to_inputs(action=action))
+
+        if self.settings.enable_enemies:
+            for enemy in list(self.enemies):
+                if not enemy.ai:
+                    continue
+                observation = build_basic_observation(
+                    map_grid=map_grid,
+                    map_width=map_width,
+                    map_height=map_height,
+                    cell_size=self.settings.cell_size,
+                    entity_x=enemy.x,
+                    entity_y=enemy.y,
+                    lives=enemy.lives,
+                    max_lives=max(1, enemy.lives),
+                    enemy_count=enemy_count,
+                    window_size=15,
+                )
+                action = await self.ai_inference_service.maybe_infer_action(
+                    session_id=None,
+                    entity_id=enemy.id,
+                    observation=observation,
+                )
+                if action is None:
+                    continue
+                enemy.direction = action_to_direction(action=action, current=enemy.direction)
+                enemy.move_timer = 0
     
     def update_player(self, player: Player, delta_time: float) -> PlayerUpdate | None:
         """Обновить одного игрока"""

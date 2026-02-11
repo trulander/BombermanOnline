@@ -97,6 +97,26 @@ class EventService:
             specific_suffix=game_id
         )
 
+    async def get_game_service_instances(self) -> list[dict[str, Any]]:
+        """Получить список всех инстансов ai-service"""
+        try:
+            response = await self.nats_repository.request(
+                subject="ai.instances.request",
+                payload=json.dumps({}).encode(),
+                timeout=5.0
+            )
+            result = json.loads(response.data.decode())
+            if result.get('success'):
+                instances = result.get('instances', [])
+                logger.debug(f"Retrieved {len(instances)} ai-service instances")
+                return instances
+            else:
+                logger.warning(f"Failed to get ai-service instances: {result.get('message')}")
+                return []
+        except Exception as e:
+            logger.error(f"Error getting ai-service instances: {e}", exc_info=True)
+            return []
+
     async def handle_create_game(self, data: dict, callback: Callable) -> dict:
         """Обработчик создания новой игры"""
         response = await callback(**data)

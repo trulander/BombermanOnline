@@ -80,8 +80,8 @@ class Map:
         # offsets = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)] # полная сетка с диагональными перемещениями
         offsets = [(-1, 0), (0, -1), (0, 1), (1, 0)]# только верх низ право лево
         neighbors = [(dx, dy) for dx, dy in offsets
-                     if 0 <= x + dx < self.grid.shape[0] and 0 <= y + dy < self.grid.shape[1]
-                     and self.grid[x + dx, y + dy] not in [CellType.SOLID_WALL.value, CellType.BREAKABLE_BLOCK.value]]
+                     if 0 <= x + dx < self.width and 0 <= y + dy < self.height
+                     and self.grid[y + dy, x + dx] not in [CellType.SOLID_WALL.value, CellType.BREAKABLE_BLOCK.value]]
         return neighbors
     
     def is_wall(self, x: int, y: int) -> bool:

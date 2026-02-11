@@ -15,8 +15,8 @@ from app.inference.inference_service import InferenceService
 
 from starlette.datastructures import State
 import consul
-import socket
-from starlette_exporter import PrometheusMiddleware, handle_metrics
+from aioprometheus import MetricsMiddleware
+from aioprometheus.asgi.starlette import metrics
 
 logger = logging.getLogger(__name__)
 
@@ -25,20 +25,32 @@ def register_service():
     logger.info(f"registering in the consul service")
     service_name = settings.SERVICE_NAME
     c = consul.Consul(host=settings.CONSUL_HOST, port=8500)
-    service_id = f"{service_name}-{socket.gethostname()}"
-    c.agent.service.register(
-        name=service_name,
-        service_id=service_id,
-        address=socket.gethostname(),  # Имя сервиса в Docker сети
-        port=settings.PORT,
-        tags=["traefik"],
-        check=consul.Check.http(
-            url=f"http://{socket.gethostname()}:{settings.PORT}/health",
+    data = {
+        "address": settings.HOSTNAME,  # Имя сервиса в Docker сети
+        "tags": ["traefik"],
+        "check": consul.Check.http(
+            url=f"http://{settings.HOSTNAME}:{settings.PORT}/health",
             interval="10s",
             timeout="1s",
             deregister="60s"
         )
+    }
+    c.agent.service.register(
+        **data,
+        service_id=f"{service_name}-{settings.HOSTNAME}",
+        name=f"{service_name}",
+        meta={
+            "rest_api_port": str(settings.PORT),
+            "grpc_port": str(settings.GRPC_PORT),
+        },
+        port=settings.PORT
     )
+    # c.agent.service.register(
+    #     **data,
+    #     service_id=f"{service_name}-{settings.HOSTNAME}-grpc",
+    #     name=f"{service_name}-grpc",
+    #     port=settings.GRPC_PORT
+    # )
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -90,13 +102,10 @@ app.state: State
 
 # Добавляем Prometheus метрики
 app.add_middleware(
-    PrometheusMiddleware,
-    app_name="game_service",
-    group_paths=True,
-    filter_unhandled_paths=False,
+    MetricsMiddleware,
 )
 
-app.add_route("/metrics", handle_metrics)
+app.add_route("/metrics", metrics)
 
 @app.get("/health")
 async def health_check() -> Dict[str, str]:

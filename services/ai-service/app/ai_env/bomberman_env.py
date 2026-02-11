@@ -13,7 +13,7 @@ class BombermanEnv(gym.Env[np.ndarray, int]):
     def __init__(
         self,
         grpc_client: GameServiceGRPCClient,
-        obs_shape: tuple[int, ...] = (1,),
+        obs_shape: tuple[int, ...] = (231,),
         action_count: int = 6,
     ) -> None:
         self.grpc_client = grpc_client

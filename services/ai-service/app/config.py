@@ -1,4 +1,5 @@
 import logging
+import socket
 from functools import lru_cache
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -42,7 +43,7 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     RELOAD: bool = True
 
-    HOSTNAME: str = "localhost"
+    HOSTNAME: str = socket.gethostname()
 
     CONSUL_HOST: str = "localhost"
 

@@ -6,6 +6,7 @@ from uuid import uuid4
 from ..config import settings
 from ..models.game_models import GameCreateSettings, GameSettings
 from ..services.game_service import GameService
+from ..services.ai_inference_service import AIInferenceService
 from ..services.event_service import EventService, NatsEvents
 from ..services.map_service import MapService
 
@@ -17,9 +18,15 @@ from ..entities.weapon import WeaponType, WeaponAction
 logger = logging.getLogger(__name__)
 
 class GameCoordinator:
-    def __init__(self, notification_service: EventService, map_repository:MapRepository) -> None:
+    def __init__(
+        self,
+        notification_service: EventService,
+        map_repository: MapRepository,
+        ai_inference_service: AIInferenceService | None = None,
+    ) -> None:
         self.notification_service: EventService = notification_service
         self.map_repository: MapRepository = map_repository
+        self.ai_inference_service = ai_inference_service
         self.games: dict[str, GameService] = {}
 
 
@@ -47,7 +54,7 @@ class GameCoordinator:
                 for game_id, game in list(self.games.items()):
                     if game.game_mode.is_alive() and game.is_active():
                         active_games += 1
-                        updated_state = await game.update()
+                        updated_state = await game.update(delta_seconds=None)
                         # Отправляем обновление через NATS всем подключенным клиентам
                         await self.notification_service.send_game_update(data=updated_state.model_dump(mode="json"))
                     elif game.is_active() and not game.game_mode.is_game_over():
@@ -93,7 +100,8 @@ class GameCoordinator:
             # Создаем игру
             game_service = GameService(
                 game_settings=game_settings,
-                map_service=map_service
+                map_service=map_service,
+                ai_inference_service=self.ai_inference_service,
             )
             
             # Инициализируем игру

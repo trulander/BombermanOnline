@@ -11,6 +11,7 @@ from ..entities.weapon import WeaponType, WeaponAction
 from ..entities.game_status import GameStatus
 from ..models.map_models import MapState, MapData, MapUpdate
 from ..services.map_service import MapService
+from ..services.ai_inference_service import AIInferenceService
 from ..services.game_mode_service import GameModeService
 from ..services.team_service import TeamService
 from ..services.modes.campaign_mode import CampaignMode
@@ -28,10 +29,16 @@ MapState.model_rebuild()
 class GameService:
     """Сервис оркестрации игры"""
     
-    def __init__(self, game_settings: GameSettings, map_service: MapService):
+    def __init__(
+        self,
+        game_settings: GameSettings,
+        map_service: MapService,
+        ai_inference_service: AIInferenceService | None = None,
+    ):
         try:
             self.settings: GameSettings = game_settings
             self.map_service: MapService = map_service
+            self.ai_inference_service: AIInferenceService | None = ai_inference_service
             self.status: GameStatus = GameStatus.PENDING
             self.created_at: datetime = datetime.utcnow()
             self.updated_at: datetime = datetime.utcnow()
@@ -52,17 +59,37 @@ class GameService:
         """Создать игровой режим на основе настроек"""
         match self.settings.game_mode:
             case GameModeType.CAMPAIGN:
-                return CampaignMode(self.settings, self.map_service, self.team_service)
+                return CampaignMode(
+                    game_settings=self.settings,
+                    map_service=self.map_service,
+                    team_service=self.team_service,
+                    ai_inference_service=self.ai_inference_service,
+                )
 
             case GameModeType.FREE_FOR_ALL:
-                return FreeForAllMode(self.settings, self.map_service, self.team_service)
+                return FreeForAllMode(
+                    game_settings=self.settings,
+                    map_service=self.map_service,
+                    team_service=self.team_service,
+                    ai_inference_service=self.ai_inference_service,
+                )
 
             case GameModeType.CAPTURE_THE_FLAG:
-                return CaptureFlagMode(self.settings, self.map_service, self.team_service)
+                return CaptureFlagMode(
+                    game_settings=self.settings,
+                    map_service=self.map_service,
+                    team_service=self.team_service,
+                    ai_inference_service=self.ai_inference_service,
+                )
 
             case _:
                 logger.warning(f"Unknown game mode {self.settings.game_mode}, defaulting to campaign")
-                return CampaignMode(self.settings, self.map_service, self.team_service)
+                return CampaignMode(
+                    game_settings=self.settings,
+                    map_service=self.map_service,
+                    team_service=self.team_service,
+                    ai_inference_service=self.ai_inference_service,
+                )
 
 
     async def initialize_game(self) -> None:
@@ -265,7 +292,7 @@ class GameService:
             logger.error(message, exc_info=True)
             return {"success": False, "message": message}
 
-    async def update(self) -> GameUpdateEvent:
+    async def update(self, *, delta_seconds: float | None = None) -> GameUpdateEvent:
         """Обновить состояние игры"""
         try:
             if not self.is_active():
@@ -277,7 +304,7 @@ class GameService:
                 )
             
             # Делегируем обновление игровому режиму
-            status_update = await self.game_mode.update()
+            status_update = await self.game_mode.update(delta_time=delta_seconds)
             state = GameUpdateEvent(
                 game_id=self.settings.game_id,
                 map_update=self.game_mode.map.get_changes(),
@@ -303,6 +330,7 @@ class GameService:
                 error=True,
                 message=f"Error in game update: {e}"
             )
+
     
     def place_weapon(self, player_id: str, weapon_action: WeaponAction) -> dict:
         """Применить оружие игрока"""

@@ -1,5 +1,6 @@
 import logging
 from ..game_mode_service import GameModeService
+from ..ai_inference_service import AIInferenceService
 from ...models.game_models import GameSettings
 from ...services.map_service import MapService
 
@@ -8,8 +9,19 @@ logger = logging.getLogger(__name__)
 
 class FreeForAllMode(GameModeService):
     """Режим 'каждый сам за себя'"""
-    def __init__(self, game_settings: GameSettings, map_service: MapService, team_service=None):
-        super().__init__(game_settings, map_service, team_service)
+    def __init__(
+        self,
+        game_settings: GameSettings,
+        map_service: MapService,
+        team_service=None,
+        ai_inference_service: AIInferenceService | None = None,
+    ):
+        super().__init__(
+            game_settings=game_settings,
+            map_service=map_service,
+            team_service=team_service,
+            ai_inference_service=ai_inference_service,
+        )
         
         # Отключаем врагов в режиме FFA
         self.settings.enable_enemies = False

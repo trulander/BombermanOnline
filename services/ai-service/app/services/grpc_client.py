@@ -1,25 +1,23 @@
 import logging
+import json
 
 import grpc
 import numpy as np
 
-import app.main
 from .game_service_finder import GameServiceFinder
-
-try:
-    from app.shared.proto import bomberman_ai_pb2, bomberman_ai_pb2_grpc
-    PROTO_AVAILABLE = True
-except ImportError:
-    bomberman_ai_pb2 = None
-    bomberman_ai_pb2_grpc = None
-    PROTO_AVAILABLE = False
-    logger = logging.getLogger(__name__)
-    logger.warning(
-        msg="Proto files not generated yet. Run generate.sh in services/shared/proto/",
-    )
 
 
 logger = logging.getLogger(__name__)
+
+
+try:
+    from app.shared.proto import bomberman_ai_pb2, bomberman_ai_pb2_grpc
+except ImportError as e:
+    logger.critical(
+        msg="Proto files not generated yet. Run generate.sh in services/shared/proto/",
+    )
+    raise Exception(e)
+
 
 
 class GameServiceGRPCClient:
@@ -27,7 +25,7 @@ class GameServiceGRPCClient:
         self,
         game_service_finder: GameServiceFinder | None = None,
     ) -> None:
-        self.channel: grpc.aio.Channel | None = None
+        self.channel: grpc.Channel | None = None
         self.stub = None
         self.game_service_finder = game_service_finder
         self.current_instance: dict | None = None
@@ -38,7 +36,7 @@ class GameServiceGRPCClient:
                 if self.game_service_finder:
                     self.current_instance = self.game_service_finder.find_game_service_instance()
                 else:
-
+                    import app.main
                     finder = GameServiceFinder(nats_repository=app.main.app.state.nats_repository)
                     self.current_instance = finder.find_game_service_instance()
 
@@ -46,9 +44,8 @@ class GameServiceGRPCClient:
                     raise ConnectionError("No game-service instances available")
 
             address = f"{self.current_instance['address']}:{self.current_instance['port']}"
-            self.channel = grpc.aio.insecure_channel(target=address)
-            if PROTO_AVAILABLE and bomberman_ai_pb2_grpc is not None:
-                self.stub = bomberman_ai_pb2_grpc.GameServiceStub(self.channel)
+            self.channel = grpc.insecure_channel(target=address)
+            self.stub = bomberman_ai_pb2_grpc.GameServiceStub(self.channel)
             logger.info(f"Connected to game-service gRPC at {address}")
 
     def disconnect(self) -> None:
@@ -63,15 +60,62 @@ class GameServiceGRPCClient:
         action: int,
         session_id: str | None,
     ) -> tuple[np.ndarray | None, float, bool, bool, dict]:
-        if not PROTO_AVAILABLE or self.stub is None:
+        if self.stub is None:
+            self.connect()
+        if self.stub is None:
+            logger.error(f"gRPC step failed: Wasn't able to connect to the game-service grpc server", exc_info=True)
+            raise Exception({"error": "Wasn't able to connect to the game-service grpc server"})
             return None, 0.0, False, False, {}
-        return None, 0.0, False, False, {}
+        request = bomberman_ai_pb2.TrainingStepRequest(
+            session_id=session_id or "",
+            action=action,
+            delta_seconds=0.33,
+        )
+        try:
+            response = self.stub.Step(request)
+        except Exception as exc:
+            logger.error(f"gRPC step failed: {exc}", exc_info=True)
+            self.disconnect()
+            return None, 0.0, False, False, {}
+        observation = np.array(response.observation.values, dtype=np.float32)
+        info = {}
+        if response.info_json:
+            try:
+                info = json.loads(response.info_json)
+            except Exception:
+                info = {}
+        return observation, float(response.reward), bool(response.terminated), bool(response.truncated), info
 
     def reset(
         self,
         options: dict[str, object] | None = None,
     ) -> tuple[np.ndarray | None, dict, str]:
-        if not PROTO_AVAILABLE or self.stub is None:
+        if self.stub is None:
+            self.connect()
+        if self.stub is None:
+            logger.error(f"gRPC reset failed: Wasn't able to connect to the game-service grpc server", exc_info=True)
+            raise Exception({"error": "Wasn't able to connect to the game-service grpc server"})
             return None, {}, "stub-session"
-        return None, {}, "stub-session"
+        options = options or {}
+        request = bomberman_ai_pb2.TrainingResetRequest(
+            map_width=int(options.get("map_width", 0)),
+            map_height=int(options.get("map_height", 0)),
+            enemy_count=int(options.get("enemy_count", 0)),
+            enable_enemies=bool(options.get("enable_enemies", True)),
+            seed=int(options.get("seed", 0)),
+        )
+        try:
+            response = self.stub.Reset(request)
+        except Exception as exc:
+            logger.error(f"gRPC reset failed: {exc}", exc_info=True)
+            self.disconnect()
+            return None, {}, "stub-session"
+        observation = np.array(response.observation.values, dtype=np.float32)
+        info = {}
+        if response.info_json:
+            try:
+                info = json.loads(response.info_json)
+            except Exception:
+                info = {}
+        return observation, info, response.session_id or "stub-session"
 
