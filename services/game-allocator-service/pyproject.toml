@@ -16,3 +16,8 @@ dependencies = [
     "python-json-logger>=3.3.0",
     "redis>=6.0.0",
 ]
+[dependency-groups]
+dev=[
+    "ty>=0.0.16",
+    "ruff>=0.15.0",
+]

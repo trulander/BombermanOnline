@@ -23,6 +23,11 @@ dependencies = [
     "protobuf>=6.33.4",
 ]
 
+[dependency-groups]
+dev=[
+    "ty>=0.0.16",
+    "ruff>=0.15.0",
+]
 
 [tool.uv]
 extra-index-url = ["https://download.pytorch.org/whl/rocm6.3"]

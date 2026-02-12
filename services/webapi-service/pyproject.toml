@@ -19,3 +19,8 @@ dependencies = [
     "httpx>=0.28.1",
     "py-consul>=1.6.0",
 ]
+[dependency-groups]
+dev=[
+    "ty>=0.0.16",
+    "ruff>=0.15.0",
+]

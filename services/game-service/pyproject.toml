@@ -30,4 +30,10 @@ dependencies = [
     "grpcio>=1.76.0",
     "grpcio-tools>=1.62.0",
     "protobuf>=6.33.4",
+
+]
+[dependency-groups]
+dev=[
+    "ty>=0.0.16",
+    "ruff>=0.15.0",
 ]
