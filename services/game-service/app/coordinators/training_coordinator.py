@@ -1,18 +1,24 @@
 import json
 import random
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 from app.entities.game_mode import GameModeType
 from app.entities.player import UnitType
 from app.entities.weapon import WeaponAction
-from app.repositories.map_repository import MapRepository
+
 from app.services.ai_action_mapper import action_to_inputs
+
 from app.services.ai_observation import build_basic_observation
 from app.services.game_service import GameService
 from app.services.map_service import MapService
 from app.models.game_models import GameSettings
 
+
+if TYPE_CHECKING:
+    from app.repositories.map_repository import MapRepository
+    from app.services.ai_inference_service import AIInferenceService
 
 @dataclass
 class TrainingSession:
@@ -42,9 +48,10 @@ class TrainingStepResult:
 class TrainingCoordinator:
     def __init__(
         self,
-        *,
-        map_repository: MapRepository,
+        map_repository: "MapRepository",
+        ai_inference_service: "AIInferenceService"
     ) -> None:
+        self.ai_inference_service = ai_inference_service
         self._map_repository = map_repository
         self._sessions: dict[str, TrainingSession] = {}
 
@@ -85,6 +92,7 @@ class TrainingCoordinator:
         game_service = GameService(
             game_settings=game_settings,
             map_service=map_service,
+            ai_inference_service=self.ai_inference_service
         )
         await game_service.initialize_game()
 

@@ -1,3 +1,4 @@
+import asyncio
 import random
 import time
 from collections import defaultdict
@@ -51,6 +52,7 @@ class GameModeService(ABC):
         self.level: int = 1
         self.game_over: bool = False
         self.last_update_time: float = time.time()
+        self._ai_pending_tasks: dict[str, asyncio.Task] = {}
     
     async def initialize_map(self) -> None:
         """Инициализировать карту для игры"""
@@ -222,74 +224,120 @@ class GameModeService(ABC):
             logger.error(f"Error in game update: {e}", exc_info=True)
             return {}
 
-    async def _apply_ai_actions(self, *, delta_time: float) -> None:
-        if self.ai_inference_service is None:
+    # async def _apply_ai_actions(self, *, delta_time: float) -> None:
+    #     if self.ai_inference_service is None:
+    #         return
+    #     if self.map is None:
+    #         return
+    #
+    #     map_width = self.map.width
+    #     map_height = self.map.height
+    #     map_grid = self.map.grid
+    #     enemy_count = len(self.enemies)
+    #
+    #     for player in list(self.players.values()):
+    #         if not player.ai:
+    #             continue
+    #         observation = build_basic_observation(
+    #             map_grid=map_grid,
+    #             map_width=map_width,
+    #             map_height=map_height,
+    #             cell_size=self.settings.cell_size,
+    #             entity_x=player.x,
+    #             entity_y=player.y,
+    #             lives=player.lives,
+    #             max_lives=self.settings.player_max_lives,
+    #             enemy_count=enemy_count,
+    #             window_size=15,
+    #         )
+    #         action = await self.ai_inference_service.maybe_infer_action(
+    #             session_id=None,
+    #             entity_id=player.id,
+    #             observation=observation,
+    #         )
+    #         if action is None:
+    #             continue
+    #         if action == 5:
+    #             self.place_weapon(
+    #                 player=player,
+    #                 weapon_action=WeaponAction.PLACEWEAPON1,
+    #             )
+    #             player.set_inputs(inputs=action_to_inputs(action=0))
+    #         else:
+    #             player.set_inputs(inputs=action_to_inputs(action=action))
+    #
+    #     if self.settings.enable_enemies:
+    #         for enemy in list(self.enemies):
+    #             if not enemy.ai:
+    #                 continue
+    #             observation = build_basic_observation(
+    #                 map_grid=map_grid,
+    #                 map_width=map_width,
+    #                 map_height=map_height,
+    #                 cell_size=self.settings.cell_size,
+    #                 entity_x=enemy.x,
+    #                 entity_y=enemy.y,
+    #                 lives=enemy.lives,
+    #                 max_lives=max(1, enemy.lives),
+    #                 enemy_count=enemy_count,
+    #                 window_size=15,
+    #             )
+    #             action = await self.ai_inference_service.maybe_infer_action(
+    #                 session_id=None,
+    #                 entity_id=enemy.id,
+    #                 observation=observation,
+    #             )
+    #             if action is None:
+    #                 continue
+    #             enemy.direction = action_to_direction(action=action, current=enemy.direction)
+    #             enemy.move_timer = 0
+
+    def _cancel_ai_task(self, entity_id: str):
+        task = self._ai_pending_tasks.pop(entity_id, None)
+        if task and not task.done():
+            task.cancel()
+
+    def _handle_ai_action(self, *, entity: Entity, is_player: bool):
+        entity_id = entity.id
+
+        if entity_id in self._ai_pending_tasks:
+            task = self._ai_pending_tasks[entity_id]
+            if task.done():
+                del self._ai_pending_tasks[entity_id]
+                try:
+                    action = task.result()
+                except Exception:
+                    action = None
+
+                if action is not None:
+                    entity.ai_last_action_time = time.time()
+                    if is_player:
+                        if action == 5:
+                            self.place_weapon(player=entity, weapon_action=WeaponAction.PLACEWEAPON1)
+                            entity.set_inputs(inputs=action_to_inputs(action=0))
+                        else:
+                            entity.set_inputs(inputs=action_to_inputs(action=action))
+                    else:
+                        entity.direction = action_to_direction(action=action, current=entity.direction)
+                        entity.move_timer = 0
             return
-        if self.map is None:
-            return
 
-        map_width = self.map.width
-        map_height = self.map.height
-        map_grid = self.map.grid
-        enemy_count = len(self.enemies)
-
-        for player in list(self.players.values()):
-            if not player.ai:
-                continue
-            observation = build_basic_observation(
-                map_grid=map_grid,
-                map_width=map_width,
-                map_height=map_height,
-                cell_size=self.settings.cell_size,
-                entity_x=player.x,
-                entity_y=player.y,
-                lives=player.lives,
-                max_lives=self.settings.player_max_lives,
-                enemy_count=enemy_count,
-                window_size=15,
+        obs = build_basic_observation(
+            map_grid=self.map.grid, map_width=self.map.width, map_height=self.map.height,
+            cell_size=self.settings.cell_size,
+            entity_x=entity.x, entity_y=entity.y,
+            lives=entity.lives,
+            max_lives=self.settings.player_max_lives if is_player else max(1, entity.lives),
+            enemy_count=len(self.enemies), window_size=15,
+        )
+        task = asyncio.create_task(
+            self.ai_inference_service.maybe_infer_action(
+                session_id=None, entity_id=entity_id, observation=obs,
             )
-            action = await self.ai_inference_service.maybe_infer_action(
-                session_id=None,
-                entity_id=player.id,
-                observation=observation,
-            )
-            if action is None:
-                continue
-            if action == 5:
-                self.place_weapon(
-                    player=player,
-                    weapon_action=WeaponAction.PLACEWEAPON1,
-                )
-                player.set_inputs(inputs=action_to_inputs(action=0))
-            else:
-                player.set_inputs(inputs=action_to_inputs(action=action))
+        )
+        self._ai_pending_tasks[entity_id] = task
 
-        if self.settings.enable_enemies:
-            for enemy in list(self.enemies):
-                if not enemy.ai:
-                    continue
-                observation = build_basic_observation(
-                    map_grid=map_grid,
-                    map_width=map_width,
-                    map_height=map_height,
-                    cell_size=self.settings.cell_size,
-                    entity_x=enemy.x,
-                    entity_y=enemy.y,
-                    lives=enemy.lives,
-                    max_lives=max(1, enemy.lives),
-                    enemy_count=enemy_count,
-                    window_size=15,
-                )
-                action = await self.ai_inference_service.maybe_infer_action(
-                    session_id=None,
-                    entity_id=enemy.id,
-                    observation=observation,
-                )
-                if action is None:
-                    continue
-                enemy.direction = action_to_direction(action=action, current=enemy.direction)
-                enemy.move_timer = 0
-    
+
     def update_player(self, player: Player, delta_time: float) -> PlayerUpdate | None:
         """Обновить одного игрока"""
         try:
@@ -297,6 +345,9 @@ class GameModeService(ABC):
                 #TODO тут может нужно удалять игрока из списка, но не просто так, иначе в общем счете его не будет наверное
                 self.players.pop(player.id)
                 return player.get_changes()
+
+            if player.ai and player.can_handle_ai_action():
+                self._handle_ai_action(entity=player, is_player=True)
 
             player.update(delta_time=delta_time)
 
@@ -321,10 +372,14 @@ class GameModeService(ABC):
         """Обновить одного врага"""
         try:
             if enemy.destroyed:
+                self._cancel_ai_task(enemy.id)
                 enemy.destroy_animation_timer += delta_time
                 if enemy.destroy_animation_timer >= self.settings.destroy_animation_time:
                     self.enemies.remove(enemy)
                 return enemy.get_changes()
+
+            if enemy.ai and enemy.can_handle_ai_action():
+                self._handle_ai_action(entity=enemy, is_player=False)
 
             enemy.update(delta_time=delta_time)
             return enemy.get_changes()

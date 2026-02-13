@@ -24,7 +24,7 @@ def start_training(
     logger.info("rest start_training called")
     try:
         training_service.start_training(
-            total_timesteps=payload.total_timesteps or 1000,
+            total_timesteps=payload.total_timesteps or 100,
             log_name=payload.log_name or "bomberman_ai",
         )
         logger.info("StartTraining completed successfully")

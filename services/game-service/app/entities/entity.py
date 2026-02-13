@@ -7,6 +7,7 @@ import uuid
 import logging
 from typing import Any, TYPE_CHECKING
 
+from app.config import settings
 
 if TYPE_CHECKING:
     from app.entities import Map
@@ -50,6 +51,7 @@ class Entity:
             self.destroy_animation_timer: float = 0
 
             self.ai: bool = ai
+            self.ai_last_action_time: float = 0.0
             self.move_timer = 0
 
             self.speed: float = speed
@@ -78,28 +80,26 @@ class Entity:
         """Get a random normalized direction vector"""
         try:
             # рассчет движерия ботов
+            if not self.ai:
+                # Обновление таймера движения
+                self.move_timer += delta_time
+                # Смена направления периодически или при столкновении со стеной
+                change_direction_interval: float = 1.0 + random.random() * 2.0
+                if self.move_timer >= change_direction_interval:
+                    # Choose one of four cardinal directions
+                    # choices = [(0, 1), (1, 0), (0, -1), (-1, 0)]
+                    choices = self.map.get_available_direction(
+                        x=round(self.x / self.settings.cell_size),
+                        y=round(self.y / self.settings.cell_size)
+                    )
+                    if not choices:
+                        choices = [0,0]
+                    direction = random.choice(choices)
+                    self.direction = direction
+                    self.move_timer = 0
 
-            # Обновление таймера движения
-            self.move_timer += delta_time
-            # Смена направления периодически или при столкновении со стеной
-            change_direction_interval: float = 1.0 + random.random() * 2.0
-            if self.move_timer >= change_direction_interval:
-                # Choose one of four cardinal directions
-                # choices = [(0, 1), (1, 0), (0, -1), (-1, 0)]
-                choices = self.map.get_available_direction(
-                    x=round(self.x / self.settings.cell_size),
-                    y=round(self.y / self.settings.cell_size)
-                )
-                if not choices:
-                    choices = [0,0]
-                direction = random.choice(choices)
-                self.direction = direction
-                self.move_timer = 0
-
-            else:
-                return self.direction
-            logger.debug(f"Enemy new direction: {direction}")
-            return direction
+            logger.debug(f"Enemy new direction: {self.direction}")
+            return self.direction
         except Exception as e:
             logger.error(f"Error generating random direction: {e}", exc_info=True)
             # Fallback to a default direction
@@ -224,3 +224,10 @@ class Entity:
         except Exception as e:
             logger.error(f"Error updating entity {self.id} ({self.name}): {e}", exc_info=True)
             return False
+
+    def can_handle_ai_action(self, now_time: float = None) -> bool:
+        if not now_time:
+            now_time = time.time()
+        if now_time - self.ai_last_action_time >= settings.AI_ACTION_INTERVAL:
+            return True
+        return False

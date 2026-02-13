@@ -22,7 +22,7 @@ class GameCoordinator:
         self,
         notification_service: EventService,
         map_repository: MapRepository,
-        ai_inference_service: AIInferenceService | None = None,
+        ai_inference_service: AIInferenceService,
     ) -> None:
         self.notification_service: EventService = notification_service
         self.map_repository: MapRepository = map_repository

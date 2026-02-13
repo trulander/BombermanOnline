@@ -33,12 +33,12 @@ class GameService:
         self,
         game_settings: GameSettings,
         map_service: MapService,
-        ai_inference_service: AIInferenceService | None = None,
+        ai_inference_service: AIInferenceService,
     ):
         try:
             self.settings: GameSettings = game_settings
             self.map_service: MapService = map_service
-            self.ai_inference_service: AIInferenceService | None = ai_inference_service
+            self.ai_inference_service: AIInferenceService = ai_inference_service
             self.status: GameStatus = GameStatus.PENDING
             self.created_at: datetime = datetime.utcnow()
             self.updated_at: datetime = datetime.utcnow()

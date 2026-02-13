@@ -28,4 +28,5 @@ game_coordinator = GameCoordinator(
 )
 training_coordinator = TrainingCoordinator(
     map_repository=map_repository,
+    ai_inference_service=ai_inference_service
 )
