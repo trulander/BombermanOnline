@@ -23,6 +23,13 @@ http:
         - web
       service: grafana@docker
 
+    # Tensorboard
+    tensorboard:
+      rule: "Host(`tensorboard.localhost`)"
+      entryPoints:
+        - web
+      service: tensorboard@docker
+
     # Infisical
     infisical:
       rule: "Host(`infisical.localhost`)"
@@ -125,17 +132,28 @@ http:
         - security-headers
         - auth-check
 
-    # Ai сервис gRPC - с проверкой авторизации
-    ai-service-grpc:
-      rule: "PathPrefix(`/ai/grpc`)"
+
+    # Ai сервис - с проверкой авторизации
+    ai-service-docs:
+      rule: "PathPrefix(`/ai-service/docs`)"
       entryPoints:
         - web
       service: ai-service@consulcatalog
       middlewares:
-        - strip-ai-grpc-prefix
         - compress
         - security-headers
-        - auth-check
+
+    # Ai сервис - с проверкой авторизации
+    ai-service-grpc:
+      rule: "PathPrefix(`/ai-service`)"
+      entryPoints:
+        - web
+      service: ai-service@consulcatalog
+      middlewares:
+        - compress
+        - security-headers
+#        - auth-check
+
 
     # Web Frontend - должен быть последним, чтобы не перехватывать специфичные маршруты
     frontend:
