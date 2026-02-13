@@ -7,8 +7,10 @@ from fastapi import FastAPI
 from app.config import settings
 from app.repositories.nats_repository import NatsRepository
 from app.repositories.redis_repository import RedisRepository
+from app.routes.training import training_router
+from app.services.game_service_finder import GameServiceFinder
 
-from app.services.grpc_server import start_grpc, stop_grpc
+from app.services.grpc_server import AIServiceServicer
 from app.services.grpc_client import GameServiceGRPCClient
 from app.training.trainer import TrainingService
 from app.inference.inference_service import InferenceService
@@ -71,30 +73,42 @@ async def lifespan(app: FastAPI):
     )
     await app.state.nats_repository.aconnect()
 
-    app.state.grpc_client = GameServiceGRPCClient()
+    app.state.game_service_finder = GameServiceFinder(
+        nats_repository=app.state.nats_repository
+    )
+    app.state.grpc_client = GameServiceGRPCClient(
+        game_service_finder=app.state.game_service_finder
+    )
     app.state.training_service = TrainingService(
         grpc_client=app.state.grpc_client,
     )
     app.state.inference_service = InferenceService()
-    app.state.grpc_server = start_grpc(
+
+    app.state.ai_service = AIServiceServicer(
         training_service=app.state.training_service,
-        inference_service=app.state.inference_service,
+        inference_service=app.state.inference_service
     )
+    app.state.ai_service.start_grpc()
 
     logger.info("AI Service started up.")
     yield
     # Shutdown
     logger.info("AI Service shutting down.")
 
-    stop_grpc(app.state.grpc_server)
+    app.state.ai_service.stop_grpc()
+
     if app.state.redis_repository:
         app.state.redis_repository.close()
+
     if app.state.nats_repository:
         await app.state.nats_repository.adisconnect()
 
 app = FastAPI(
     title=settings.APP_TITLE,
+    docs_url=settings.SWAGGER_URL,
+    openapi_url=f"{settings.SWAGGER_URL}/openapi.json",
     debug=settings.DEBUG,
+    log_level=settings.LOG_LEVEL.lower(),
     reload=settings.RELOAD,
     lifespan=lifespan
 )
@@ -106,6 +120,8 @@ app.add_middleware(
 )
 
 app.add_route("/metrics", metrics)
+
+app.include_router(training_router, prefix=settings.API_V1_STR)
 
 @app.get("/health")
 async def health_check() -> Dict[str, str]:

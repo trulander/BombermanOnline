@@ -23,27 +23,23 @@ except ImportError as e:
 class GameServiceGRPCClient:
     def __init__(
         self,
-        game_service_finder: GameServiceFinder | None = None,
+        game_service_finder: GameServiceFinder,
     ) -> None:
         self.channel: grpc.Channel | None = None
         self.stub = None
         self.game_service_finder = game_service_finder
         self.current_instance: dict | None = None
+        logger.info("GameServiceGRPCClient initialized")
 
     def connect(self) -> None:
         if self.channel is None:
             if not self.current_instance:
-                if self.game_service_finder:
-                    self.current_instance = self.game_service_finder.find_game_service_instance()
-                else:
-                    import app.main
-                    finder = GameServiceFinder(nats_repository=app.main.app.state.nats_repository)
-                    self.current_instance = finder.find_game_service_instance()
+                self.current_instance = self.game_service_finder.find_game_service_instance()
 
                 if not self.current_instance:
                     raise ConnectionError("No game-service instances available")
 
-            address = f"{self.current_instance['address']}:{self.current_instance['port']}"
+            address = f"{self.current_instance['address']}:{self.current_instance['grpc_port']}"
             self.channel = grpc.insecure_channel(target=address)
             self.stub = bomberman_ai_pb2_grpc.GameServiceStub(self.channel)
             logger.info(f"Connected to game-service gRPC at {address}")
@@ -60,6 +56,7 @@ class GameServiceGRPCClient:
         action: int,
         session_id: str | None,
     ) -> tuple[np.ndarray | None, float, bool, bool, dict]:
+        logger.debug(f"gRPC step: action={action}, session_id={session_id}")
         if self.stub is None:
             self.connect()
         if self.stub is None:
@@ -82,14 +79,21 @@ class GameServiceGRPCClient:
         if response.info_json:
             try:
                 info = json.loads(response.info_json)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to parse info_json in step response: {e}")
                 info = {}
+        logger.debug(
+            f"gRPC step result: reward={response.reward}, "
+            f"terminated={response.terminated}, truncated={response.truncated}, "
+            f"obs_size={observation.size}"
+        )
         return observation, float(response.reward), bool(response.terminated), bool(response.truncated), info
 
     def reset(
         self,
         options: dict[str, object] | None = None,
     ) -> tuple[np.ndarray | None, dict, str]:
+        logger.info(f"gRPC reset: options={options}")
         if self.stub is None:
             self.connect()
         if self.stub is None:
@@ -115,7 +119,11 @@ class GameServiceGRPCClient:
         if response.info_json:
             try:
                 info = json.loads(response.info_json)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"Failed to parse info_json in reset response: {e}")
                 info = {}
+        logger.info(
+            f"gRPC reset result: session_id={response.session_id}, obs_size={observation.size}"
+        )
         return observation, info, response.session_id or "stub-session"
 

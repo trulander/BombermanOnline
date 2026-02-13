@@ -37,6 +37,8 @@ class Settings(BaseSettings):
 
     SERVICE_NAME: str = "ai-service"
     APP_TITLE: str = "Bomberman AI Service"
+    API_V1_STR: str = "/ai-service/api/v1"
+    SWAGGER_URL: str = "/ai-service/docs"
 
     HOST: str = "0.0.0.0"
     PORT: int = 5004

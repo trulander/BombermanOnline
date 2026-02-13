@@ -90,6 +90,8 @@ class Entity:
                     x=round(self.x / self.settings.cell_size),
                     y=round(self.y / self.settings.cell_size)
                 )
+                if not choices:
+                    choices = [0,0]
                 direction = random.choice(choices)
                 self.direction = direction
                 self.move_timer = 0

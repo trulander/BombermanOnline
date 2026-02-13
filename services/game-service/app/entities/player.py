@@ -22,7 +22,7 @@ class UnitType(Enum):
 
 class PlayerUpdate(TypedDict):
     player_id: str
-    name: NotRequired[str]
+    name: NotRequired[str | None]
     team_id: NotRequired[str]
     x: NotRequired[float]
     y: NotRequired[float]
@@ -30,7 +30,7 @@ class PlayerUpdate(TypedDict):
     primary_weapon: NotRequired[WeaponType]
     primary_weapon_max_count: NotRequired[int]
     primary_weapon_power: NotRequired[int]
-    secondary_weapon: NotRequired[WeaponType]
+    secondary_weapon: NotRequired[WeaponType | None]
     secondary_weapon_max_count: NotRequired[int]
     secondary_weapon_power: NotRequired[int]
     invulnerable: NotRequired[bool]
