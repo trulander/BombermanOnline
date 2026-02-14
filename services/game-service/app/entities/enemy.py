@@ -47,6 +47,7 @@ class Enemy(Entity):
             enemy_type: EnemyType,
             map: "Map",
             settings: "GameSettings",
+            ai: bool = False
     ):
         super().__init__(
             x=x,
@@ -54,7 +55,7 @@ class Enemy(Entity):
             width=size * self.scale_size,
             height=size * self.scale_size,
             speed=speed,
-            ai=True,
+            ai=ai,
             name=f"Enemy_{enemy_type.value}",
             map=map,
             settings=settings

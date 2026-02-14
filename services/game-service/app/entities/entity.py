@@ -62,7 +62,7 @@ class Entity:
             # таймер бессмертия после получения урона, по умолчанию таймер для enemy должен быть переопределен для других типов
             self.invulnerable_timer: float = 0
 
-            self.direction: tuple[float, float] = (0, 1)  # Направление
+            self.direction: tuple[float, float] = (0, 0)  # Направление
 
             logger.debug(f"Entity created: id={self.id}, name={name}, position=({x}, {y})")
         except Exception as e:
@@ -93,9 +93,8 @@ class Entity:
                         y=round(self.y / self.settings.cell_size)
                     )
                     if not choices:
-                        choices = [0,0]
-                    direction = random.choice(choices)
-                    self.direction = direction
+                        choices = [(0,0)]
+                    self.direction = random.choice(choices)
                     self.move_timer = 0
 
             logger.debug(f"Enemy new direction: {self.direction}")

@@ -10,7 +10,7 @@ from app.entities.weapon import WeaponAction
 
 from app.services.ai_action_mapper import action_to_inputs
 
-from app.services.ai_observation import build_basic_observation
+from app.services.ai_observation import build_observation, ObservationData, GRID_SIZE, STATS_SIZE
 from app.services.game_service import GameService
 from app.services.map_service import MapService
 from app.models.game_models import GameSettings
@@ -32,13 +32,15 @@ class TrainingSession:
 @dataclass
 class TrainingResetResult:
     session_id: str
-    observation_values: list[float]
+    grid_values: list[float]
+    stats_values: list[float]
     info_json: str
 
 
 @dataclass
 class TrainingStepResult:
-    observation_values: list[float]
+    grid_values: list[float]
+    stats_values: list[float]
     reward: float
     terminated: bool
     truncated: bool
@@ -73,6 +75,7 @@ class TrainingCoordinator:
             max_players=1,
             default_map_width=map_width or defaults.default_map_width,
             default_map_height=map_height or defaults.default_map_height,
+            enemy_ai_controlled=False
         )
 
         if enemy_count is not None:
@@ -102,12 +105,12 @@ class TrainingCoordinator:
             unit_type=UnitType.BOMBERMAN,
         )
         player = game_service.get_player(player_id=player_id)
-        if player is not None:
-            player.ai = True
+        # if player is not None:
+        #     player.ai = True
 
         game_service.start_game()
 
-        observation = self._build_observation(
+        obs: ObservationData = self._build_observation(
             game_service=game_service,
             player_id=player_id,
         )
@@ -130,7 +133,8 @@ class TrainingCoordinator:
         )
         return TrainingResetResult(
             session_id=session_id,
-            observation_values=observation,
+            grid_values=obs.grid_values,
+            stats_values=obs.stats_values,
             info_json=info_json,
         )
 
@@ -144,7 +148,8 @@ class TrainingCoordinator:
         session = self._sessions.get(session_id)
         if session is None:
             return TrainingStepResult(
-                observation_values=[],
+                grid_values=[0.0] * GRID_SIZE,
+                stats_values=[0.0] * STATS_SIZE,
                 reward=0.0,
                 terminated=True,
                 truncated=False,
@@ -155,7 +160,8 @@ class TrainingCoordinator:
         player = game_service.get_player(player_id=session.player_id)
         if player is None:
             return TrainingStepResult(
-                observation_values=[],
+                grid_values=[0.0] * GRID_SIZE,
+                stats_values=[0.0] * STATS_SIZE,
                 reward=0.0,
                 terminated=True,
                 truncated=False,
@@ -172,7 +178,7 @@ class TrainingCoordinator:
 
         await game_service.update(delta_seconds=delta_seconds)
 
-        observation = self._build_observation(
+        obs: ObservationData = self._build_observation(
             game_service=game_service,
             player_id=session.player_id,
         )
@@ -199,21 +205,38 @@ class TrainingCoordinator:
         )
 
         return TrainingStepResult(
-            observation_values=observation,
+            grid_values=obs.grid_values,
+            stats_values=obs.stats_values,
             reward=reward,
             terminated=terminated,
             truncated=False,
             info_json=info_json,
         )
 
-    def _build_observation(self, *, game_service: GameService, player_id: str) -> list[float]:
+    def _build_observation(self, *, game_service: GameService, player_id: str) -> ObservationData:
         player = game_service.get_player(player_id=player_id)
         if player is None or game_service.game_mode.map is None:
-            return []
-        map_width = game_service.game_mode.map.width
-        map_height = game_service.game_mode.map.height
+            return ObservationData(
+                grid_values=[0.0] * GRID_SIZE,
+                stats_values=[0.0] * STATS_SIZE,
+            )
+        map_width: int = game_service.game_mode.map.width
+        map_height: int = game_service.game_mode.map.height
         map_grid = game_service.game_mode.map.grid
-        return build_basic_observation(
+        enemies_positions: list[tuple[float, float]] = [
+            (e.x, e.y) for e in game_service.game_mode.enemies if not e.destroyed
+        ]
+        weapons_positions: list[tuple[float, float]] = [
+            (w.x, w.y) for w in game_service.game_mode.weapons.values()
+        ]
+        power_ups_positions: list[tuple[float, float]] = [
+            (p.x, p.y) for p in game_service.game_mode.power_ups.values()
+        ]
+        active_bombs: int = sum(
+            1 for w in game_service.game_mode.weapons.values()
+            if w.owner_id == player_id
+        )
+        return build_observation(
             map_grid=map_grid,
             map_width=map_width,
             map_height=map_height,
@@ -223,6 +246,17 @@ class TrainingCoordinator:
             lives=player.lives,
             max_lives=game_service.settings.player_max_lives,
             enemy_count=len(game_service.game_mode.enemies),
+            bombs_left=max(0, player.primary_weapon_max_count - active_bombs),
+            max_bombs=player.primary_weapon_max_count,
+            bomb_power=player.primary_weapon_power,
+            is_invulnerable=player.invulnerable,
+            speed=player.speed,
+            max_speed=game_service.settings.player_max_speed,
+            time_left=0.0,
+            time_limit=float(game_service.settings.time_limit or 0),
+            enemies_positions=enemies_positions,
+            weapons_positions=weapons_positions,
+            power_ups_positions=power_ups_positions,
             window_size=15,
         )
 
@@ -236,12 +270,11 @@ class TrainingCoordinator:
         game_over: bool,
         player_alive: bool,
     ) -> float:
-        reward = 0.0
+        reward: float = -0.01
         if player_lives < last_player_lives:
             reward -= 1.0
         if enemy_count < last_enemy_count:
-            reward += float(last_enemy_count - enemy_count)
+            reward += float(last_enemy_count - enemy_count) * 2.0
         if game_over:
-            reward += 5.0 if player_alive else -5.0
+            reward += 10.0 if player_alive else -5.0
         return reward
-
