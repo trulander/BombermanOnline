@@ -165,6 +165,7 @@ class GameSettings(BaseModel):
     # Настройки врагов
     enemy_count_multiplier: float = 1.0
     enemy_invulnerable_time: float = 2.0
+    enemy_ai_controlled: bool = True
 
     # Настройки очков
     block_destroy_score: int = 10

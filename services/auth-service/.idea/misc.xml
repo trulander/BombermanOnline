@@ -4,10 +4,4 @@
     <option name="sdkName" value="uv (auth-service)" />
   </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="uv (auth-service)" project-jdk-type="Python SDK" />
-  <component name="RuffConfiguration">
-    <option name="enabled" value="true" />
-  </component>
-  <component name="TyConfiguration">
-    <option name="enabled" value="true" />
-  </component>
 </project>

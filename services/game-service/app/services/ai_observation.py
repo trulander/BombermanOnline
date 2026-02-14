@@ -1,9 +1,67 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 import numpy as np
 
 
-def build_basic_observation(
+CELL_TERRAIN: dict[int, float] = {
+    0: 0.0,
+    1: 1.0,
+    2: 0.5,
+    3: 0.0,
+    4: 0.0,
+    5: 0.25,
+}
+
+DEFAULT_WINDOW_SIZE: int = 15
+GRID_CHANNELS: int = 5
+STATS_SIZE: int = 9
+GRID_SIZE: int = GRID_CHANNELS * DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_SIZE
+
+
+@dataclass
+class ObservationData:
+    grid_values: list[float]
+    stats_values: list[float]
+
+
+def _world_to_cell(coord: float, cell_size: int) -> int:
+    if cell_size > 0:
+        return int(coord / float(cell_size))
+    return 0
+
+
+def _calc_window_origin(
+    *,
+    center: int,
+    half: int,
+    grid_extent: int,
+    window_size: int,
+) -> int:
+    max_start: int = max(0, grid_extent - window_size)
+    return min(max(center - half, 0), max_start)
+
+
+def _place_on_channel(
+    *,
+    channel: np.ndarray,
+    positions: list[tuple[float, float]],
+    cell_size: int,
+    start_x: int,
+    start_y: int,
+    window_size: int,
+) -> None:
+    for wx, wy in positions:
+        gx: int = _world_to_cell(coord=wx, cell_size=cell_size)
+        gy: int = _world_to_cell(coord=wy, cell_size=cell_size)
+        lx: int = gx - start_x
+        ly: int = gy - start_y
+        if 0 <= lx < window_size and 0 <= ly < window_size:
+            channel[ly, lx] = 1.0
+
+
+def build_observation(
     *,
     map_grid: list | np.ndarray,
     map_width: int,
@@ -14,47 +72,124 @@ def build_basic_observation(
     lives: int,
     max_lives: int,
     enemy_count: int,
-    window_size: int = 15,
-) -> list[float]:
-    width_cells = max(1, map_width)
-    height_cells = max(1, map_height)
-    world_width = max(1.0, float(width_cells * cell_size))
-    world_height = max(1.0, float(height_cells * cell_size))
-    lives_denominator = max(1, max_lives)
-    map_area = max(1, width_cells * height_cells)
+    bombs_left: int,
+    max_bombs: int,
+    bomb_power: int,
+    is_invulnerable: bool,
+    speed: float,
+    max_speed: float,
+    time_left: float,
+    time_limit: float,
+    enemies_positions: list[tuple[float, float]] | None = None,
+    weapons_positions: list[tuple[float, float]] | None = None,
+    power_ups_positions: list[tuple[float, float]] | None = None,
+    window_size: int = DEFAULT_WINDOW_SIZE,
+) -> ObservationData:
+    width_cells: int = max(1, map_width)
+    height_cells: int = max(1, map_height)
+    map_area: int = max(1, width_cells * height_cells)
 
-    x_norm = float(entity_x) / world_width
-    y_norm = float(entity_y) / world_height
-    lives_norm = float(lives) / float(lives_denominator)
-    enemy_norm = float(enemy_count) / float(map_area)
-    width_norm = float(width_cells) / 50.0
-    height_norm = float(height_cells) / 50.0
-
-    grid_array = np.asarray(map_grid, dtype=np.float32)
+    grid_array: np.ndarray = np.asarray(map_grid, dtype=np.float32)
     if grid_array.ndim != 2:
         grid_array = np.zeros((height_cells, width_cells), dtype=np.float32)
 
-    center_x = int(entity_x / float(cell_size)) if cell_size > 0 else 0
-    center_y = int(entity_y / float(cell_size)) if cell_size > 0 else 0
-    half = window_size // 2
+    terrain: np.ndarray = np.zeros_like(grid_array)
+    for cell_val, norm_val in CELL_TERRAIN.items():
+        terrain[grid_array == cell_val] = norm_val
 
-    max_start_x = max(0, grid_array.shape[1] - window_size)
-    max_start_y = max(0, grid_array.shape[0] - window_size)
-    start_x = min(max(center_x - half, 0), max_start_x)
-    start_y = min(max(center_y - half, 0), max_start_y)
+    center_x: int = _world_to_cell(coord=entity_x, cell_size=cell_size)
+    center_y: int = _world_to_cell(coord=entity_y, cell_size=cell_size)
+    half: int = window_size // 2
 
-    window = grid_array[start_y:start_y + window_size, start_x:start_x + window_size]
-    if window.shape[0] != window_size or window.shape[1] != window_size:
-        padded = np.zeros((window_size, window_size), dtype=np.float32)
-        padded[:window.shape[0], :window.shape[1]] = window
-        window = padded
+    start_x: int = _calc_window_origin(
+        center=center_x,
+        half=half,
+        grid_extent=terrain.shape[1],
+        window_size=window_size,
+    )
+    start_y: int = _calc_window_origin(
+        center=center_y,
+        half=half,
+        grid_extent=terrain.shape[0],
+        window_size=window_size,
+    )
 
-    return window.flatten().tolist() + [
-        x_norm,
-        y_norm,
+    terrain_window: np.ndarray = terrain[
+        start_y:start_y + window_size,
+        start_x:start_x + window_size,
+    ].copy()
+    if terrain_window.shape[0] != window_size or terrain_window.shape[1] != window_size:
+        padded: np.ndarray = np.ones((window_size, window_size), dtype=np.float32)
+        padded[:terrain_window.shape[0], :terrain_window.shape[1]] = terrain_window
+        terrain_window = padded
+
+    ch_self: np.ndarray = np.zeros((window_size, window_size), dtype=np.float32)
+    player_lx: int = center_x - start_x
+    player_ly: int = center_y - start_y
+    if 0 <= player_lx < window_size and 0 <= player_ly < window_size:
+        ch_self[player_ly, player_lx] = 1.0
+
+    ch_enemies: np.ndarray = np.zeros((window_size, window_size), dtype=np.float32)
+    if enemies_positions:
+        _place_on_channel(
+            channel=ch_enemies,
+            positions=enemies_positions,
+            cell_size=cell_size,
+            start_x=start_x,
+            start_y=start_y,
+            window_size=window_size,
+        )
+
+    ch_weapons: np.ndarray = np.zeros((window_size, window_size), dtype=np.float32)
+    if weapons_positions:
+        _place_on_channel(
+            channel=ch_weapons,
+            positions=weapons_positions,
+            cell_size=cell_size,
+            start_x=start_x,
+            start_y=start_y,
+            window_size=window_size,
+        )
+
+    ch_powerups: np.ndarray = np.zeros((window_size, window_size), dtype=np.float32)
+    if power_ups_positions:
+        _place_on_channel(
+            channel=ch_powerups,
+            positions=power_ups_positions,
+            cell_size=cell_size,
+            start_x=start_x,
+            start_y=start_y,
+            window_size=window_size,
+        )
+
+    grid: np.ndarray = np.stack(
+        [terrain_window, ch_self, ch_enemies, ch_weapons, ch_powerups],
+        axis=0,
+    )
+
+    rel_x: float = float(center_x - start_x) / float(max(1, window_size - 1))
+    rel_y: float = float(center_y - start_y) / float(max(1, window_size - 1))
+    lives_norm: float = float(lives) / float(max(1, max_lives))
+    enemy_norm: float = float(enemy_count) / float(map_area)
+    bombs_left_norm: float = float(bombs_left) / float(max(1, max_bombs))
+    blast_range_norm: float = float(bomb_power) / 10.0
+    invulnerable_val: float = 1.0 if is_invulnerable else 0.0
+    speed_norm: float = float(speed) / float(max(1.0, max_speed))
+    time_left_norm: float = float(time_left) / float(max(1.0, time_limit)) if time_limit > 0 else 0.0
+
+    stats: list[float] = [
+        rel_x,
+        rel_y,
         lives_norm,
         enemy_norm,
-        width_norm,
-        height_norm,
+        bombs_left_norm,
+        blast_range_norm,
+        invulnerable_val,
+        speed_norm,
+        time_left_norm,
     ]
 
+    return ObservationData(
+        grid_values=grid.flatten().tolist(),
+        stats_values=stats,
+    )

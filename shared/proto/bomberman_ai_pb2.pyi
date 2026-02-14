@@ -15,10 +15,12 @@ class TrainingStartResponse(_message.Message):
     def __init__(self) -> None: ...
 
 class Observation(_message.Message):
-    __slots__ = ("values",)
-    VALUES_FIELD_NUMBER: _ClassVar[int]
-    values: _containers.RepeatedScalarFieldContainer[float]
-    def __init__(self, values: _Optional[_Iterable[float]] = ...) -> None: ...
+    __slots__ = ("grid_values", "stats_values")
+    GRID_VALUES_FIELD_NUMBER: _ClassVar[int]
+    STATS_VALUES_FIELD_NUMBER: _ClassVar[int]
+    grid_values: _containers.RepeatedScalarFieldContainer[float]
+    stats_values: _containers.RepeatedScalarFieldContainer[float]
+    def __init__(self, grid_values: _Optional[_Iterable[float]] = ..., stats_values: _Optional[_Iterable[float]] = ...) -> None: ...
 
 class TrainingResetRequest(_message.Message):
     __slots__ = ("map_width", "map_height", "enemy_count", "enable_enemies", "seed")

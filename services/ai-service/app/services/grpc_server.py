@@ -7,6 +7,7 @@ import grpc
 from ..config import settings
 from ..inference.inference_service import InferenceService
 from ..training.trainer import TrainingService
+from ..services.grpc_client import GRID_CHANNELS, WINDOW_SIZE, STATS_SIZE
 
 
 logger = logging.getLogger(__name__)
@@ -19,6 +20,20 @@ except ImportError as e:
         msg="Proto files not generated yet. Run generate.sh in services/shared/proto/",
     )
     raise Exception(e)
+
+
+def _parse_observation_from_request(
+    observation: object,
+) -> dict[str, np.ndarray] | None:
+    if observation is None:
+        return None
+    grid_flat: np.ndarray = np.array(observation.grid_values, dtype=np.float32)
+    stats: np.ndarray = np.array(observation.stats_values, dtype=np.float32)
+    expected_grid: int = GRID_CHANNELS * WINDOW_SIZE * WINDOW_SIZE
+    if grid_flat.size != expected_grid or stats.size != STATS_SIZE:
+        return None
+    grid: np.ndarray = grid_flat.reshape(GRID_CHANNELS, WINDOW_SIZE, WINDOW_SIZE)
+    return {"grid": grid, "stats": stats}
 
 
 class AIServiceServicer:
@@ -63,15 +78,20 @@ class AIServiceServicer:
         if self.inference_service.model is None:
             logger.info("InferAction: model not loaded, loading model")
             self.inference_service.load_model()
-        if request.observation is None:
-            logger.warning("InferAction: observation is None, returning action=0")
+
+        obs: dict[str, np.ndarray] | None = _parse_observation_from_request(
+            observation=request.observation,
+        )
+        if obs is None:
+            logger.warning("InferAction: observation is empty or malformed, returning action=0")
             return bomberman_ai_pb2.InferActionResponse(action=0)
-        observation = np.array(request.observation.values, dtype=np.float32)
-        if observation.size == 0:
-            logger.warning("InferAction: observation is empty, returning action=0")
-            return bomberman_ai_pb2.InferActionResponse(action=0)
+
+        entity_id: str = request.entity_id or "unknown"
         try:
-            action = self.inference_service.infer_action(observation=observation)
+            action: int = self.inference_service.infer_action(
+                observation=obs,
+                entity_id=entity_id,
+            )
             logger.debug(f"InferAction: predicted action={action}")
         except Exception as e:
             logger.error(f"InferAction: inference failed: {e}", exc_info=True)

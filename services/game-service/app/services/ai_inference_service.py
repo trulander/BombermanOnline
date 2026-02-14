@@ -65,7 +65,8 @@ class AIInferenceService:
         *,
         session_id: str | None,
         entity_id: str,
-        observation: list[float],
+        grid_values: list[float],
+        stats_values: list[float],
     ) -> int | None:
         if not self._can_request_action(entity_id=entity_id):
             return None
@@ -76,7 +77,8 @@ class AIInferenceService:
             session_id=session_id or "",
             entity_id=entity_id,
             observation=bomberman_ai_pb2.Observation(
-                values=observation,
+                grid_values=grid_values,
+                stats_values=stats_values,
             ),
         )
         try:

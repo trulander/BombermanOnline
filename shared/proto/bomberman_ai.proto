@@ -16,7 +16,8 @@ message TrainingStartRequest {}
 message TrainingStartResponse {}
 
 message Observation {
-  repeated float values = 1;
+  repeated float grid_values = 1;
+  repeated float stats_values = 2;
 }
 
 message TrainingResetRequest {

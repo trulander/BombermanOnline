@@ -19,6 +19,26 @@ except ImportError as e:
     raise Exception(e)
 
 
+GRID_CHANNELS: int = 5
+WINDOW_SIZE: int = 15
+STATS_SIZE: int = 9
+
+
+def _parse_observation(observation: object) -> dict[str, np.ndarray]:
+    grid_flat: np.ndarray = np.array(observation.grid_values, dtype=np.float32)
+    stats: np.ndarray = np.array(observation.stats_values, dtype=np.float32)
+
+    expected_grid: int = GRID_CHANNELS * WINDOW_SIZE * WINDOW_SIZE
+    if grid_flat.size == expected_grid:
+        grid: np.ndarray = grid_flat.reshape(GRID_CHANNELS, WINDOW_SIZE, WINDOW_SIZE)
+    else:
+        grid = np.zeros((GRID_CHANNELS, WINDOW_SIZE, WINDOW_SIZE), dtype=np.float32)
+
+    if stats.size != STATS_SIZE:
+        stats = np.zeros(STATS_SIZE, dtype=np.float32)
+
+    return {"grid": grid, "stats": stats}
+
 
 class GameServiceGRPCClient:
     def __init__(
@@ -55,7 +75,7 @@ class GameServiceGRPCClient:
         self,
         action: int,
         session_id: str | None,
-    ) -> tuple[np.ndarray | None, float, bool, bool, dict]:
+    ) -> tuple[dict[str, np.ndarray] | None, float, bool, bool, dict]:
         logger.debug(f"gRPC step: action={action}, session_id={session_id}")
         if self.stub is None:
             self.connect()
@@ -75,7 +95,7 @@ class GameServiceGRPCClient:
             self.disconnect()
             raise
 
-        observation = np.array(response.observation.values, dtype=np.float32)
+        observation: dict[str, np.ndarray] = _parse_observation(observation=response.observation)
         info = {}
         if response.info_json:
             try:
@@ -86,15 +106,14 @@ class GameServiceGRPCClient:
 
         logger.debug(
             f"gRPC step result: reward={response.reward}, "
-            f"terminated={response.terminated}, truncated={response.truncated}, "
-            f"obs_size={observation.size}"
+            f"terminated={response.terminated}, truncated={response.truncated}"
         )
         return observation, float(response.reward), bool(response.terminated), bool(response.truncated), info
 
     def reset(
         self,
         options: dict[str, object] | None = None,
-    ) -> tuple[np.ndarray | None, dict, str]:
+    ) -> tuple[dict[str, np.ndarray] | None, dict, str]:
         logger.info(f"gRPC reset: options={options}")
         if self.stub is None:
             self.connect()
@@ -117,7 +136,7 @@ class GameServiceGRPCClient:
             self.disconnect()
             raise
 
-        observation = np.array(response.observation.values, dtype=np.float32)
+        observation: dict[str, np.ndarray] = _parse_observation(observation=response.observation)
         info = {}
         if response.info_json:
             try:
@@ -126,7 +145,6 @@ class GameServiceGRPCClient:
                 logger.warning(f"Failed to parse info_json in reset response: {e}")
                 raise
         logger.info(
-            f"gRPC reset result: session_id={response.session_id}, obs_size={observation.size}"
+            f"gRPC reset result: session_id={response.session_id}"
         )
         return observation, info, response.session_id or "stub-session"
-

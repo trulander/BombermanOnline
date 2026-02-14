@@ -32,7 +32,7 @@ class GameServiceServicer:
     ) -> bomberman_ai_pb2.TrainingStepResponse:
         if self.training_coordinator is None:
             return bomberman_ai_pb2.TrainingStepResponse(
-                observation=bomberman_ai_pb2.Observation(values=[]),
+                observation=bomberman_ai_pb2.Observation(grid_values=[], stats_values=[]),
                 reward=0.0,
                 terminated=True,
                 truncated=False,
@@ -45,7 +45,10 @@ class GameServiceServicer:
             delta_seconds=delta_seconds,
         )
         return bomberman_ai_pb2.TrainingStepResponse(
-            observation=bomberman_ai_pb2.Observation(values=result.observation_values),
+            observation=bomberman_ai_pb2.Observation(
+                grid_values=result.grid_values,
+                stats_values=result.stats_values,
+            ),
             reward=result.reward,
             terminated=result.terminated,
             truncated=result.truncated,
@@ -60,7 +63,7 @@ class GameServiceServicer:
         if self.training_coordinator is None:
             return bomberman_ai_pb2.TrainingResetResponse(
                 session_id="",
-                observation=bomberman_ai_pb2.Observation(values=[]),
+                observation=bomberman_ai_pb2.Observation(grid_values=[], stats_values=[]),
                 info_json="",
             )
         result = await self.training_coordinator.reset(
@@ -72,7 +75,10 @@ class GameServiceServicer:
         )
         return bomberman_ai_pb2.TrainingResetResponse(
             session_id=result.session_id,
-            observation=bomberman_ai_pb2.Observation(values=result.observation_values),
+            observation=bomberman_ai_pb2.Observation(
+                grid_values=result.grid_values,
+                stats_values=result.stats_values,
+            ),
             info_json=result.info_json,
         )
 
