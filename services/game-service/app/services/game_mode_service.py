@@ -11,7 +11,7 @@ from typing import Dict, List, Tuple, Optional, Any
 from .team_service import TeamService
 from .ai_inference_service import AIInferenceService
 from .ai_action_mapper import action_to_inputs, action_to_direction
-from .ai_observation import build_basic_observation
+from .ai_observation import build_observation
 from ..entities import Entity
 from ..entities.map import Map
 from ..entities.player import Player, UnitType, PlayerUpdate
@@ -80,7 +80,7 @@ class GameModeService(ABC):
             
             # Создаем врагов если включены
             if self.settings.enable_enemies:
-                self._create_enemies()
+                self._create_enemies(ai_enemies=self.settings.enemy_ai_controlled)
         except Exception as e:
             logger.error(f"Error initializing map: {e}", exc_info=True)
             self.map = Map(self.settings.default_map_width, self.settings.default_map_height)
@@ -224,73 +224,6 @@ class GameModeService(ABC):
             logger.error(f"Error in game update: {e}", exc_info=True)
             return {}
 
-    # async def _apply_ai_actions(self, *, delta_time: float) -> None:
-    #     if self.ai_inference_service is None:
-    #         return
-    #     if self.map is None:
-    #         return
-    #
-    #     map_width = self.map.width
-    #     map_height = self.map.height
-    #     map_grid = self.map.grid
-    #     enemy_count = len(self.enemies)
-    #
-    #     for player in list(self.players.values()):
-    #         if not player.ai:
-    #             continue
-    #         observation = build_basic_observation(
-    #             map_grid=map_grid,
-    #             map_width=map_width,
-    #             map_height=map_height,
-    #             cell_size=self.settings.cell_size,
-    #             entity_x=player.x,
-    #             entity_y=player.y,
-    #             lives=player.lives,
-    #             max_lives=self.settings.player_max_lives,
-    #             enemy_count=enemy_count,
-    #             window_size=15,
-    #         )
-    #         action = await self.ai_inference_service.maybe_infer_action(
-    #             session_id=None,
-    #             entity_id=player.id,
-    #             observation=observation,
-    #         )
-    #         if action is None:
-    #             continue
-    #         if action == 5:
-    #             self.place_weapon(
-    #                 player=player,
-    #                 weapon_action=WeaponAction.PLACEWEAPON1,
-    #             )
-    #             player.set_inputs(inputs=action_to_inputs(action=0))
-    #         else:
-    #             player.set_inputs(inputs=action_to_inputs(action=action))
-    #
-    #     if self.settings.enable_enemies:
-    #         for enemy in list(self.enemies):
-    #             if not enemy.ai:
-    #                 continue
-    #             observation = build_basic_observation(
-    #                 map_grid=map_grid,
-    #                 map_width=map_width,
-    #                 map_height=map_height,
-    #                 cell_size=self.settings.cell_size,
-    #                 entity_x=enemy.x,
-    #                 entity_y=enemy.y,
-    #                 lives=enemy.lives,
-    #                 max_lives=max(1, enemy.lives),
-    #                 enemy_count=enemy_count,
-    #                 window_size=15,
-    #             )
-    #             action = await self.ai_inference_service.maybe_infer_action(
-    #                 session_id=None,
-    #                 entity_id=enemy.id,
-    #                 observation=observation,
-    #             )
-    #             if action is None:
-    #                 continue
-    #             enemy.direction = action_to_direction(action=action, current=enemy.direction)
-    #             enemy.move_timer = 0
 
     def _cancel_ai_task(self, entity_id: str):
         task = self._ai_pending_tasks.pop(entity_id, None)
@@ -322,17 +255,57 @@ class GameModeService(ABC):
                         entity.move_timer = 0
             return
 
-        obs = build_basic_observation(
+        enemies_positions: list[tuple[float, float]] = [
+            (e.x, e.y) for e in self.enemies if not e.destroyed and e.id != entity_id
+        ]
+        if not is_player:
+            enemies_positions.extend(
+                (p.x, p.y) for p in self.players.values() if p.is_alive()
+            )
+        weapons_positions: list[tuple[float, float]] = [
+            (w.x, w.y) for w in self.weapons.values()
+        ]
+        power_ups_positions: list[tuple[float, float]] = [
+            (p.x, p.y) for p in self.power_ups.values()
+        ]
+        if is_player:
+            active_bombs: int = sum(1 for w in self.weapons.values() if w.owner_id == entity_id)
+            max_bombs: int = entity.primary_weapon_max_count
+            bomb_power: int = entity.primary_weapon_power
+            max_lives_val: int = self.settings.player_max_lives
+            entity_speed: float = entity.speed
+        else:
+            active_bombs = 0
+            max_bombs = 1
+            bomb_power = 0
+            max_lives_val = max(1, entity.lives)
+            entity_speed = entity.speed
+        obs_data = build_observation(
             map_grid=self.map.grid, map_width=self.map.width, map_height=self.map.height,
             cell_size=self.settings.cell_size,
             entity_x=entity.x, entity_y=entity.y,
             lives=entity.lives,
-            max_lives=self.settings.player_max_lives if is_player else max(1, entity.lives),
-            enemy_count=len(self.enemies), window_size=15,
+            max_lives=max_lives_val,
+            enemy_count=len(self.enemies),
+            bombs_left=max(0, max_bombs - active_bombs),
+            max_bombs=max_bombs,
+            bomb_power=bomb_power,
+            is_invulnerable=entity.invulnerable,
+            speed=entity_speed,
+            max_speed=self.settings.player_max_speed,
+            time_left=0.0,
+            time_limit=float(self.settings.time_limit or 0),
+            enemies_positions=enemies_positions,
+            weapons_positions=weapons_positions,
+            power_ups_positions=power_ups_positions,
+            window_size=15,
         )
         task = asyncio.create_task(
             self.ai_inference_service.maybe_infer_action(
-                session_id=None, entity_id=entity_id, observation=obs,
+                session_id=None,
+                entity_id=entity_id,
+                grid_values=obs_data.grid_values,
+                stats_values=obs_data.stats_values,
             )
         )
         self._ai_pending_tasks[entity_id] = task
@@ -596,7 +569,7 @@ class GameModeService(ABC):
         except Exception as e:
             logger.error(f"Error applying power-up {power_up.type.name} to player {player.id}: {e}", exc_info=True)
     
-    def _create_enemies(self) -> None:
+    def _create_enemies(self, ai_enemies: bool = False) -> None:
         """Создать врагов для текущего уровня"""
         try:
             if not self.map:
@@ -614,7 +587,8 @@ class GameModeService(ABC):
                     speed=enemy_data['speed'],
                     enemy_type=enemy_data['type'],
                     map=self.map,
-                    settings=self.settings
+                    settings=self.settings,
+                    ai=ai_enemies
                 )
                 self.enemies.append(enemy)
             
