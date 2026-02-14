@@ -62,7 +62,7 @@ class GameServiceGRPCClient:
         if self.stub is None:
             logger.error(f"gRPC step failed: Wasn't able to connect to the game-service grpc server", exc_info=True)
             raise Exception({"error": "Wasn't able to connect to the game-service grpc server"})
-            return None, 0.0, False, False, {}
+
         request = bomberman_ai_pb2.TrainingStepRequest(
             session_id=session_id or "",
             action=action,
@@ -73,7 +73,8 @@ class GameServiceGRPCClient:
         except Exception as exc:
             logger.error(f"gRPC step failed: {exc}", exc_info=True)
             self.disconnect()
-            return None, 0.0, False, False, {}
+            raise
+
         observation = np.array(response.observation.values, dtype=np.float32)
         info = {}
         if response.info_json:
@@ -81,7 +82,8 @@ class GameServiceGRPCClient:
                 info = json.loads(response.info_json)
             except Exception as e:
                 logger.warning(f"Failed to parse info_json in step response: {e}")
-                info = {}
+                raise
+
         logger.debug(
             f"gRPC step result: reward={response.reward}, "
             f"terminated={response.terminated}, truncated={response.truncated}, "
@@ -99,7 +101,7 @@ class GameServiceGRPCClient:
         if self.stub is None:
             logger.error(f"gRPC reset failed: Wasn't able to connect to the game-service grpc server", exc_info=True)
             raise Exception({"error": "Wasn't able to connect to the game-service grpc server"})
-            return None, {}, "stub-session"
+
         options = options or {}
         request = bomberman_ai_pb2.TrainingResetRequest(
             map_width=int(options.get("map_width", 0)),
@@ -113,7 +115,8 @@ class GameServiceGRPCClient:
         except Exception as exc:
             logger.error(f"gRPC reset failed: {exc}", exc_info=True)
             self.disconnect()
-            return None, {}, "stub-session"
+            raise
+
         observation = np.array(response.observation.values, dtype=np.float32)
         info = {}
         if response.info_json:
@@ -121,7 +124,7 @@ class GameServiceGRPCClient:
                 info = json.loads(response.info_json)
             except Exception as e:
                 logger.warning(f"Failed to parse info_json in reset response: {e}")
-                info = {}
+                raise
         logger.info(
             f"gRPC reset result: session_id={response.session_id}, obs_size={observation.size}"
         )
