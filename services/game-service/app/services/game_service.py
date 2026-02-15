@@ -107,7 +107,7 @@ class GameService:
             raise
 
 
-    def add_player(self, player_id: str, unit_type: UnitType = UnitType.BOMBERMAN, is_player: bool = False) -> dict:
+    def add_player(self, player_id: str, unit_type: UnitType = UnitType.BOMBERMAN, ai_player: bool = False) -> dict:
         """Добавить игрока в игру"""
         try:
             if self.status not in [GameStatus.PENDING]:
@@ -125,7 +125,7 @@ class GameService:
                         size=self.settings.cell_size,
                         map=self.game_mode.map,
                         settings=self.settings,
-                        ai=is_player
+                        ai=ai_player
                     )
                 case UnitType.TANK:
                     player = Tank(
@@ -133,7 +133,7 @@ class GameService:
                         size=self.settings.cell_size,
                         map=self.game_mode.map,
                         settings=self.settings,
-                        ai=is_player
+                        ai=ai_player
                     )
                 case _:
                     player = Bomberman(
@@ -141,7 +141,7 @@ class GameService:
                         size=self.settings.cell_size,
                         map=self.game_mode.map,
                         settings=self.settings,
-                        ai=is_player
+                        ai=ai_player
                     )
             success = self.game_mode.add_player(player)
             

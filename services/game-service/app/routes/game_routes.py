@@ -291,7 +291,8 @@ async def add_player_to_game(
     try:
         result = game_service.add_player(
             player_id=player_action.player_id,
-            unit_type=player_action.unit_type
+            unit_type=player_action.unit_type,
+            ai_player=player_action.ai_player
         )
         
         if result.get('success'):
