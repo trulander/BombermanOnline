@@ -3,7 +3,7 @@ import time
 from pathlib import Path
 
 from sb3_contrib import RecurrentPPO
-from stable_baselines3.common.vec_env import DummyVecEnv
+from stable_baselines3.common.vec_env import DummyVecEnv, VecMonitor
 
 from app.ai_env.bomberman_env import BombermanEnv
 from app.config import settings
@@ -41,8 +41,9 @@ class TrainingService:
 
         render_mode: str | None = "rgb_array" if enable_render else None
 
-        logger.info("Creating BombermanEnv wrapped in DummyVecEnv")
-        env = DummyVecEnv(
+        logger.info("Creating BombermanEnv wrapped in DummyVecEnv and VecMonitor")
+        # Create vectorized environment
+        vec_env = DummyVecEnv(
             env_fns=[
                 lambda: BombermanEnv(
                     grpc_client=self.grpc_client,
@@ -50,6 +51,8 @@ class TrainingService:
                 ),
             ],
         )
+        # Wrap in VecMonitor to track and log episode metrics (ep_rew_mean, ep_len_mean, etc.)
+        env = VecMonitor(vec_env)
 
         # --- Determine whether to resume from an existing model or create a new one ---
         resume: bool = False
