@@ -72,9 +72,11 @@ def build_observation(
     lives: int,
     max_lives: int,
     enemy_count: int,
+    max_enemies: int,
     bombs_left: int,
     max_bombs: int,
     bomb_power: int,
+    max_bomb_power: int,
     is_invulnerable: bool,
     speed: float,
     max_speed: float,
@@ -87,7 +89,6 @@ def build_observation(
 ) -> ObservationData:
     width_cells: int = max(1, map_width)
     height_cells: int = max(1, map_height)
-    map_area: int = max(1, width_cells * height_cells)
 
     grid_array: np.ndarray = np.asarray(map_grid, dtype=np.float32)
     if grid_array.ndim != 2:
@@ -170,9 +171,9 @@ def build_observation(
     rel_x: float = float(center_x - start_x) / float(max(1, window_size - 1))
     rel_y: float = float(center_y - start_y) / float(max(1, window_size - 1))
     lives_norm: float = float(lives) / float(max(1, max_lives))
-    enemy_norm: float = float(enemy_count) / float(map_area)
+    enemy_norm: float = float(enemy_count) / float(max(1, max_enemies))
     bombs_left_norm: float = float(bombs_left) / float(max(1, max_bombs))
-    blast_range_norm: float = float(bomb_power) / 10.0
+    blast_range_norm: float = float(bomb_power) / float(max(1, max_bomb_power))
     invulnerable_val: float = 1.0 if is_invulnerable else 0.0
     speed_norm: float = float(speed) / float(max(1.0, max_speed))
     time_left_norm: float = float(time_left) / float(max(1.0, time_limit)) if time_limit > 0 else 0.0

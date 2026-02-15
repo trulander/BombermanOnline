@@ -39,12 +39,12 @@ class Tank(Player):
             # Настройки оружия в зависимости от типа юнита
 
             self.primary_weapon: WeaponType = WeaponType.BULLET
-            self.primary_weapon_max_count: int = 1
-            self.primary_weapon_power: int = 1
+            self.primary_weapon_max_count: int = 1 #TODO добавить параметр в настройки
+            self.primary_weapon_power: int = 1 #TODO добавить параметр в настройки
 
             self.secondary_weapon: WeaponType = WeaponType.MINE
-            self.secondary_weapon_max_count: int = 1
-            self.secondary_weapon_power: int = 1
+            self.secondary_weapon_max_count: int = 1 #TODO добавить параметр в настройки
+            self.secondary_weapon_power: int = 1 #TODO добавить параметр в настройки
 
             logger.info(f"Player created: id={id}, unit_type={self.unit_type.value}")
         except Exception as e:

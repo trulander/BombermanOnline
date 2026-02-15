@@ -37,8 +37,8 @@ class Bomberman(Player):
             # Настройки оружия в зависимости от типа юнита
 
             self.primary_weapon: WeaponType = WeaponType.BOMB
-            self.primary_weapon_max_count: int = 1
-            self.primary_weapon_power: int = 1
+            self.primary_weapon_max_count: int = settings.default_count_bombs
+            self.primary_weapon_power: int = settings.default_bomb_power
 
             self.secondary_weapon: WeaponType = None
             self.secondary_weapon_max_count: int = 1

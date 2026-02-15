@@ -138,11 +138,6 @@ class GameModeService(ABC):
             player.lives = self.settings.player_start_lives
             player.speed = self.settings.player_default_speed
             
-            # Настраиваем оружие в зависимости от типа юнита
-            if player.unit_type == UnitType.BOMBERMAN:
-                player.max_weapons = self.settings.default_max_bombs
-                player.weapon_power = self.settings.default_bomb_power
-            
             self.players[player.id] = player
             logger.info(f"Player {player.id} added at position ({x}, {y}) with color {player.color}")
             return True
@@ -297,9 +292,11 @@ class GameModeService(ABC):
             lives=entity.lives,
             max_lives=max_lives_val,
             enemy_count=len(self.enemies),
+            max_enemies=self.map_service.enemy_count + (len(self.players) - 1),
             bombs_left=max(0, max_bombs - active_bombs),
             max_bombs=max_bombs,
             bomb_power=bomb_power,
+            max_bomb_power=self.settings.max_bomb_power,
             is_invulnerable=entity.invulnerable,
             speed=entity_speed,
             max_speed=self.settings.player_max_speed,

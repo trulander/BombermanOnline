@@ -116,7 +116,7 @@
 
 Многие параметры из `GameSettings` (глобальные и для сессии) влияют на выполнение команд:
 -   `player_default_speed`, `bullet_speed`: влияют на движение.
--   `bomb_timer`, `default_bomb_power`, `default_max_bombs`: влияют на характеристики и использование бомб.
+-   `bomb_timer`, `default_bomb_power`, `default_count_bombs`: влияют на характеристики и использование бомб.
 -   `friendly_fire`: определяет, может ли игрок навредить себе или союзникам своим оружием.
 
 ## Заключение

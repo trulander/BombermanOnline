@@ -19,6 +19,7 @@ class MapService:
     def __init__(self, map_repository: MapRepository, game_settings: GameSettings):
         self.map_repository = map_repository
         self.game_settings = game_settings
+        self.enemy_count = 0
         
     async def create_map_from_template(self, template_id: str) -> Optional[Map]:
         """Создать карту на основе шаблона из базы данных"""
@@ -284,17 +285,17 @@ class MapService:
             # Базовое количество врагов + увеличение по уровням
             base_enemy_count = 3
             level_multiplier = self.game_settings.enemy_count_multiplier
-            enemy_count = int(base_enemy_count + level * level_multiplier)
+            self.enemy_count = int(base_enemy_count + level * level_multiplier)
             
             # Ограничиваем количество доступными позициями
-            enemy_count = min(enemy_count, len(enemy_spawns))
+            self.enemy_count = min(self.enemy_count, len(enemy_spawns))
             
-            if enemy_count == 0:
+            if self.enemy_count == 0:
                 logger.warning("No valid enemy spawn positions found")
                 return []
             
             # Выбираем случайные позиции
-            chosen_positions = random.sample(enemy_spawns, enemy_count)
+            chosen_positions = random.sample(enemy_spawns, self.enemy_count)
             
             # Генерируем врагов
             enemies_data = []

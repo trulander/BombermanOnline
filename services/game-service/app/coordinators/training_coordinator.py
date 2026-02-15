@@ -333,9 +333,11 @@ class TrainingCoordinator:
             lives=player.lives,
             max_lives=game_service.settings.player_max_lives,
             enemy_count=len(game_service.game_mode.enemies),
+            max_enemies=game_service.map_service.enemy_count + (len(game_service.game_mode.players) - 1),
             bombs_left=max(0, player.primary_weapon_max_count - active_bombs),
             max_bombs=player.primary_weapon_max_count,
             bomb_power=player.primary_weapon_power,
+            max_bomb_power=game_service.settings.max_bomb_power,
             is_invulnerable=player.invulnerable,
             speed=player.speed,
             max_speed=game_service.settings.player_max_speed,
@@ -386,31 +388,31 @@ class TrainingCoordinator:
         breakable_count: int,
         last_breakable_count: int,
     ) -> float:
-        reward: float = -0.02
+        reward: float = -1
 
         if not moved:
-            reward -= 0.03
+            reward -= 1
 
         if new_cell:
-            reward += 0.1
+            reward += 0.5
 
-        dist_delta: float = last_closest_enemy_dist - closest_enemy_dist
-        reward += dist_delta * 0.005
+        # dist_delta: float = last_closest_enemy_dist - closest_enemy_dist
+        # reward += dist_delta * 0.005
 
         if action == 5:
-            reward += 0.03
+            reward += 10
 
         walls_destroyed: int = last_breakable_count - breakable_count
         if walls_destroyed > 0:
-            reward += float(walls_destroyed) * 0.3
+            reward += float(walls_destroyed) * 30
 
         if player_lives < last_player_lives:
-            reward -= 1.0
+            reward -= 100
 
         if enemy_count < last_enemy_count:
-            reward += float(last_enemy_count - enemy_count) * 5.0
+            reward += float(last_enemy_count - enemy_count) * 300
 
         if game_over:
-            reward += 10.0 if player_alive else -3.0
+            reward += 500 if player_alive else -300
 
         return reward

@@ -73,7 +73,7 @@ These parameters are part of `GameSettings`, but are usually set globally for al
 | `bomb_timer`                   | Time until bomb explosion (seconds).                              | `2.0`                                  |
 | `bomb_explosion_duration`      | Duration of bomb explosion display (seconds).              | `0.5`                                  |
 | `default_bomb_power`           | Default bomb explosion power (radius).                      | `1`                                    |
-| `default_max_bombs`            | Maximum number of bombs that can be placed simultaneously.        | `1`                                    |
+| `default_count_bombs`            | Maximum number of bombs that can be placed simultaneously.        | `1`                                    |
 | `bullet_speed`                 | Bullet flight speed.                                         | `5.0`                                  |
 | `mine_timer`                   | Time until mine explosion after activation (for mines that don't explode immediately). | `1.0` (in `Mine.update`, not `GameSettings.mine_timer` which is `5.0`) |
 | `enemy_count_multiplier`       | Enemy count multiplier depending on the level.          | `1.0`                                  |

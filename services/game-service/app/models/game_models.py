@@ -161,7 +161,9 @@ class GameSettings(BaseModel):
     bomb_timer: float = 2.0 #таймер для автоматического взрыва установленной бомбы
     bomb_explosion_duration: float = 0.5# таймер продолжительности взрыва
     default_bomb_power: int = 1
-    default_max_bombs: int = 1
+    max_bomb_power: int = 10 #TODO имплементировать лимиты на увеличение максимальной мощности бомб у юнита
+    max_bomb_count: int = 10 #TODO имплементировать лимиты на увеличение максимального количества бомб у юнита
+    default_count_bombs: int = 1
     bullet_speed: float = 5.0
     mine_timer: float = 5.0
 

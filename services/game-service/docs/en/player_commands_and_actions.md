@@ -116,7 +116,7 @@ Although the basic logic for processing movement and weapon use commands is most
 
 Many parameters from `GameSettings` (global and session-specific) affect command execution:
 -   `player_default_speed`, `bullet_speed`: affect movement.
--   `bomb_timer`, `default_bomb_power`, `default_max_bombs`: affect the characteristics and use of bombs.
+-   `bomb_timer`, `default_bomb_power`, `default_count_bombs`: affect the characteristics and use of bombs.
 -   `friendly_fire`: determines if a player can harm themselves or allies with their weapon.
 
 ## Conclusion
