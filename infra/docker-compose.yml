@@ -294,7 +294,7 @@ services:
       - ../infra/ai_logs:/tf/logs
     ports:
       - "6006:6006"
-    command: tensorboard --logdir=/tf/logs --host 0.0.0.0 --port 6006
+    command: tensorboard --logdir=/tf/logs --host 0.0.0.0 --port 6006 --samples_per_plugin=images=10000
     logging:
       driver: "fluentd"
       options:
