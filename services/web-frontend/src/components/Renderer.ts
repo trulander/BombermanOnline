@@ -154,6 +154,9 @@ export class Renderer {
         this.renderEnemies(gameState, offsetDiffX, offsetDiffY);
         this.renderPlayers(gameState, currentPlayerId, offsetDiffX, offsetDiffY);
 
+        // Рендерим обратный таймер если он активен
+        this.renderTimer(gameState);
+
         // Рендерим отладочную информацию
         if (this.debugMode) {
             this.renderDebugInfo(gameState, currentPlayerId, offsetDiffX, offsetDiffY);
@@ -831,6 +834,36 @@ export class Renderer {
             relX <= this.viewWidth &&
             relY <= this.viewHeight
         );
+    }
+
+    // Рендерим обратный таймер в верхней части экрана в формате MM:SS
+    private renderTimer(gameState: GameState): void {
+        if (gameState.time_remaining == null || gameState.time_remaining <= 0) {
+            return;
+        }
+
+        const totalSeconds: number = Math.ceil(gameState.time_remaining);
+        const minutes: number = Math.floor(totalSeconds / 60);
+        const seconds: number = totalSeconds % 60;
+        const timerText: string = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+        // Фон под таймером
+        const textWidth: number = 120;
+        const textHeight: number = 40;
+        const x: number = (this.canvas.width - textWidth) / 2;
+        const y: number = 10;
+
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.6)';
+        this.ctx.beginPath();
+        this.ctx.roundRect(x, y, textWidth, textHeight, 8);
+        this.ctx.fill();
+
+        // Текст таймера
+        this.ctx.fillStyle = totalSeconds <= 30 ? '#ff4444' : '#ffffff';
+        this.ctx.font = 'bold 24px monospace';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText(timerText, this.canvas.width / 2, y + textHeight / 2);
     }
 
     // Рендерим отладочную информацию

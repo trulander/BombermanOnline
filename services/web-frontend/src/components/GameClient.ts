@@ -325,6 +325,11 @@ export class GameClient {
             this.lastUpdateTime = performance.now();
             this.gameState.status = gameUpdate.status
             this.gameState.is_active = gameUpdate.is_active
+
+            // Обновляем оставшееся время обратного отсчёта
+            if (gameUpdate.time_remaining !== undefined && gameUpdate.time_remaining !== null) {
+                this.gameState.time_remaining = gameUpdate.time_remaining;
+            }
             // Применяем изменения к кешированной карте
             if (gameUpdate.map_update && this.cachedMapGrid){
                 try {

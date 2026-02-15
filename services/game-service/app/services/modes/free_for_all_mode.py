@@ -47,7 +47,11 @@ class FreeForAllMode(GameModeService):
             self.game_over = True
             return True
         
-        # TODO: Добавить проверку по времени
+        # Если таймер активен и истёк — побеждает игрок с наибольшим количеством жизней
+        if self.settings.time_limit and self.settings.time_limit > 0 and self.time_remaining <= 0:
+            self.game_over = True
+            logger.info("FFA mode: Time expired — determining winner by lives")
+            return True
         
         return False
     
@@ -57,12 +61,25 @@ class FreeForAllMode(GameModeService):
             alive_players = [p for p in self.players.values() if p.lives > 0]
             
             if len(alive_players) == 1:
+                # Остался один живой — он победитель
                 winner = alive_players[0]
                 logger.info(f"FFA mode: Player {winner.id} wins!")
                 
                 # Начисляем очки команде победителя
                 if self.team_service:
                     self.team_service.add_score_to_player_team(winner.id, 1000)  # Очки за победу
+            elif len(alive_players) > 1:
+                # Время истекло — побеждает игрок с наибольшим количеством жизней
+                max_lives: int = max(p.lives for p in alive_players)
+                top_players = [p for p in alive_players if p.lives == max_lives]
+                if len(top_players) == 1:
+                    winner = top_players[0]
+                    logger.info(f"FFA mode: Player {winner.id} wins by most lives ({max_lives})!")
+                    if self.team_service:
+                        self.team_service.add_score_to_player_team(winner.id, 1000)
+                else:
+                    # Ничья — у нескольких игроков одинаковое количество жизней
+                    logger.info(f"FFA mode: Game ended in draw ({len(top_players)} players with {max_lives} lives)")
             else:
                 logger.info("FFA mode: Game ended in draw")
             

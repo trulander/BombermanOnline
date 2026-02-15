@@ -27,6 +27,8 @@ class GameUpdateEvent(BaseModel):
     power_ups_update: dict[str, PowerUpUpdate] = None
     #TODO Добавить teams
     game_id: str = None
+    # Оставшееся время обратного отсчёта (None = таймер не активен)
+    time_remaining: Optional[float] = None
 
 
 # class GamePlayerInfo(BaseModel):

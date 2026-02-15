@@ -54,7 +54,11 @@ class CaptureFlagMode(GameModeService):
                     self.game_over = True
                     return True
         
-        # TODO: Добавить проверку по времени
+        # Если таймер активен и истёк — побеждает команда с наибольшим score
+        if self.settings.time_limit and self.settings.time_limit > 0 and self.time_remaining <= 0:
+            self.game_over = True
+            logger.info("CTF mode: Time expired — determining winner by score")
+            return True
         
         return False
     

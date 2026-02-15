@@ -53,6 +53,8 @@ class GameModeService(ABC):
         self.game_over: bool = False
         self.last_update_time: float = time.time()
         self._ai_pending_tasks: dict[str, asyncio.Task] = {}
+        # Обратный отсчёт времени игры (0 = таймер отключён)
+        self.time_remaining: float = float(self.settings.time_limit or 0)
     
     async def initialize_map(self) -> None:
         """Инициализировать карту для игры"""
@@ -190,6 +192,10 @@ class GameModeService(ABC):
                 delta_time = current_time - self.last_update_time
             self.last_update_time = current_time
 
+            # Декрементируем обратный таймер если он активен
+            if self.time_remaining > 0:
+                self.time_remaining = max(0.0, self.time_remaining - delta_time)
+
             # Пропускаем обновление если игра окончена
             if self.game_over:
                 logger.debug("Game is over, skipping update")
@@ -214,6 +220,10 @@ class GameModeService(ABC):
             for power_up in self.power_ups.values():
                 result["power_ups_update"].update({power_up.id: power_up.get_changes()})
             
+            # Передаём оставшееся время в результат обновления
+            if self.time_remaining > 0 or (self.settings.time_limit and self.settings.time_limit > 0):
+                result["time_remaining"] = self.time_remaining
+
             # Проверяем завершение игры
             if self.is_game_over():
                 await self.handle_game_over()
@@ -293,7 +303,7 @@ class GameModeService(ABC):
             is_invulnerable=entity.invulnerable,
             speed=entity_speed,
             max_speed=self.settings.player_max_speed,
-            time_left=0.0,
+            time_left=self.time_remaining,
             time_limit=float(self.settings.time_limit or 0),
             enemies_positions=enemies_positions,
             weapons_positions=weapons_positions,

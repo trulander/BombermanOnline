@@ -7,6 +7,7 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Chip,
   CircularProgress,
   Dialog,
@@ -14,6 +15,7 @@ import {
   DialogContent,
   DialogTitle,
   FormControl,
+  FormControlLabel,
   Grid,
   IconButton,
   InputLabel,
@@ -65,6 +67,7 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
   const [openAddPlayerDialog, setOpenAddPlayerDialog] = useState(false);
   const [addPlayerId, setAddPlayerId] = useState<string>('');
   const [addPlayerUnitType, setAddPlayerUnitType] = useState<UnitType>(UnitType.BOMBERMAN);
+  const [addPlayerAi, setAddPlayerAi] = useState<boolean>(false);
   const [addPlayerError, setAddPlayerError] = useState<string | null>(null);
   
   const [playerUnitType, setPlayerUnitType] = useState<UnitType>(UnitType.BOMBERMAN); // Current player's unit type
@@ -214,11 +217,13 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
     try {
       const response = await proxiedGameApi.post(`/games/${gameId}/players`, {
         player_id: addPlayerId,
-        unit_type: addPlayerUnitType
+        unit_type: addPlayerUnitType,
+        ai_player: addPlayerAi,
       });
       if (response.data) {
         setAddPlayerId('');
         setAddPlayerUnitType(UnitType.BOMBERMAN);
+        setAddPlayerAi(false);
         setOpenAddPlayerDialog(false);
         setSuccess('Игрок успешно добавлен!');
         fetchGameDetails(); // Refresh players list
@@ -960,6 +965,16 @@ const ManageGame: React.FC<ManageGameProps> = ({ gameId, isModalOpen }) => {
               ))}
             </Select>
           </FormControl>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={addPlayerAi}
+                onChange={(e) => setAddPlayerAi(e.target.checked)}
+              />
+            }
+            label="AI Player (управление искусственным интеллектом)"
+            sx={{ mt: 1 }}
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setOpenAddPlayerDialog(false)}>Отмена</Button>

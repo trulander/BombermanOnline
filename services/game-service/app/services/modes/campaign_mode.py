@@ -36,7 +36,7 @@ class CampaignMode(GameModeService):
         return False
     
     def is_game_over(self) -> bool:
-        """Игра заканчивается когда все игроки мертвы или все враги убиты"""
+        """Игра заканчивается когда все игроки мертвы, все враги убиты или истекло время"""
         # Проверяем есть ли живые игроки
         alive_players = [p for p in self.players.values() if p.lives > 0]
         if not alive_players:
@@ -45,6 +45,12 @@ class CampaignMode(GameModeService):
         
         # Проверяем завершение уровня (все враги убиты)
         if self.settings.enable_enemies and len(self.enemies) == 0:
+            return True
+
+        # Если таймер активен и истёк — игрок проиграл (не успел уничтожить всех врагов)
+        if self.settings.time_limit and self.settings.time_limit > 0 and self.time_remaining <= 0:
+            self.game_over = True
+            logger.info("Campaign mode: Time expired — player loses")
             return True
         
         return False
@@ -58,9 +64,15 @@ class CampaignMode(GameModeService):
                 # Все игроки мертвы - поражение
                 self.game_over = True
                 logger.info("Campaign mode: All players dead - game over")
+            elif self.settings.time_limit and self.settings.time_limit > 0 and self.time_remaining <= 0:
+                # Время истекло — поражение (не успел уничтожить всех врагов)
+                self.game_over = True
+                logger.info("Campaign mode: Time expired - game over (defeat)")
             elif self.settings.enable_enemies and len(self.enemies) == 0:
                 # Уровень завершен - переход на следующий уровень
                 await self._level_complete()
+                # Сбрасываем таймер на новый уровень
+                self.time_remaining = float(self.settings.time_limit or 0)
                 logger.info(f"Campaign mode: Level {self.level} completed")
             
         except Exception as e:

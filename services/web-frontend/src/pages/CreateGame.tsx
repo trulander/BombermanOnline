@@ -104,6 +104,7 @@ const CreateGame: React.FC = () => {
           game_mode: GameModeType.CAMPAIGN,
           max_players: 4,
           map_template_id: '',
+          time_limit: 300,
         }}
         validationSchema={validationSchema}
         onSubmit={handleSubmit}
@@ -143,6 +144,18 @@ const CreateGame: React.FC = () => {
               margin="normal"
               error={touched.max_players && Boolean(errors.max_players)}
               helperText={touched.max_players && errors.max_players}
+            />
+
+            <Field
+              as={TextField}
+              name="time_limit"
+              label="Лимит времени (секунды, 0 = без лимита)"
+              type="number"
+              variant="outlined"
+              fullWidth
+              margin="normal"
+              inputProps={{ min: 0, max: 3600 }}
+              helperText="По умолчанию 300 секунд (5 минут). 0 — таймер отключён."
             />
 
             <FormControl fullWidth margin="normal" error={touched.map_template_id && Boolean(errors.map_template_id)}>

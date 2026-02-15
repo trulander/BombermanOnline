@@ -300,6 +300,8 @@ export interface GameState {
     teams?: {
         [teamId: string]: GameTeamInfo
     };
+    // Оставшееся время обратного отсчёта (null/undefined = таймер не активен)
+    time_remaining?: number | null;
 }
 
 export interface GameUpdateEvent {
@@ -321,6 +323,8 @@ export interface GameUpdateEvent {
         [entityId: string]: OptionalPowerUpState
     };
     game_id?: string | null;
+    // Оставшееся время обратного отсчёта (null/undefined = таймер не активен)
+    time_remaining?: number | null;
 }
 
 
