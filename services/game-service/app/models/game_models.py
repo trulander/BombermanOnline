@@ -98,7 +98,8 @@ class GameStatusUpdate(BaseModel):
 class PlayerAction(BaseModel):
     """Модель для действий с игроками"""
     player_id: str
-    unit_type: Optional[UnitType] = UnitType.BOMBERMAN
+    unit_type: Optional[UnitType] = UnitType.BOMBERMAN,
+    is_player: bool = False
 
 
 class GameCreateResponse(BaseModel):

@@ -52,6 +52,7 @@ class Player(Entity, ABC):
             map: "Map",
             settings: "GameSettings",
             name: str = None,
+            ai: bool = False,
     ):
         try:
             super().__init__(
@@ -63,7 +64,8 @@ class Player(Entity, ABC):
                 color=self.COLORS[0], # Default color, will be assigned later
                 map = map,
                 settings = settings,
-                name=name
+                name=name,
+                ai=ai
             )
             self.team_id: str = ""  # ID команды
             self.disconnected_time: float = 0.0

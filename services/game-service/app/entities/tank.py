@@ -23,13 +23,15 @@ class Tank(Player):
             size: float,
             map: "Map",
             settings: "GameSettings",
+            ai: bool = False,
     ):
         try:
             super().__init__(
                 id=id,
                 size=size,
                 map=map,
-                settings=settings
+                settings=settings,
+                ai=ai
             )
             self.team_id: str | None = None
             self.direction: tuple[float, float] = (0, 1)
