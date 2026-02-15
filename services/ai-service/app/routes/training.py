@@ -27,7 +27,8 @@ def start_training(
             total_timesteps=payload.total_timesteps or 100,
             log_name=payload.log_name or "bomberman_ai",
             enable_render=payload.enable_render or False,
-            render_freq=payload.render_freq or 500
+            render_freq=payload.render_freq or 500,
+            model_name=payload.model_name,
         )
         logger.info("StartTraining completed successfully")
     except Exception as e:
