@@ -2,6 +2,7 @@ import logging
 from typing import Dict, List, Set
 from ..game_mode_service import GameModeService
 from ..ai_inference_service import AIInferenceService
+from ...entities import Player
 from ...models.game_models import GameSettings
 from ...services.map_service import MapService
 
@@ -85,9 +86,9 @@ class CaptureFlagMode(GameModeService):
             logger.error(f"Error handling CTF game over: {e}", exc_info=True)
             self.game_over = True
     
-    def handle_player_hit(self, player) -> None:
+    def handle_player_hit(self, player: Player, attacker_id: str = None) -> None:
         """Переопределяем для режима захвата флага"""
-        super().handle_player_hit(player)
+        super().handle_player_hit(player=player, attacker_id=attacker_id)
         
         # В командном режиме можно добавить респавн если включен
         if player.lives <= 0 and self.settings.respawn_enabled:

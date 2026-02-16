@@ -1,6 +1,7 @@
 import logging
 from ..game_mode_service import GameModeService
 from ..ai_inference_service import AIInferenceService
+from ...entities import Player
 from ...models.game_models import GameSettings
 from ...services.map_service import MapService
 
@@ -89,9 +90,9 @@ class FreeForAllMode(GameModeService):
             logger.error(f"Error handling FFA game over: {e}", exc_info=True)
             self.game_over = True
     
-    def handle_player_hit(self, player) -> None:
+    def handle_player_hit(self, player: Player, attacker_id: str = None) -> None:
         """Переопределяем для режима все против всех"""
-        super().handle_player_hit(player)
+        super().handle_player_hit(player=player, attacker_id=attacker_id)
         
         # В режиме все против всех убитые игроки исключаются из игры
         if player.lives <= 0:
