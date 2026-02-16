@@ -165,6 +165,7 @@ class Weapon(Entity, ABC):
             "activated": self.activated,
             "exploded": self.is_exploded(),
             "explosion_cells": self.explosion_cells.copy(),
+            "owner_id": self.owner_id
         }
         changes = {
             "entity_id": self.id
