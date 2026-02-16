@@ -5,13 +5,10 @@ import gymnasium as gym
 from gymnasium import spaces
 from PIL import Image, ImageDraw
 
+from app.config import settings
 from app.services.grpc_client import GameServiceGRPCClient
 
 logger = logging.getLogger(__name__)
-
-GRID_CHANNELS: int = 5
-WINDOW_SIZE: int = 7
-STATS_SIZE: int = 7
 
 RENDER_SCALE: int = 32
 
@@ -44,8 +41,8 @@ class BombermanEnv(gym.Env[dict[str, np.ndarray], int]):
     def __init__(
         self,
         grpc_client: GameServiceGRPCClient,
-        grid_shape: tuple[int, ...] = (GRID_CHANNELS, WINDOW_SIZE, WINDOW_SIZE),
-        stats_size: int = STATS_SIZE,
+        grid_shape: tuple[int, ...] = (settings.GRID_CHANNELS, settings.WINDOW_SIZE, settings.WINDOW_SIZE),
+        stats_size: int = settings.STATS_SIZE,
         action_count: int = 6,
         render_mode: str | None = None,
     ) -> None:

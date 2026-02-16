@@ -5,7 +5,7 @@ import grpc
 import numpy as np
 
 from .game_service_finder import GameServiceFinder
-from ..ai_env.bomberman_env import GRID_CHANNELS, WINDOW_SIZE, STATS_SIZE
+from ..config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -24,14 +24,14 @@ def _parse_observation(observation: object) -> dict[str, np.ndarray]:
     grid_flat: np.ndarray = np.array(observation.grid_values, dtype=np.float32)
     stats: np.ndarray = np.array(observation.stats_values, dtype=np.float32)
 
-    expected_grid: int = GRID_CHANNELS * WINDOW_SIZE * WINDOW_SIZE
+    expected_grid: int = settings.GRID_CHANNELS * settings.WINDOW_SIZE * settings.WINDOW_SIZE
     if grid_flat.size == expected_grid:
-        grid: np.ndarray = grid_flat.reshape(GRID_CHANNELS, WINDOW_SIZE, WINDOW_SIZE)
+        grid: np.ndarray = grid_flat.reshape(settings.GRID_CHANNELS, settings.WINDOW_SIZE, settings.WINDOW_SIZE)
     else:
-        grid = np.zeros((GRID_CHANNELS, WINDOW_SIZE, WINDOW_SIZE), dtype=np.float32)
+        grid = np.zeros((settings.GRID_CHANNELS, settings.WINDOW_SIZE, settings.WINDOW_SIZE), dtype=np.float32)
 
-    if stats.size != STATS_SIZE:
-        stats = np.zeros(STATS_SIZE, dtype=np.float32)
+    if stats.size != settings.STATS_SIZE:
+        stats = np.zeros(settings.STATS_SIZE, dtype=np.float32)
 
     return {"grid": grid, "stats": stats}
 

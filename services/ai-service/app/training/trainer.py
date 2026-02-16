@@ -15,6 +15,7 @@ from app.config import settings
 from app.services.grpc_client import GameServiceGRPCClient
 from app.training.render_callback import TensorBoardRenderCallback
 from app.training.training_metrics_callback import TrainingMetricsCallback
+from app.training.cnn_feature_extractor import BombermanCombinedFeatureExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +43,10 @@ class TrainingService:
         n_eval_episodes: int | None = None,
         max_no_improvement_evals: int | None = None,
         min_evals: int | None = None,
+        use_cnn: bool = True,
+        cnn_features_dim: int = 256,
+        mlp_features_dim: int = 64,
+        features_dim: int = 512,
     ) -> Path:
         """
         Запускает процесс обучения модели с использованием RecurrentPPO.
@@ -94,6 +99,19 @@ class TrainingService:
             min_evals: Минимальное количество оценок перед проверкой улучшения. Если None,
                 используется значение из settings.MIN_EVALS (по умолчанию 5). Гарантирует, что
                 ранняя остановка не сработает слишком рано, давая модели время на обучение.
+            
+            use_cnn: Использовать CNN feature extractor для обработки grid наблюдений.
+                Если True, grid данные обрабатываются через CNN, stats через MLP, затем объединяются.
+                Если False, используется стандартный MLP для всех наблюдений.
+            
+            cnn_features_dim: Размерность признаков после CNN обработки grid данных.
+                Используется только если use_cnn=True.
+            
+            mlp_features_dim: Размерность признаков после MLP обработки stats данных.
+                Используется только если use_cnn=True.
+            
+            features_dim: Финальная размерность признаков после объединения CNN и MLP.
+                Используется только если use_cnn=True.
         
         Returns:
             Path: Путь к сохраненной финальной модели. Если был найден best_model в процессе
@@ -136,7 +154,8 @@ class TrainingService:
             f"log_name={log_name}, enable_render={enable_render}, "
             f"render_freq={render_freq}, model_name={model_name}, "
             f"enable_checkpointing={enable_checkpointing}, checkpoint_freq={checkpoint_freq}, "
-            f"enable_evaluation={enable_evaluation}, eval_freq={eval_freq}"
+            f"enable_evaluation={enable_evaluation}, eval_freq={eval_freq}, "
+            f"use_cnn={use_cnn}"
         )
         settings.LOGS_PATH.mkdir(parents=True, exist_ok=True)
         settings.MODELS_PATH.mkdir(parents=True, exist_ok=True)
@@ -196,12 +215,38 @@ class TrainingService:
                 )
 
         if not resume:
+            # Configure policy kwargs based on whether to use CNN
+            policy_kwargs = {}
+            if use_cnn:
+                logger.info(
+                    f"Using combined CNN+MLP feature extractor: "
+                    f"cnn_features_dim={cnn_features_dim}, "
+                    f"mlp_features_dim={mlp_features_dim}, "
+                    f"features_dim={features_dim}"
+                )
+                # MultiInputLstmPolicy passes the entire Dict observation space to the feature extractor.
+                # We use BombermanCombinedFeatureExtractor which handles the Dict space correctly:
+                # - Processes "grid" key through CNN
+                # - Processes "stats" key through MLP
+                # - Combines both into a single feature vector
+                policy_kwargs = dict(
+                    features_extractor_class=BombermanCombinedFeatureExtractor,
+                    features_extractor_kwargs=dict(
+                        features_dim=features_dim,
+                        cnn_features_dim=cnn_features_dim,
+                        mlp_features_dim=mlp_features_dim,
+                    ),
+                )
+            else:
+                logger.info("Using default MLP feature extractor for all observations")
+            
             logger.info("Creating new RecurrentPPO model with MultiInputLstmPolicy")
             self.model = RecurrentPPO(
                 policy="MultiInputLstmPolicy",
                 env=env,
                 verbose=0,
                 tensorboard_log=str(settings.LOGS_PATH),
+                policy_kwargs=policy_kwargs if policy_kwargs else None,
             )
 
         # --- Callbacks ---

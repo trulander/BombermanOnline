@@ -19,7 +19,7 @@ class InferenceService:
 
     def load_model(
         self,
-        model_name: str = "100000.zip",
+        model_name: str = "20000.zip",
     ) -> bool:
         model_file = self.model_path / model_name
         logger.info(f"Loading model from {model_file}")

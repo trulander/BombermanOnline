@@ -65,6 +65,11 @@ class Settings(BaseSettings):
     MODELS_PATH: Path = Path("./app/ai_models")
     LOGS_PATH: Path = Path("./app/ai_logs")
 
+    #observation settings
+    GRID_CHANNELS: int = 5
+    WINDOW_SIZE: int = 15
+    STATS_SIZE: int = 7
+
     # Training settings
     CHECKPOINT_FREQ: int = 10000
     ENABLE_EVALUATION: bool = True
@@ -72,6 +77,7 @@ class Settings(BaseSettings):
     N_EVAL_EPISODES: int = 5
     MAX_NO_IMPROVEMENT_EVALS: int = 10
     MIN_EVALS: int = 5
+
 
     # NATS settings for game-allocator-service
     NATS_URL: str = "nats://localhost:4222"
