@@ -1,9 +1,10 @@
 import logging
 import time
+from collections.abc import Callable
 from pathlib import Path
 
 from sb3_contrib import RecurrentPPO
-from stable_baselines3.common.vec_env import DummyVecEnv, VecMonitor
+from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecMonitor
 from stable_baselines3.common.callbacks import (
     CheckpointCallback,
     EvalCallback,
@@ -11,13 +12,88 @@ from stable_baselines3.common.callbacks import (
 )
 
 from app.ai_env.bomberman_env import BombermanEnv
-from app.config import settings
+from app.config import settings, configure_logging
 from app.services.grpc_client import GameServiceGRPCClient
 from app.training.render_callback import TensorBoardRenderCallback
 from app.training.training_metrics_callback import TrainingMetricsCallback
 from app.training.cnn_feature_extractor import BombermanCombinedFeatureExtractor
 
 logger = logging.getLogger(__name__)
+
+
+def make_env(
+    env_id: int, 
+    render_mode: str | None = None,
+    startup_delay: float = 0.0
+) -> Callable[[], BombermanEnv]:
+    """
+    Factory function to create environment instances for multiprocessing.
+    
+    Each process must have its own isolated instances of dependencies:
+    - NatsRepository (with its own NATS connection)
+    - GameServiceFinder (with its own NatsRepository)
+    - GameServiceGRPCClient (with its own GameServiceFinder)
+    - BombermanEnv (with its own GameServiceGRPCClient)
+    
+    This ensures that each subprocess in SubprocVecEnv has independent
+    connections and doesn't share state with other processes.
+    
+    Args:
+        env_id: Unique identifier for the environment (used for logging and delay calculation)
+        render_mode: Render mode for the environment (None, "rgb_array", etc.)
+        startup_delay: Delay in seconds before creating dependencies. Each process waits
+            startup_delay * env_id seconds before initialization to prevent simultaneous
+            selection of the same game-service instance. Process 0 starts immediately,
+            process 1 waits startup_delay seconds, process 2 waits 2*startup_delay, etc.
+    
+    Returns:
+        Callable that creates a BombermanEnv instance when called
+    """
+    def _init() -> BombermanEnv:
+        # Configure logging for this subprocess using existing configuration
+        # This ensures logs from child processes are visible
+        # from app.config import configure_logging, settings as app_settings
+        configure_logging(
+            log_level=settings.LOG_LEVEL,
+            log_format=settings.LOG_FORMAT,
+            trace_caller=settings.TRACE_CALLER
+        )
+
+        # Get logger after configuration
+        logger = logging.getLogger(__name__)
+        logger.info(f"[ENV-{env_id}] Subprocess initialized")
+
+
+        # Add delay before creating dependencies to prevent simultaneous instance selection
+        if startup_delay > 0:
+            delay = startup_delay * env_id
+            logger.info(f"Environment {env_id}: waiting {delay:.2f}s before startup to avoid instance collision")
+            time.sleep(delay)
+        
+        # Import dependencies inside the function to ensure they're available
+        # in each subprocess after fork/spawn
+        from app.repositories.nats_repository import NatsRepository
+        from app.services.game_service_finder import GameServiceFinder
+        from app.services.grpc_client import GameServiceGRPCClient
+        
+        # Create isolated dependencies for this process
+        # Each process needs its own NATS connection
+        nats_repo = NatsRepository(nats_url=settings.NATS_URL)
+        # Connect synchronously (NatsRepository.connect() handles async internally)
+        nats_repo.connect()
+        
+        # Create GameServiceFinder with the isolated NatsRepository
+        game_service_finder = GameServiceFinder(nats_repository=nats_repo)
+        
+        # Create GameServiceGRPCClient with the isolated GameServiceFinder
+        grpc_client = GameServiceGRPCClient(game_service_finder=game_service_finder)
+        
+        # Create and return the environment with isolated dependencies
+        env = BombermanEnv(grpc_client=grpc_client, render_mode=render_mode)
+        logger.info(f"Created environment {env_id} in subprocess with isolated dependencies")
+        return env
+    
+    return _init
 
 
 class TrainingService:
@@ -47,6 +123,8 @@ class TrainingService:
         cnn_features_dim: int = 256,
         mlp_features_dim: int = 64,
         features_dim: int = 512,
+        count_cpu: int = 6,
+        process_startup_delay: float = 5.0,
     ) -> Path:
         """
         Запускает процесс обучения модели с использованием RecurrentPPO.
@@ -112,6 +190,20 @@ class TrainingService:
             
             features_dim: Финальная размерность признаков после объединения CNN и MLP.
                 Используется только если use_cnn=True.
+            
+            count_cpu: Количество параллельных процессов для обучения. Определяет режим векторизации:
+                - count_cpu == 1: Используется DummyVecEnv (однопроцессорный режим, текущая реализация).
+                  Все окружения выполняются последовательно в одном процессе.
+                - count_cpu > 1: Используется SubprocVecEnv (многопроцессорный режим).
+                  Каждое окружение выполняется в отдельном процессе, что ускоряет сбор данных.
+                  Рекомендуется использовать количество, равное числу CPU ядер или меньше.
+            
+            process_startup_delay: Задержка между запусками процессов в секундах (используется только при count_cpu > 1).
+                Каждый процесс запускается с задержкой, пропорциональной его env_id, чтобы предотвратить
+                одновременный выбор одного и того же game-service инстанса всеми процессами.
+                Например, при process_startup_delay=0.5: процесс 0 запускается сразу, процесс 1 через 0.5 сек,
+                процесс 2 через 1.0 сек и т.д. Это позволяет game-allocator-service обновлять метрики нагрузки
+                между запросами и распределять процессы по разным инстансам. По умолчанию 0.5 секунды.
         
         Returns:
             Path: Путь к сохраненной финальной модели. Если был найден best_model в процессе
@@ -155,7 +247,7 @@ class TrainingService:
             f"render_freq={render_freq}, model_name={model_name}, "
             f"enable_checkpointing={enable_checkpointing}, checkpoint_freq={checkpoint_freq}, "
             f"enable_evaluation={enable_evaluation}, eval_freq={eval_freq}, "
-            f"use_cnn={use_cnn}"
+            f"use_cnn={use_cnn}, count_cpu={count_cpu}"
         )
         settings.LOGS_PATH.mkdir(parents=True, exist_ok=True)
         settings.MODELS_PATH.mkdir(parents=True, exist_ok=True)
@@ -163,23 +255,43 @@ class TrainingService:
 
         render_mode: str | None = "rgb_array" if enable_render else None
 
-        logger.info("Creating BombermanEnv wrapped in DummyVecEnv and VecMonitor")
-        # Create vectorized environment
-        vec_env = DummyVecEnv(
-            env_fns=[
-                lambda: BombermanEnv(
-                    grpc_client=self.grpc_client,
-                    render_mode=render_mode,
-                ),
-            ],
-        )
+        # Create vectorized environment based on count_cpu parameter
+        if count_cpu == 1:
+            # Старая реализация - DummyVecEnv (однопроцессорный режим)
+            logger.info("Using DummyVecEnv (single process mode, count_cpu=1)")
+            vec_env = DummyVecEnv(
+                env_fns=[
+                    lambda: BombermanEnv(
+                        grpc_client=self.grpc_client,
+                        render_mode=render_mode,
+                    ),
+                ],
+            )
+        else:
+            # Новая реализация - SubprocVecEnv (многопроцессорный режим)
+            logger.info(
+                f"Using SubprocVecEnv (multiprocessing mode, count_cpu={count_cpu}, "
+                f"process_startup_delay={process_startup_delay}s)"
+            )
+            vec_env = SubprocVecEnv(
+                [
+                    make_env(
+                        env_id=i, 
+                        render_mode=render_mode, 
+                        startup_delay=process_startup_delay
+                    ) 
+                    for i in range(count_cpu)
+                ]
+            )
+        
         # Wrap in VecMonitor to track and log episode metrics (ep_rew_mean, ep_len_mean, etc.)
         env = VecMonitor(vec_env)
 
         # Create separate evaluation environment (if evaluation is enabled)
+        # Evaluation always uses DummyVecEnv for stability, regardless of count_cpu
         eval_env = None
         if enable_evaluation:
-            logger.info("Creating evaluation environment")
+            logger.info("Creating evaluation environment (always using DummyVecEnv for stability)")
             eval_vec_env = DummyVecEnv(
                 env_fns=[
                     lambda: BombermanEnv(
@@ -260,7 +372,7 @@ class TrainingService:
         metrics_callback = TrainingMetricsCallback(
             checkpoint_dir=checkpoint_dir,
             eval_log_dir=eval_log_dir,
-            verbose=1
+            verbose=0
         )
         callbacks.append(metrics_callback)
 
@@ -273,7 +385,7 @@ class TrainingService:
                 name_prefix="checkpoint",
                 save_replay_buffer=False,
                 save_vecnormalize=False,
-                verbose=2
+                verbose=0
             )
             callbacks.append(checkpoint_callback)
             logger.info(
@@ -290,7 +402,7 @@ class TrainingService:
             stop_callback = StopTrainingOnNoModelImprovement(
                 max_no_improvement_evals=max_no_improvement_evals,
                 min_evals=min_evals,
-                verbose=1,
+                verbose=0,
             )
 
             # Evaluation callback
@@ -299,11 +411,11 @@ class TrainingService:
                 best_model_save_path=str(best_model_path),
                 log_path=str(eval_log_dir),
                 eval_freq=eval_freq,
-                deterministic=True,
+                deterministic=False,
                 render=False,
                 n_eval_episodes=n_eval_episodes,
                 callback_on_new_best=stop_callback,
-                verbose=1
+                verbose=0
             )
             callbacks.append(eval_callback)
             logger.info(
