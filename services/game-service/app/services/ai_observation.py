@@ -168,8 +168,8 @@ def build_observation(
         axis=0,
     )
 
-    rel_x: float = float(center_x - start_x) / float(max(1, window_size - 1))
-    rel_y: float = float(center_y - start_y) / float(max(1, window_size - 1))
+    # rel_x: float = float(center_x - start_x) / float(max(1, window_size - 1))
+    # rel_y: float = float(center_y - start_y) / float(max(1, window_size - 1))
     lives_norm: float = float(lives) / float(max(1, max_lives))
     enemy_norm: float = float(enemy_count) / float(max(1, max_enemies))
     bombs_left_norm: float = float(bombs_left) / float(max(1, max_bombs))
@@ -179,8 +179,8 @@ def build_observation(
     time_left_norm: float = float(time_left) / float(max(1.0, time_limit)) if time_limit > 0 else 0.0
 
     stats: list[float] = [
-        rel_x,
-        rel_y,
+        # rel_x,
+        # rel_y,
         lives_norm,
         enemy_norm,
         bombs_left_norm,

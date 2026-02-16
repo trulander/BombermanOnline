@@ -346,7 +346,7 @@ class TrainingCoordinator:
             enemies_positions=enemies_positions,
             weapons_positions=weapons_positions,
             power_ups_positions=power_ups_positions,
-            window_size=15,
+            window_size=7,
         )
 
     def _closest_enemy_distance(
