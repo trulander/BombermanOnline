@@ -54,7 +54,7 @@ class InferenceService:
             observation=observation,
             state=lstm_state,
             episode_start=np.array([episode_start]),
-            deterministic=True,
+            deterministic=False,
         )
         self._lstm_states[entity_id] = new_lstm_state
 
