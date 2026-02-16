@@ -249,6 +249,10 @@ class GameModeService(ABC):
 
                 if action is not None:
                     entity.ai_last_action_time = time.time()
+                    logger.debug(
+                        f"Applying AI action={action} to entity={entity_id} "
+                        f"(is_player={is_player}), current pos=({entity.x:.1f}, {entity.y:.1f})"
+                    )
                     if is_player:
                         if action == 5:
                             self.place_weapon(player=entity, weapon_action=WeaponAction.PLACEWEAPON1)
@@ -258,6 +262,10 @@ class GameModeService(ABC):
                     else:
                         entity.direction = action_to_direction(action=action, current=entity.direction)
                         entity.move_timer = 0
+                        logger.debug(
+                            f"Enemy {entity_id} direction set to {entity.direction}, "
+                            f"target cells reset"
+                        )
             return
 
         enemies_positions: list[tuple[float, float]] = [
@@ -308,9 +316,19 @@ class GameModeService(ABC):
             power_ups_positions=power_ups_positions,
             window_size=15,
         )
+        # Use game_id as session_id to track episodes per game
+        # This allows LSTM states to be reset when a new game starts
+        game_id: str | None = getattr(self.settings, 'game_id', None)
+        logger.debug(
+            f"Requesting AI inference for entity={entity_id}, "
+            f"pos=({entity.x:.1f}, {entity.y:.1f}), "
+            f"direction={entity.direction}, "
+            f"target_cell=({entity.ai_target_cell_x}, {entity.ai_target_cell_y}), "
+            f"session={game_id}"
+        )
         task = asyncio.create_task(
             self.ai_inference_service.maybe_infer_action(
-                session_id=None,
+                session_id=game_id,
                 entity_id=entity_id,
                 grid_values=obs_data.grid_values,
                 stats_values=obs_data.stats_values,

@@ -67,7 +67,7 @@ class Entity:
             # таймер бессмертия после получения урона, по умолчанию таймер для enemy должен быть переопределен для других типов
             self.invulnerable_timer: float = 0
 
-            self.direction: tuple[float, float] = (0, 0)  # Направление
+            self.direction: tuple[int, int] = (0, 0)  # Направление
             
             # For AI entities, ensure initial position is aligned to grid
             if self.ai:

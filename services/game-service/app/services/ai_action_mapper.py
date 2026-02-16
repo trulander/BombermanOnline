@@ -13,13 +13,15 @@ def action_to_inputs(action: int) -> Inputs:
     )
 
 
-def action_to_direction(action: int, current: tuple[float, float]) -> tuple[float, float]:
+def action_to_direction(action: int, current: tuple[int, int]) -> tuple[int, int]:
+    if action == 0:
+        return (0, 0)
     if action == 1:
-        return (0.0, -1.0)
+        return (0, -1)
     if action == 2:
-        return (0.0, 1.0)
+        return (0, 1)
     if action == 3:
-        return (-1.0, 0.0)
+        return (-1, 0)
     if action == 4:
-        return (1.0, 0.0)
+        return (1, 0)
     return current

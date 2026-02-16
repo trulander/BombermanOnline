@@ -41,6 +41,7 @@ class InferenceService:
         self,
         observation: dict[str, np.ndarray],
         entity_id: str,
+        session_id: str
     ) -> int:
         if self.model is None:
             logger.error("infer_action called but model is not loaded")
