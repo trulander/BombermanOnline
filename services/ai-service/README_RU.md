@@ -49,6 +49,7 @@ AI Сервис — компонент платформы Bomberman Online, от
 *   **[Развертывание и запуск](docs/ru/deployment.md)**: Инструкции по локальному запуску и использованию Docker.
 *   **[Взаимодействие и Use Cases](docs/ru/interaction.md)**: Описание NATS API, диаграммы и сценарии использования.
 *   **[Обучение моделей AI](docs/ru/ai_training.md)**: Детали процесса обучения с подкреплением.
+*   **[CNN Архитектура](docs/ru/cnn_architecture.md)**: Описание CNN feature extractor для обработки пространственных данных.
 *   **[Конфигурация](docs/ru/configuration.md)**: Полный список переменных окружения.
 *   **[Поток обучения и инференса](docs/ru/examples/ai_service_flow.md)**: Диаграмма взаимодействий.
 *   **[Поток тренировки](docs/ru/examples/ai_training_flow.md)**: Диаграмма тренировки через gRPC.
