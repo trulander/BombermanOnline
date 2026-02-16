@@ -652,9 +652,9 @@ class GameModeService(ABC):
             logger.error(f"Error getting game state: {e}", exc_info=True)
             return MapState(
                 players={},
-                enemies=[],
-                weapons=[],
-                power_ups=[],
+                enemies={},
+                weapons={},
+                power_ups={},
                 map=MapData(grid=None, width=0, height=0),
                 level=self.level,
                 error=True,
