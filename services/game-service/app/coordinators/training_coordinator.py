@@ -1,6 +1,7 @@
 import json
 import math
 import random
+import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from uuid import uuid4
@@ -121,8 +122,10 @@ class TrainingCoordinator:
             unit_type=UnitType.BOMBERMAN,
         )
         player = game_service.get_player(player_id=player_id)
-        # if player is not None:
-        #     player.ai = True
+        if player is not None:
+            player.ai = True
+
+        player.can_handle_ai_action = lambda x=None: False# patching to avoid back requests to the ai-service
 
         game_service.start_game()
 
@@ -216,7 +219,9 @@ class TrainingCoordinator:
             )
 
         await game_service.update(delta_seconds=delta_seconds)
-
+        time_to_target = player.get_remaining_movement_time()
+        if time_to_target:
+            await game_service.update(delta_seconds=time_to_target+0.01)
         session.total_steps += 1
 
         obs: ObservationData = self._build_observation(
@@ -346,7 +351,7 @@ class TrainingCoordinator:
             enemies_positions=enemies_positions,
             weapons_positions=weapons_positions,
             power_ups_positions=power_ups_positions,
-            window_size=7,
+            window_size=15,
         )
 
     def _closest_enemy_distance(
@@ -390,11 +395,11 @@ class TrainingCoordinator:
     ) -> float:
         reward: float = -1
 
-        if not moved:
-            reward -= 1
+        if not moved and action < 5:
+            reward -= 3
 
         if new_cell:
-            reward += 0.5
+            reward += 1
 
         # dist_delta: float = last_closest_enemy_dist - closest_enemy_dist
         # reward += dist_delta * 0.005

@@ -285,6 +285,7 @@ class GameModeService(ABC):
             bomb_power = 0
             max_lives_val = max(1, entity.lives)
             entity_speed = entity.speed
+
         obs_data = build_observation(
             map_grid=self.map.grid, map_width=self.map.width, map_height=self.map.height,
             cell_size=self.settings.cell_size,
@@ -305,7 +306,7 @@ class GameModeService(ABC):
             enemies_positions=enemies_positions,
             weapons_positions=weapons_positions,
             power_ups_positions=power_ups_positions,
-            window_size=7,
+            window_size=15,
         )
         task = asyncio.create_task(
             self.ai_inference_service.maybe_infer_action(

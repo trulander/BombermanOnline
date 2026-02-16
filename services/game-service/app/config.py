@@ -51,7 +51,7 @@ class Settings(BaseSettings):
     GAME_UPDATE_FPS: float = 30.0
     GAME_OVER_TIMEOUT: float = 5.0  # секунды
 
-    AI_ACTION_INTERVAL: float = 0.33  # секунды между командами AI (3 команды/сек)
+    AI_ACTION_INTERVAL: float = 0.33  # минимальный интервал в секундах между командами AI (3 команды/сек)
 
     # gRPC settings
     GRPC_HOST: str = "0.0.0.0"
