@@ -4,11 +4,17 @@ from pathlib import Path
 
 from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.vec_env import DummyVecEnv, VecMonitor
+from stable_baselines3.common.callbacks import (
+    CheckpointCallback,
+    EvalCallback,
+    StopTrainingOnNoModelImprovement,
+)
 
 from app.ai_env.bomberman_env import BombermanEnv
 from app.config import settings
 from app.services.grpc_client import GameServiceGRPCClient
 from app.training.render_callback import TensorBoardRenderCallback
+from app.training.training_metrics_callback import TrainingMetricsCallback
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +35,108 @@ class TrainingService:
         enable_render: bool = False,
         render_freq: int = 500,
         model_name: str | None = None,
+        enable_checkpointing: bool = True,
+        checkpoint_freq: int | None = None,
+        enable_evaluation: bool = True,
+        eval_freq: int | None = None,
+        n_eval_episodes: int | None = None,
+        max_no_improvement_evals: int | None = None,
+        min_evals: int | None = None,
     ) -> Path:
+        """
+        Запускает процесс обучения модели с использованием RecurrentPPO.
+        
+        Поддерживает периодическое сохранение чекпоинтов, оценку модели на отдельном окружении,
+        раннюю остановку при отсутствии прогресса и логирование метрик в TensorBoard.
+        
+        Args:
+            total_timesteps: Общее количество шагов обучения. Определяет длительность обучения.
+            
+            log_name: Имя для логирования в TensorBoard и организации директорий с чекпоинтами
+                и результатами evaluation. Используется для группировки экспериментов.
+            
+            enable_render: Включить визуализацию игрового процесса. Если True, периодически
+                сохраняет кадры игры в TensorBoard для визуального анализа поведения модели.
+            
+            render_freq: Частота сохранения кадров в TensorBoard (в шагах). Используется только
+                если enable_render=True. Определяет, как часто будут сохраняться изображения игры.
+            
+            model_name: Имя файла модели для дообучения (resume training). Если указан и файл
+                существует, обучение продолжится с этой модели. Если None, начинается новое обучение.
+                Может быть указан с расширением .zip или без него.
+            
+            enable_checkpointing: Включить периодическое сохранение промежуточных моделей.
+                Если True, модель будет сохраняться каждые checkpoint_freq шагов в директорию
+                checkpoints/{log_name}/. Позволяет восстановить обучение с любого чекпоинта.
+            
+            checkpoint_freq: Частота сохранения чекпоинтов в шагах. Если None, используется
+                значение из settings.CHECKPOINT_FREQ (по умолчанию 10000). Рекомендуется устанавливать
+                в зависимости от total_timesteps (обычно 10K-50K шагов).
+            
+            enable_evaluation: Включить периодическую оценку модели и раннюю остановку.
+                Если True, модель будет оцениваться на отдельном evaluation окружении каждые
+                eval_freq шагов. Лучшая модель автоматически сохраняется. Если False или
+                total_timesteps < eval_freq * 2, evaluation отключается (тестовый режим).
+            
+            eval_freq: Частота оценки модели в шагах. Если None, используется значение из
+                settings.EVAL_FREQ (по умолчанию 5000). Определяет, как часто модель будет
+                тестироваться на evaluation окружении для определения лучшей версии.
+            
+            n_eval_episodes: Количество эпизодов для оценки модели. Если None, используется
+                значение из settings.N_EVAL_EPISODES (по умолчанию 5). Больше эпизодов дают
+                более стабильную оценку, но требуют больше времени.
+            
+            max_no_improvement_evals: Максимальное количество оценок без улучшения перед
+                ранней остановкой. Если None, используется значение из settings.MAX_NO_IMPROVEMENT_EVALS
+                (по умолчанию 10). Если модель не улучшается в течение этого количества оценок,
+                обучение останавливается автоматически для предотвращения переобучения.
+            
+            min_evals: Минимальное количество оценок перед проверкой улучшения. Если None,
+                используется значение из settings.MIN_EVALS (по умолчанию 5). Гарантирует, что
+                ранняя остановка не сработает слишком рано, давая модели время на обучение.
+        
+        Returns:
+            Path: Путь к сохраненной финальной модели. Если был найден best_model в процессе
+                evaluation, возвращается путь к best_model, иначе - путь к последней версии модели.
+        
+        Note:
+            - При дообучении (model_name указан) все метрики и счетчики продолжаются с текущего шага
+            - В тестовом режиме (total_timesteps < eval_freq * 2) evaluation автоматически отключается
+            - Все метрики логируются в TensorBoard: ep_rew_mean, last_checkpoint_step, best_model_step и др.
+            - CheckpointCallback сохраняет модели в MODELS_PATH/checkpoints/{log_name}/
+            - EvalCallback сохраняет best_model в LOGS_PATH/evaluations/{log_name}/best_model/
+        """
+        # Use default values from settings if not provided
+        checkpoint_freq = checkpoint_freq if checkpoint_freq is not None else settings.CHECKPOINT_FREQ
+        eval_freq = eval_freq if eval_freq is not None else settings.EVAL_FREQ
+        n_eval_episodes = n_eval_episodes if n_eval_episodes is not None else settings.N_EVAL_EPISODES
+        max_no_improvement_evals = (
+            max_no_improvement_evals
+            if max_no_improvement_evals is not None
+            else settings.MAX_NO_IMPROVEMENT_EVALS
+        )
+        min_evals = min_evals if min_evals is not None else settings.MIN_EVALS
+        enable_evaluation = (
+            enable_evaluation
+            if enable_evaluation is not None
+            else settings.ENABLE_EVALUATION
+        )
+
+        # Determine if test mode (disable evaluation for short training runs)
+        is_test_mode: bool = not enable_evaluation or (total_timesteps < eval_freq * 2)
+        if is_test_mode:
+            logger.info(
+                f"Test mode detected (total_timesteps={total_timesteps} < {eval_freq * 2} "
+                f"or enable_evaluation=False), disabling evaluation and early stopping"
+            )
+            enable_evaluation = False
+
         logger.info(
             f"Starting training: total_timesteps={total_timesteps}, "
             f"log_name={log_name}, enable_render={enable_render}, "
-            f"render_freq={render_freq}, model_name={model_name}"
+            f"render_freq={render_freq}, model_name={model_name}, "
+            f"enable_checkpointing={enable_checkpointing}, checkpoint_freq={checkpoint_freq}, "
+            f"enable_evaluation={enable_evaluation}, eval_freq={eval_freq}"
         )
         settings.LOGS_PATH.mkdir(parents=True, exist_ok=True)
         settings.MODELS_PATH.mkdir(parents=True, exist_ok=True)
@@ -53,6 +156,20 @@ class TrainingService:
         )
         # Wrap in VecMonitor to track and log episode metrics (ep_rew_mean, ep_len_mean, etc.)
         env = VecMonitor(vec_env)
+
+        # Create separate evaluation environment (if evaluation is enabled)
+        eval_env = None
+        if enable_evaluation:
+            logger.info("Creating evaluation environment")
+            eval_vec_env = DummyVecEnv(
+                env_fns=[
+                    lambda: BombermanEnv(
+                        grpc_client=self.grpc_client,
+                        render_mode=None,  # No rendering for evaluation
+                    ),
+                ],
+            )
+            eval_env = VecMonitor(eval_vec_env)
 
         # --- Determine whether to resume from an existing model or create a new one ---
         resume: bool = False
@@ -89,6 +206,67 @@ class TrainingService:
 
         # --- Callbacks ---
         callbacks = []
+
+        # Setup directories for checkpoints and evaluations
+        checkpoint_dir = settings.MODELS_PATH / "checkpoints" / log_name
+        eval_log_dir = settings.LOGS_PATH / "evaluations" / log_name
+
+        # TrainingMetricsCallback - always enabled to track metrics
+        metrics_callback = TrainingMetricsCallback(
+            checkpoint_dir=checkpoint_dir,
+            eval_log_dir=eval_log_dir,
+            verbose=1
+        )
+        callbacks.append(metrics_callback)
+
+        # CheckpointCallback - save intermediate models periodically
+        if enable_checkpointing:
+            checkpoint_dir.mkdir(parents=True, exist_ok=True)
+            checkpoint_callback = CheckpointCallback(
+                save_freq=checkpoint_freq,
+                save_path=str(checkpoint_dir),
+                name_prefix="checkpoint",
+                save_replay_buffer=False,
+                save_vecnormalize=False,
+                verbose=2
+            )
+            callbacks.append(checkpoint_callback)
+            logger.info(
+                f"CheckpointCallback enabled: saving to {checkpoint_dir} "
+                f"every {checkpoint_freq} steps"
+            )
+
+        # EvalCallback and Early Stopping - only if evaluation is enabled
+        if enable_evaluation and eval_env is not None:
+            eval_log_dir.mkdir(parents=True, exist_ok=True)
+            best_model_path = eval_log_dir / "best_model"
+
+            # Early stopping callback
+            stop_callback = StopTrainingOnNoModelImprovement(
+                max_no_improvement_evals=max_no_improvement_evals,
+                min_evals=min_evals,
+                verbose=1,
+            )
+
+            # Evaluation callback
+            eval_callback = EvalCallback(
+                eval_env=eval_env,
+                best_model_save_path=str(best_model_path),
+                log_path=str(eval_log_dir),
+                eval_freq=eval_freq,
+                deterministic=True,
+                render=False,
+                n_eval_episodes=n_eval_episodes,
+                callback_on_new_best=stop_callback,
+                verbose=1
+            )
+            callbacks.append(eval_callback)
+            logger.info(
+                f"EvalCallback enabled: evaluating every {eval_freq} steps, "
+                f"early stopping after {max_no_improvement_evals} evaluations without improvement"
+            )
+
+        # Render callback
         if enable_render:
             logger.info("Render enabled — adding TensorBoardRenderCallback")
             callbacks.append(TensorBoardRenderCallback(render_freq=render_freq))
@@ -107,9 +285,20 @@ class TrainingService:
         elapsed: float = time.monotonic() - start_time
         logger.info(f"Training completed in {elapsed:.2f}s")
 
-        # --- Save model ---
+        # # --- Save final model ---
+        # # Check if best model was saved by EvalCallback
+        # best_model_path = eval_log_dir / "best_model" / "best_model.zip"
+        # if enable_evaluation and best_model_path.exists():
+        #     logger.info(f"Best model found at {best_model_path}, using it as final model")
+        #     # Load best model to save it as final
+        #     self.model = RecurrentPPO.load(
+        #         path=str(best_model_path),
+        #         env=env,
+        #         device="auto",
+        #     )
+
         # If resuming, overwrite the same file; otherwise save with log_name.
         save_path: Path = model_file if model_file is not None else settings.MODELS_PATH / f"{log_name}.zip"
         self.model.save(path=save_path)
-        logger.info(f"Model saved to {save_path}")
+        logger.info(f"Final model saved to {save_path}")
         return save_path

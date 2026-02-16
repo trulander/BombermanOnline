@@ -4,10 +4,10 @@ from concurrent import futures
 
 import grpc
 
+from ..ai_env.bomberman_env import GRID_CHANNELS, WINDOW_SIZE, STATS_SIZE
 from ..config import settings
 from ..inference.inference_service import InferenceService
 from ..training.trainer import TrainingService
-from ..services.grpc_client import GRID_CHANNELS, WINDOW_SIZE, STATS_SIZE
 
 
 logger = logging.getLogger(__name__)

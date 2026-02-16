@@ -5,7 +5,7 @@ import grpc
 import numpy as np
 
 from .game_service_finder import GameServiceFinder
-
+from ..ai_env.bomberman_env import GRID_CHANNELS, WINDOW_SIZE, STATS_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -18,10 +18,6 @@ except ImportError as e:
     )
     raise Exception(e)
 
-
-GRID_CHANNELS: int = 5
-WINDOW_SIZE: int = 15
-STATS_SIZE: int = 9
 
 
 def _parse_observation(observation: object) -> dict[str, np.ndarray]:

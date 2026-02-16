@@ -29,6 +29,13 @@ def start_training(
             enable_render=payload.enable_render or False,
             render_freq=payload.render_freq or 500,
             model_name=payload.model_name,
+            enable_checkpointing=payload.enable_checkpointing,
+            checkpoint_freq=payload.checkpoint_freq,
+            enable_evaluation=payload.enable_evaluation,
+            eval_freq=payload.eval_freq,
+            n_eval_episodes=payload.n_eval_episodes,
+            max_no_improvement_evals=payload.max_no_improvement_evals,
+            min_evals=payload.min_evals,
         )
         logger.info("StartTraining completed successfully")
     except Exception as e:
