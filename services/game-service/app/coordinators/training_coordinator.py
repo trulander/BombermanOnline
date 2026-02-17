@@ -87,7 +87,7 @@ class TrainingCoordinator:
         defaults = GameSettings()
         game_settings = GameSettings(
             game_id=str(uuid4()),
-            game_mode=GameModeType.CAMPAIGN,
+            game_mode=GameModeType.TRAINING_IA,
             max_players=1,
             default_map_width=map_width or defaults.default_map_width,
             default_map_height=map_height or defaults.default_map_height,
@@ -399,7 +399,7 @@ class TrainingCoordinator:
         reward: float = -1
 
         if not moved and action < 5:
-            reward -= 3
+            reward -= 4
 
         if new_cell:
             reward += 1
@@ -409,19 +409,21 @@ class TrainingCoordinator:
 
         if action == 5:
             if applied_weapon and applied_weapon['success']:
-                reward += 10
+                walls_destroyed: int = last_breakable_count - breakable_count
+                if walls_destroyed > 0:
+                    reward += float(walls_destroyed) * 30
+                else:
+                    reward += 20
             else:
-                reward -= 3
+                reward -= 4
 
-        walls_destroyed: int = last_breakable_count - breakable_count
-        if walls_destroyed > 0:
-            reward += float(walls_destroyed) * 30
+
 
         if player_lives < last_player_lives:
-            reward -= 100
+            reward -= 300
 
         if enemy_count < last_enemy_count:
-            reward += float(last_enemy_count - enemy_count) * 300
+            reward += float(last_enemy_count - enemy_count) * 500
 
         if game_over:
             reward += 500 if player_alive else -300

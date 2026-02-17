@@ -483,7 +483,7 @@ class GameModeService(ABC):
     def handle_weapon_explosion(self, weapon: Weapon) -> None:
         """Обработать взрыв бомбы"""
         try:
-            #если есть разрушенные блоки, то начисляем очки о генерируем бонусы
+            #если есть разрушенные блоки, то начисляем очки и генерируем бонусы
             for x, y in weapon.get_destroyed_blocks():
                 # Начисляем очки команде владельца бомбы
                 self.team_service.add_score_to_player_team(weapon.owner_id, self.settings.block_destroy_score)

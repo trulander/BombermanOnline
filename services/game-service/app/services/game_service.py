@@ -2,6 +2,7 @@ import logging
 import time
 from typing import Dict, Optional, Any
 
+from .modes.training_ai_mode import TrainingAiMode
 from ..entities.bomberman import Bomberman
 from ..entities.player import Player, UnitType
 from ..entities.tank import Tank
@@ -76,6 +77,13 @@ class GameService:
 
             case GameModeType.CAPTURE_THE_FLAG:
                 return CaptureFlagMode(
+                    game_settings=self.settings,
+                    map_service=self.map_service,
+                    team_service=self.team_service,
+                    ai_inference_service=self.ai_inference_service,
+                )
+            case GameModeType.TRAINING_IA:
+                return TrainingAiMode(
                     game_settings=self.settings,
                     map_service=self.map_service,
                     team_service=self.team_service,
