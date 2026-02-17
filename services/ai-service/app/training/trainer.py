@@ -69,29 +69,30 @@ def make_env(
             delay = startup_delay * env_id
             logger.info(f"Environment {env_id}: waiting {delay:.2f}s before startup to avoid instance collision")
             time.sleep(delay)
-        
+
         # Import dependencies inside the function to ensure they're available
         # in each subprocess after fork/spawn
         from app.repositories.nats_repository import NatsRepository
         from app.services.game_service_finder import GameServiceFinder
         from app.services.grpc_client import GameServiceGRPCClient
-        
+
         # Create isolated dependencies for this process
         # Each process needs its own NATS connection
         nats_repo = NatsRepository(nats_url=settings.NATS_URL)
         # Connect synchronously (NatsRepository.connect() handles async internally)
         nats_repo.connect()
-        
+
         # Create GameServiceFinder with the isolated NatsRepository
         game_service_finder = GameServiceFinder(nats_repository=nats_repo)
-        
+
         # Create GameServiceGRPCClient with the isolated GameServiceFinder
         grpc_client = GameServiceGRPCClient(game_service_finder=game_service_finder)
-        
+
         # Create and return the environment with isolated dependencies
         env = BombermanEnv(grpc_client=grpc_client, render_mode=render_mode)
         logger.info(f"Created environment {env_id} in subprocess with isolated dependencies")
         return env
+
     
     return _init
 
@@ -124,7 +125,7 @@ class TrainingService:
         mlp_features_dim: int = 64,
         features_dim: int = 512,
         count_cpu: int = 6,
-        process_startup_delay: float = 5.0,
+        process_startup_delay: float = 0.5,
     ) -> Path:
         """
         Запускает процесс обучения модели с использованием RecurrentPPO.
@@ -274,14 +275,15 @@ class TrainingService:
                 f"process_startup_delay={process_startup_delay}s)"
             )
             vec_env = SubprocVecEnv(
-                [
+                env_fns=[
                     make_env(
                         env_id=i, 
                         render_mode=render_mode, 
                         startup_delay=process_startup_delay
                     ) 
                     for i in range(count_cpu)
-                ]
+                ],
+                # start_method="spawn"
             )
         
         # Wrap in VecMonitor to track and log episode metrics (ep_rew_mean, ep_len_mean, etc.)
@@ -292,14 +294,27 @@ class TrainingService:
         eval_env = None
         if enable_evaluation:
             logger.info("Creating evaluation environment (always using DummyVecEnv for stability)")
-            eval_vec_env = DummyVecEnv(
-                env_fns=[
-                    lambda: BombermanEnv(
-                        grpc_client=self.grpc_client,
-                        render_mode=None,  # No rendering for evaluation
-                    ),
-                ],
-            )
+            if count_cpu == 1:
+                eval_vec_env = DummyVecEnv(
+                    env_fns=[
+                        lambda: BombermanEnv(
+                            grpc_client=self.grpc_client,
+                            render_mode=None,  # No rendering for evaluation
+                        ),
+                    ],
+                )
+            else:
+                eval_vec_env = SubprocVecEnv(
+                    env_fns=[
+                        make_env(
+                            env_id=i,
+                            render_mode=None,
+                            startup_delay=process_startup_delay
+                        )
+                        for i in range(count_cpu)
+                    ],
+                    # start_method="spawn"
+                )
             eval_env = VecMonitor(eval_vec_env)
 
         # --- Determine whether to resume from an existing model or create a new one ---
