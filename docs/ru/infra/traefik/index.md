@@ -48,6 +48,8 @@ services:
 
 Следующие маршруты настроены в `infra/traefik/routers.yml`:
 
+### Основной домен `bomberman.localhost`:
+
 -   **Web Frontend**: `/`
 -   **WebAPI REST**: `/webapi`
 -   **WebAPI WebSocket**: `/webapi/socket.io`
@@ -57,29 +59,40 @@ services:
 -   **Game Service REST**: `/games`
 -   **Game Service Docs**: `/games/docs`
 -   **Game Service gRPC**: `/games/grpc`
--   **AI Service gRPC**: `/ai/grpc`
+-   **AI Service**: `/ai-service`
+-   **AI Service Docs**: `/ai-service/docs`
 -   **Сбор логов**: `/logs` (Fluent Bit logger API)
--   **Grafana**: `/grafana`
--   **pgAdmin**: `/pgadmin`
+
+### Отдельные домены:
+
 -   **Traefik Dashboard**: `traefik.localhost`
--   **Infisical UI**: `infisical.localhost`
-
-Следующие маршруты настроены через Docker labels в `infra/docker-compose.yml`:
-
+-   **Consul UI**: `consul.localhost`
+-   **cAdvisor**: `cadvisor.localhost`
+-   **Grafana**: `grafana.localhost`
 -   **Prometheus**: `prometheus.localhost`
+-   **TensorBoard**: `tensorboard.localhost`
+-   **Infisical UI**: `infisical.localhost`
+-   **pgAdmin**: `pgadmin.localhost`
 
 ## Доступ
 
--   **Основной сайт**: `http://localhost/`
--   **WebAPI**: `http://localhost/webapi/`
--   **WebAPI Docs**: `http://localhost/webapi/docs`
--   **Auth**: `http://localhost/auth/`
--   **Auth Docs**: `http://localhost/auth/docs`
--   **Game Service**: `http://localhost/games/`
--   **Game Service Docs**: `http://localhost/games/docs`
--   **Grafana**: `http://localhost/grafana`
--   **pgAdmin**: `http://localhost/pgadmin`
+-   **Основной сайт**: `http://bomberman.localhost` или `http://localhost`
+-   **WebAPI REST API**: `http://bomberman.localhost/webapi`
+-   **WebAPI WebSocket**: `http://bomberman.localhost/webapi/socket.io`
+-   **WebAPI Docs**: `http://bomberman.localhost/webapi/docs`
+-   **Auth Service**: `http://bomberman.localhost/auth`
+-   **Auth Docs**: `http://bomberman.localhost/auth/docs`
+-   **Game Service REST**: `http://bomberman.localhost/games`
+-   **Game Service Docs**: `http://bomberman.localhost/games/docs`
+-   **Game Service gRPC**: `http://bomberman.localhost/games/grpc`
+-   **AI Service**: `http://bomberman.localhost/ai-service`
+-   **AI Service Docs**: `http://bomberman.localhost/ai-service/docs`
+-   **Logger API**: `http://bomberman.localhost/logs`
+-   **Traefik Dashboard**: `http://traefik.localhost`
+-   **Grafana**: `http://grafana.localhost`
 -   **Prometheus**: `http://prometheus.localhost`
--   **Logs**: `http://localhost/logs`
--   **Infisical UI**: `http://infisical.localhost:3000`
--   **Дашборд Traefik**: `http://traefik.localhost` (также доступен по `http://localhost:8080`).
+-   **Consul UI**: `http://consul.localhost`
+-   **TensorBoard**: `http://tensorboard.localhost`
+-   **Infisical UI**: `http://infisical.localhost`
+-   **pgAdmin**: `http://pgadmin.localhost`
+-   **cAdvisor**: `http://cadvisor.localhost`

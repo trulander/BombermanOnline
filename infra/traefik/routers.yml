@@ -7,18 +7,31 @@ http:
         - web
       service: api@internal
 
-    # Logger API
-    logger:
-      rule: "PathPrefix(`/logs`)"
+    # Consul
+    consul:
+      rule: "Host(`consul.localhost`)"
       entryPoints:
         - web
-      service: logger
-      middlewares:
-        - strip-logs-prefix
+      service: consul@docker
+
+    # cAdvisoe
+    cadvisor:
+      rule: "Host(`cadvisor.localhost`)"
+      entryPoints:
+        - web
+      service: cadvisor@docker
+
+
+    # prometheus
+    prometheus:
+      rule: "Host(`prometheus.localhost`)"
+      entryPoints:
+        - web
+      service: prometheus@docker
 
     # Grafana
     grafana:
-      rule: "PathPrefix(`/grafana`)"
+      rule: "Host(`grafana.localhost`)"
       entryPoints:
         - web
       service: grafana@docker
@@ -33,23 +46,40 @@ http:
     # Infisical
     infisical:
       rule: "Host(`infisical.localhost`)"
-#      rule: "PathPrefix(`/infisical`)"
       entryPoints:
         - web
       service: infisical@docker
 
     # pgAdmin
     pgadmin:
-      rule: "PathPrefix(`/pgadmin`)"
+      rule: "Host(`pgadmin.localhost`)"
       entryPoints:
         - web
       service: pgadmin@docker
-#      middlewares:
-#        - strip-pgadmin-prefix
+
+    # Web Frontend - должен быть последним, чтобы не перехватывать специфичные маршруты
+    frontend:
+#      rule: "PathPrefix(`/`)"
+      rule: "Host(`bomberman.localhost`)"
+      entryPoints:
+        - web
+      service: web-frontend
+      middlewares:
+        - compress
+        - security-headers
+
+    # Logger API
+    logger:
+      rule: "Host(`bomberman.localhost`) && PathPrefix(`/logs`)"
+      entryPoints:
+        - web
+      service: logger
+      middlewares:
+        - strip-logs-prefix
 
     # WebAPI WebSocket - должен быть перед общим /webapi
     webapi-ws:
-      rule: "PathPrefix(`/webapi/socket.io`)"
+      rule: "Host(`bomberman.localhost`) && PathPrefix(`/webapi/socket.io`)"
       entryPoints:
         - web
       service: webapi-service@consulcatalog
@@ -61,7 +91,7 @@ http:
 
     # отключаем авторизацию для страниц документаций, для локальной разработки.
     auth-api_docs:
-      rule: "PathPrefix(`/auth/docs`)"
+      rule: "Host(`bomberman.localhost`) && PathPrefix(`/auth/docs`)"
       entryPoints:
         - web
       service: auth-service@consulcatalog
@@ -71,7 +101,7 @@ http:
 
     # Auth сервис - API
     auth-api:
-      rule: "PathPrefix(`/auth`)"
+      rule: "Host(`bomberman.localhost`) && PathPrefix(`/auth`)"
       entryPoints:
         - web
       service: auth-service@consulcatalog
@@ -80,7 +110,7 @@ http:
         - security-headers
 
     webapi-docs:
-      rule: "PathPrefix(`/webapi/docs`)"
+      rule: "Host(`bomberman.localhost`) && PathPrefix(`/webapi/docs`)"
       entryPoints:
         - web
       service: webapi-service@consulcatalog
@@ -90,7 +120,7 @@ http:
 
     # WebAPI сервис - с проверкой авторизации
     webapi:
-      rule: "PathPrefix(`/webapi`)"
+      rule: "Host(`bomberman.localhost`) && PathPrefix(`/webapi`)"
       entryPoints:
         - web
       service: webapi-service@consulcatalog
@@ -101,7 +131,7 @@ http:
 
     # Game сервис - с проверкой авторизации
     game-docs:
-      rule: "PathPrefix(`/games/docs`)"
+      rule: "Host(`bomberman.localhost`) && PathPrefix(`/games/docs`)"
       entryPoints:
         - web
       service: game-service@consulcatalog
@@ -111,7 +141,7 @@ http:
 
     # Game сервис rest api - с проверкой авторизации
     game-service-rest:
-      rule: "PathPrefix(`/games`)"
+      rule: "Host(`bomberman.localhost`) && PathPrefix(`/games`)"
       entryPoints:
         - web
       service: game-service@consulcatalog
@@ -122,7 +152,7 @@ http:
 
     # Game сервис gRPC - с проверкой авторизации
     game-service-grpc:
-      rule: "PathPrefix(`/games/grpc`)"
+      rule: "Host(`bomberman.localhost`) && PathPrefix(`/games/grpc`)"
       entryPoints:
         - web
       service: game-service@consulcatalog
@@ -135,7 +165,7 @@ http:
 
     # Ai сервис - с проверкой авторизации
     ai-service-docs:
-      rule: "PathPrefix(`/ai-service/docs`)"
+      rule: "Host(`bomberman.localhost`) && PathPrefix(`/ai-service/docs`)"
       entryPoints:
         - web
       service: ai-service@consulcatalog
@@ -145,7 +175,7 @@ http:
 
     # Ai сервис - с проверкой авторизации
     ai-service-grpc:
-      rule: "PathPrefix(`/ai-service`)"
+      rule: "Host(`bomberman.localhost`) && PathPrefix(`/ai-service`)"
       entryPoints:
         - web
       service: ai-service@consulcatalog
@@ -153,18 +183,6 @@ http:
         - compress
         - security-headers
 #        - auth-check
-
-
-    # Web Frontend - должен быть последним, чтобы не перехватывать специфичные маршруты
-    frontend:
-      rule: "PathPrefix(`/`)"
-      entryPoints:
-        - web
-      service: web-frontend
-      middlewares:
-        - compress
-        - security-headers
-
 
 
   services:

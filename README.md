@@ -194,13 +194,23 @@ docker-compose -f docker-compose.yml -f infra/docker-compose.yml up -d --build
 
 After startup, services are available at the following addresses:
 
--   **Game & Frontend**: `http://localhost:3000`
--   **Traefik Dashboard**: `http://localhost:8080`
+-   **Game & Frontend**: `http://bomberman.localhost` or `http://localhost`
+-   **WebAPI REST API**: `http://bomberman.localhost/webapi`
+-   **WebAPI Docs**: `http://bomberman.localhost/webapi/docs`
+-   **Auth Service**: `http://bomberman.localhost/auth`
+-   **Auth Docs**: `http://bomberman.localhost/auth/docs`
+-   **Game Service REST**: `http://bomberman.localhost/games`
+-   **Game Service Docs**: `http://bomberman.localhost/games/docs`
+-   **AI Service**: `http://bomberman.localhost/ai-service`
+-   **AI Service Docs**: `http://bomberman.localhost/ai-service/docs`
+-   **Traefik Dashboard**: `http://traefik.localhost`
 -   **Grafana**: `http://grafana.localhost` (admin/admin)
 -   **Prometheus**: `http://prometheus.localhost`
--   **Consul UI**: `http://localhost:8500`
--   **TensorBoard**: `http://localhost:6006`
--   **Infisical UI**: `http://infisical.localhost:3000`
+-   **Consul UI**: `http://consul.localhost`
+-   **TensorBoard**: `http://tensorboard.localhost`
+-   **Infisical UI**: `http://infisical.localhost`
+-   **pgAdmin**: `http://pgadmin.localhost`
+-   **cAdvisor**: `http://cadvisor.localhost`
 
 ## Technologies
 
