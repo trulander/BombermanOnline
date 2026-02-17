@@ -173,10 +173,10 @@ class GameSettings(BaseModel):
     enemy_ai_controlled: bool = True
 
     # Настройки очков
-    block_destroy_score: int = 10
-    enemy_destroy_score: int = 100
-    player_destroy_score: int = 300
-    powerup_collect_score: int = 25
+    block_destroy_score: int = 30
+    enemy_destroy_score: int = 500
+    player_destroy_score: int = 500
+    powerup_collect_score: int = 30
     level_complete_score: int = 500
 
     # Вероятности появления
