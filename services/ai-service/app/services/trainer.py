@@ -54,12 +54,7 @@ def make_env(
         # Configure logging for this subprocess using existing configuration
         # This ensures logs from child processes are visible
         # from app.config import configure_logging, settings as app_settings
-        configure_logging(
-            log_level=settings.LOG_LEVEL,
-            log_format=settings.LOG_FORMAT,
-            trace_caller=settings.TRACE_CALLER
-        )
-
+        configure_logging()
         # Get logger after configuration
         logger = logging.getLogger(__name__)
         logger.info(f"[ENV-{env_id}] Subprocess initialized")
@@ -125,7 +120,7 @@ class TrainingService:
         cnn_features_dim: int = 256,
         mlp_features_dim: int = 64,
         features_dim: int = 512,
-        count_cpu: int = 6,
+        count_cpu: int = 10,
         process_startup_delay: float = 0.5,
     ) -> Path:
         """
@@ -380,14 +375,20 @@ class TrainingService:
         # --- Callbacks ---
         callbacks = []
 
-        # Setup directories for checkpoints and evaluations
-        checkpoint_dir = settings.MODELS_PATH / "checkpoints" / log_name
-        eval_log_dir = settings.LOGS_PATH / "evaluations" / log_name
+        # Setup base directory for model: MODELS_PATH/{log_name}/
+        model_dir = settings.MODELS_PATH / log_name
+        model_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Setup subdirectories within model_dir
+        checkpoint_dir = model_dir / "checkpoints"
+        eval_log_dir = model_dir / "evaluations"
+        best_model_path = model_dir / "best_model.zip"
 
         # TrainingMetricsCallback - always enabled to track metrics
         metrics_callback = TrainingMetricsCallback(
             checkpoint_dir=checkpoint_dir,
             eval_log_dir=eval_log_dir,
+            best_model_path=best_model_path,
             verbose=0
         )
         callbacks.append(metrics_callback)
@@ -395,8 +396,13 @@ class TrainingService:
         # CheckpointCallback - save intermediate models periodically
         if enable_checkpointing:
             checkpoint_dir.mkdir(parents=True, exist_ok=True)
+            # In multiprocessing mode, CheckpointCallback interprets save_freq as training steps,
+            # not environment steps. So we need to divide by count_cpu to get the correct frequency.
+            # For example: if checkpoint_freq=2500 and count_cpu=6, we want checkpoints every 2500 env steps,
+            # which means every 2500/6 ≈ 416 training steps.
+            checkpoint_save_freq = checkpoint_freq // count_cpu
             checkpoint_callback = CheckpointCallback(
-                save_freq=checkpoint_freq,
+                save_freq=checkpoint_save_freq,
                 save_path=str(checkpoint_dir),
                 name_prefix="checkpoint",
                 save_replay_buffer=False,
@@ -406,13 +412,15 @@ class TrainingService:
             callbacks.append(checkpoint_callback)
             logger.info(
                 f"CheckpointCallback enabled: saving to {checkpoint_dir} "
-                f"every {checkpoint_freq} steps"
+                f"every {checkpoint_freq} environment steps "
+                f"(every {checkpoint_save_freq} training steps with count_cpu={count_cpu})"
             )
 
         # EvalCallback and Early Stopping - only if evaluation is enabled
         if enable_evaluation and eval_env is not None:
             eval_log_dir.mkdir(parents=True, exist_ok=True)
-            best_model_path = eval_log_dir / "best_model"
+            # EvalCallback will create best_model.zip inside model_dir
+            # So we pass model_dir directly, and it will create model_dir/best_model.zip
 
             # Early stopping callback
             stop_callback = StopTrainingOnNoModelImprovement(
@@ -422,11 +430,16 @@ class TrainingService:
             )
 
             # Evaluation callback
+            # In multiprocessing mode, EvalCallback interprets eval_freq as training steps,
+            # not environment steps. So we need to divide by count_cpu to get the correct frequency.
+            # For example: if eval_freq=2000 and count_cpu=6, we want evaluation every 2000 env steps,
+            # which means every 2000/6 ≈ 333 training steps.
+            eval_callback_freq = eval_freq // count_cpu
             eval_callback = EvalCallback(
                 eval_env=eval_env,
-                best_model_save_path=str(best_model_path),
+                best_model_save_path=str(model_dir),
                 log_path=str(eval_log_dir),
-                eval_freq=eval_freq,
+                eval_freq=eval_callback_freq,
                 deterministic=True,
                 render=False,
                 n_eval_episodes=n_eval_episodes,
@@ -435,7 +448,8 @@ class TrainingService:
             )
             callbacks.append(eval_callback)
             logger.info(
-                f"EvalCallback enabled: evaluating every {eval_freq} steps, "
+                f"EvalCallback enabled: evaluating every {eval_freq} environment steps "
+                f"(every {eval_callback_freq} training steps with count_cpu={count_cpu}), "
                 f"early stopping after {max_no_improvement_evals} evaluations without improvement"
             )
 
@@ -458,20 +472,14 @@ class TrainingService:
         elapsed: float = time.monotonic() - start_time
         logger.info(f"Training completed in {elapsed:.2f}s")
 
-        # # --- Save final model ---
-        # # Check if best model was saved by EvalCallback
-        # best_model_path = eval_log_dir / "best_model" / "best_model.zip"
-        # if enable_evaluation and best_model_path.exists():
-        #     logger.info(f"Best model found at {best_model_path}, using it as final model")
-        #     # Load best model to save it as final
-        #     self.model = RecurrentPPO.load(
-        #         path=str(best_model_path),
-        #         env=env,
-        #         device="auto",
-        #     )
+        # No need to copy best_model - EvalCallback already saved it to model_dir/best_model.zip
 
         # If resuming, overwrite the same file; otherwise save with log_name.
-        save_path: Path = model_file if model_file is not None else settings.MODELS_PATH / f"{log_name}.zip"
+        # Save final model to model_dir/{log_name}.zip
+        if model_file is not None:
+            save_path = model_file
+        else:
+            save_path = model_dir / f"{log_name}.zip"
         self.model.save(path=save_path)
         logger.info(f"Final model saved to {save_path}")
         return save_path

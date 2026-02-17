@@ -1,6 +1,7 @@
 import logging
 from pathlib import Path
 
+import numpy as np
 from stable_baselines3.common.callbacks import BaseCallback
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ class TrainingMetricsCallback(BaseCallback):
         self,
         checkpoint_dir: Path,
         eval_log_dir: Path,
+        best_model_path: Path,
         verbose: int = 0,
     ) -> None:
         """
@@ -28,26 +30,28 @@ class TrainingMetricsCallback(BaseCallback):
         
         Args:
             checkpoint_dir: Директория с чекпоинтами
-            eval_log_dir: Директория с логами evaluation (где хранится best_model)
+            eval_log_dir: Директория с логами evaluation (где хранится evaluations.npz)
+            best_model_path: Путь к файлу best_model.zip
             verbose: Уровень детализации логирования
         """
         super().__init__(verbose=verbose)
         self.checkpoint_dir: Path = checkpoint_dir
         self.eval_log_dir: Path = eval_log_dir
+        self.best_model_path: Path = best_model_path
         self.last_checkpoint_step: int = 0
         self.best_model_step: int = 0
         self.best_eval_reward: float = float("-inf")
         self.steps_without_improvement: int = 0
         self.last_eval_step: int = 0
+        self._last_eval_file_mtime: float = 0.0
 
     def _on_training_start(self) -> None:
         """Инициализация при начале обучения."""
         # Проверяем наличие best_model при resume training
-        best_model_path = self.eval_log_dir / "best_model" / "best_model.zip"
-        if best_model_path.exists():
-            # При resume пытаемся восстановить информацию о best_model
-            # EvalCallback сам восстановит best_reward, но мы можем логировать шаг
-            logger.info(f"Found existing best_model at {best_model_path} (resume training)")
+        # EvalCallback сохраняет best_model в best_model/best_model.zip внутри eval_log_dir.parent
+        # Но мы также проверяем наш best_model_path
+        if self.best_model_path.exists():
+            logger.info(f"Found existing best_model at {self.best_model_path} (resume training)")
 
     def _on_step(self) -> bool:
         """
@@ -93,47 +97,60 @@ class TrainingMetricsCallback(BaseCallback):
             self.last_checkpoint_step = max_step
 
     def _update_best_model_metric(self) -> None:
-        """Обновляет метрики best_model, проверяя директорию evaluation."""
-        # EvalCallback сохраняет best_model в best_model/best_model.zip
-        best_model_path = self.eval_log_dir / "best_model" / "best_model.zip"
-        if not best_model_path.exists():
+        """Обновляет метрики best_model, читая данные из evaluations.npz."""
+        # EvalCallback сохраняет результаты evaluation в evaluations.npz
+        evaluations_file = self.eval_log_dir / "evaluations.npz"
+        if not evaluations_file.exists():
             return
         
-        # Проверяем время модификации файла для определения, когда была найдена лучшая модель
-        # Но лучше отслеживать через EvalCallback, который логирует eval/mean_reward
-        # Здесь мы просто отмечаем, что best_model существует
+        # Проверяем время модификации файла, чтобы не читать его слишком часто
+        try:
+            current_mtime = evaluations_file.stat().st_mtime
+            if current_mtime <= self._last_eval_file_mtime:
+                return
+            self._last_eval_file_mtime = current_mtime
+        except OSError:
+            return
         
-        # Пытаемся прочитать информацию о best_reward из evaluation результатов
-        # EvalCallback сохраняет результаты в evaluations/{log_name}/results.csv
-        results_file = self.eval_log_dir / "results.csv"
-        if results_file.exists():
-            try:
-                import csv
-                with open(results_file, "r", encoding="utf-8") as f:
-                    reader = csv.DictReader(f)
-                    rows = list(reader)
-                    if rows:
-                        # Берем последнюю строку (последняя оценка)
-                        last_row = rows[-1]
-                        if "mean_reward" in last_row:
-                            current_reward = float(last_row["mean_reward"])
-                            if "timesteps" in last_row:
-                                eval_step = int(last_row["timesteps"])
-                                
-                                # Если нашли лучшую модель
-                                if current_reward > self.best_eval_reward:
-                                    self.best_eval_reward = current_reward
-                                    self.best_model_step = eval_step
-                                    self.steps_without_improvement = 0
-                                    self.last_eval_step = eval_step
-                                else:
-                                    # Обновляем steps_without_improvement
-                                    if eval_step > self.last_eval_step:
-                                        if self.best_model_step > 0:
-                                            self.steps_without_improvement = eval_step - self.best_model_step
-                                        self.last_eval_step = eval_step
-            except Exception as exc:
-                logger.debug(f"Failed to read evaluation results: {exc}")
+        # Читаем данные из evaluations.npz
+        try:
+            eval_data = np.load(evaluations_file, allow_pickle=True)
+            
+            # evaluations.npz содержит массивы:
+            # - timesteps: массив шагов, на которых проводилась evaluation
+            # - results: массив результатов (формат: [episode][evaluation] = reward)
+            # - ep_lengths: длины эпизодов
+            
+            timesteps = eval_data.get("timesteps")
+            results = eval_data.get("results")
+            
+            if timesteps is None or results is None or len(timesteps) == 0:
+                return
+            
+            # results имеет форму (n_evaluations, n_episodes)
+            # Вычисляем среднюю награду для каждой evaluation
+            mean_rewards = np.mean(results, axis=1) if results.ndim > 1 else results
+            
+            # Берем последнюю evaluation
+            last_idx = len(timesteps) - 1
+            current_reward = float(mean_rewards[last_idx])
+            eval_step = int(timesteps[last_idx])
+            
+            # Если нашли лучшую модель
+            if current_reward > self.best_eval_reward:
+                self.best_eval_reward = current_reward
+                self.best_model_step = eval_step
+                self.steps_without_improvement = 0
+                self.last_eval_step = eval_step
+            else:
+                # Обновляем steps_without_improvement
+                if eval_step > self.last_eval_step:
+                    if self.best_model_step > 0:
+                        self.steps_without_improvement = eval_step - self.best_model_step
+                    self.last_eval_step = eval_step
+                    
+        except Exception as exc:
+            logger.debug(f"Failed to read evaluation results from {evaluations_file}: {exc}")
 
     def _log_metrics(self) -> None:
         """Логирует метрики в TensorBoard через self.logger.record()."""

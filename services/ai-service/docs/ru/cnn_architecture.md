@@ -179,7 +179,7 @@ CNN может замедлить обучение из-за дополните�
 ### Базовое обучение с CNN
 
 ```python
-from app.training.trainer import TrainingService
+from app.services.training import TrainingService
 from app.services.grpc_client import GameServiceGRPCClient
 
 grpc_client = GameServiceGRPCClient(...)
@@ -212,4 +212,5 @@ training_service.start_training(
 ### Сравнение архитектур
 
 Рекомендуется провести эксперименты с обеими архитектурами и сравнить результаты в TensorBoard для выбора оптимальной конфигурации.
+
 

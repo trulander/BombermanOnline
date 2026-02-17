@@ -16,13 +16,19 @@ class TensorBoardRenderCallback(BaseCallback):
         super().__init__(verbose=verbose)
         self._render_freq: int = render_freq
         self._sw: SummaryWriter | None = None
+        self._last_render_step: int = 0
 
     def _on_training_start(self) -> None:
         log_dir: str = self.logger.dir
         self._sw = SummaryWriter(log_dir=log_dir)
+        self._last_render_step = 0
 
     def _on_step(self) -> bool:
-        if self.n_calls % self._render_freq != 0:
+        # Use num_timesteps instead of n_calls for correct frequency in multiprocessing mode
+        # num_timesteps is the total number of environment steps across all processes
+        # n_calls is the number of training steps (which equals num_timesteps / num_envs)
+        # Check if we've passed the next render threshold
+        if self.num_timesteps - self._last_render_step < self._render_freq:
             return True
         if self._sw is None:
             return True
@@ -44,6 +50,7 @@ class TensorBoardRenderCallback(BaseCallback):
             dataformats="HWC",
         )
         self._sw.flush()
+        self._last_render_step = self.num_timesteps
         return True
 
     def _on_training_end(self) -> None:
