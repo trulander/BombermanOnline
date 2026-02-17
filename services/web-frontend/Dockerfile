@@ -35,4 +35,6 @@ RUN chmod +x /usr/local/bin/entrypoint-docker.sh
 
 EXPOSE 3000
 
+USER 1000:1000
+
 ENTRYPOINT ["/usr/local/bin/entrypoint-docker.sh"]

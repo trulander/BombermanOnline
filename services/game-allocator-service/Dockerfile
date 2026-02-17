@@ -30,5 +30,8 @@ WORKDIR /app/game-allocator-service
 COPY docker-entrypoint.sh /usr/local/bin/
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
+RUN groupadd -g 1000 appuser && useradd -m -u 1000 -g 1000 appuser
+USER appuser
+
 ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["uv", "run", "app/main.py"]
