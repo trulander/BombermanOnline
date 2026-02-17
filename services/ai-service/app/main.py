@@ -5,6 +5,7 @@ from typing import Dict
 from fastapi import FastAPI
 
 from app.config import settings
+from app.logging_config import configure_logging
 from app.repositories.nats_repository import NatsRepository
 from app.repositories.redis_repository import RedisRepository
 from app.routes.training import training_router
@@ -12,14 +13,16 @@ from app.services.game_service_finder import GameServiceFinder
 
 from app.services.grpc_server import AIServiceServicer
 from app.services.grpc_client import GameServiceGRPCClient
-from app.training.trainer import TrainingService
-from app.inference.inference_service import InferenceService
 
 from starlette.datastructures import State
 import consul
 from aioprometheus import MetricsMiddleware
 from aioprometheus.asgi.starlette import metrics
 
+from app.services.inference_service import InferenceService
+from app.services.trainer import TrainingService
+
+configure_logging()
 logger = logging.getLogger(__name__)
 
 
