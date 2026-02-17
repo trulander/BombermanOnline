@@ -2,7 +2,7 @@ from pathlib import Path
 
 import numpy as np
 
-from app.inference.inference_service import InferenceService
+from app.services.inference_service import InferenceService
 
 
 class FakeModel:
@@ -19,7 +19,7 @@ class FakePPO:
 def test_load_model_uses_ppo(monkeypatch, tmp_path: Path) -> None:
     model_path = tmp_path / "bomberman_ai.zip"
     model_path.write_bytes(b"test")
-    service = InferenceService(model_path=tmp_path)
+    service = InferenceService()
     monkeypatch.setattr("app.inference.inference_service.PPO", FakePPO)
 
     loaded = service.load_model(model_name="bomberman_ai.zip")
@@ -29,7 +29,7 @@ def test_load_model_uses_ppo(monkeypatch, tmp_path: Path) -> None:
 
 
 def test_infer_action_returns_int() -> None:
-    service = InferenceService(model_path=Path("."))
+    service = InferenceService()
     service.model = FakeModel()
 
     action = service.infer_action(observation=np.array([0.1], dtype=np.float32))
