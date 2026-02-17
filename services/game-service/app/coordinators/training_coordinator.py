@@ -212,8 +212,9 @@ class TrainingCoordinator:
 
         inputs = action_to_inputs(action=action)
         player.set_inputs(inputs=inputs)
+        status = None
         if action == 5:
-            game_service.place_weapon(
+            status = game_service.place_weapon(
                 player_id=player.id,
                 weapon_action=WeaponAction.PLACEWEAPON1,
             )
@@ -254,6 +255,7 @@ class TrainingCoordinator:
             game_over=game_service.game_mode.game_over,
             player_alive=player.is_alive(),
             moved=moved,
+            applied_weapon=status,
             new_cell=new_cell,
             action=action,
             closest_enemy_dist=closest_dist,
@@ -386,6 +388,7 @@ class TrainingCoordinator:
         game_over: bool,
         player_alive: bool,
         moved: bool,
+        applied_weapon: dict,
         new_cell: bool,
         action: int,
         closest_enemy_dist: float,
@@ -405,7 +408,10 @@ class TrainingCoordinator:
         # reward += dist_delta * 0.005
 
         if action == 5:
-            reward += 10
+            if applied_weapon and applied_weapon['success']:
+                reward += 10
+            else:
+                reward -= 3
 
         walls_destroyed: int = last_breakable_count - breakable_count
         if walls_destroyed > 0:

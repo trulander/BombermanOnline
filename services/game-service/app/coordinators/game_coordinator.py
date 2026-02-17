@@ -1,7 +1,6 @@
 import asyncio
 import logging
 import time
-from uuid import uuid4
 
 from ..config import settings
 from ..models.game_models import GameCreateSettings, GameSettings
@@ -11,9 +10,8 @@ from ..services.event_service import EventService, NatsEvents
 from ..services.map_service import MapService
 
 from ..repositories.map_repository import MapRepository
-from ..entities.player import UnitType
 from ..entities.game_mode import GameModeType
-from ..entities.weapon import WeaponType, WeaponAction
+from ..entities.weapon import WeaponAction
 
 logger = logging.getLogger(__name__)
 
@@ -40,17 +38,17 @@ class GameCoordinator:
 
     async def start_game_loop(self) -> None:
         """Запуск игрового цикла"""
-        try:
-            logger.info("Starting game loop")
-            
-            # Используем настройки FPS из конфигурации
-            fps = settings.GAME_UPDATE_FPS
-            interval = 1 / fps
-            
-            while True:
+        logger.info("Starting game loop")
+
+        # Используем настройки FPS из конфигурации
+        fps = settings.GAME_UPDATE_FPS
+        interval = 1 / fps
+
+        while True:
+            try:
                 active_games = 0
                 start_time = time.time()
-                
+
                 for game_id, game in list(self.games.items()):
                     if game.game_mode.is_alive() and game.is_active():
                         active_games += 1
@@ -69,9 +67,9 @@ class GameCoordinator:
                 time_difference = interval - (time.time() - start_time)
                 sleep_duration = max(0, time_difference)
                 await asyncio.sleep(sleep_duration)
-                
-        except Exception as e:
-            logger.error(f"Error in game loop: {e}", exc_info=True)
+
+            except Exception as e:
+                logger.error(f"Error in game loop: {e}", exc_info=True)
 
     async def game_create(self, **kwargs) -> dict:
         """Создать новую игру с настройками"""
