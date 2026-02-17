@@ -151,7 +151,9 @@ class GameCoordinator:
                 player.set_inputs(inputs)
                 logger.debug(f"Input received for player {player_id} in game {game_id}: {inputs}")
             else:
-                logger.warning(f"Player {player_id} not found in game {game_id} for input")
+                pass
+                #TODO исправить frontend чтобы он не отправлял комманты на input до старта игры.
+                # logger.warning(f"Player {player_id} not found in game {game_id} for input")
         else:
             logger.warning(f"Game {game_id} not found for input")
 

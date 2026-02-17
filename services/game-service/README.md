@@ -195,6 +195,7 @@ More detailed information about service components, API, events, and architectur
 - [REST API Endpoints Diagram](docs/en/diagrams/api_endpoints_diagram.md)
 - [Class Diagram (Core Entities)](docs/en/diagrams/class_diagram.md)
 - [Sequence Diagram: `game.input` Processing](docs/en/diagrams/nats_game_input_sequence_diagram.md)
+- [Flow Diagram: Spawn Points Randomization System](docs/en/diagrams/spawn_points_flow.md)
 
 ### Introduction
 - [Introduction to Game Service](docs/en/introduction.md)

@@ -187,14 +187,16 @@ class GameSettings(BaseModel):
     enable_snake_walls: bool = False
     allow_enemies_near_players: bool = True
     min_distance_from_players: int = 1
-
+    # Настройки рандомизации spawn точек
+    randomize_spawn_positions: bool = True  # Рандомизировать расположение spawn точек при генерации карты
+    randomize_spawn_assignment: bool = True  # Рандомно распределять игроков по spawn точкам
 
     #Настраиваемые параметры во время создания игры
     game_id: str = None
     # Режим игры
     game_mode: GameModeType = GameModeType.CAMPAIGN
     # Настройки игроков и команд
-    max_players: int = 4
+    max_players: int = 15
     player_start_lives: int = 3
     # Настройки врагов
     enable_enemies: bool = True

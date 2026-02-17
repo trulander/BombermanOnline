@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, TYPE_CHECKING
 from datetime import datetime
 from pydantic import BaseModel, Field
 from sqlalchemy import Column, Integer, String, Text, JSON, Boolean, DateTime, Float
@@ -8,6 +8,9 @@ from app.entities.game_status import GameStatus
 from app.entities.player import UnitType
 from app.entities.weapon import WeaponType
 from app.models.base_model import Base
+
+if TYPE_CHECKING:
+    from app.models.game_models import GameTeamInfo
 
 
 # SQLAlchemy модели для базы данных

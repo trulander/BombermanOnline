@@ -195,6 +195,7 @@
 - [Диаграмма REST API Endpoints](docs/ru/diagrams/api_endpoints_diagram.md)
 - [Диаграмма Классов (Основные Сущности)](docs/ru/diagrams/class_diagram.md)
 - [Диаграмма Последовательности: Обработка `game.input`](docs/ru/diagrams/nats_game_input_sequence_diagram.md)
+- [Диаграмма потока: Система рандомизации spawn точек](docs/ru/diagrams/spawn_points_flow.md)
 
 ### Введение
 - [Введение в Game Service](docs/ru/introduction.md)

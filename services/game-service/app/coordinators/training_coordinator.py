@@ -93,6 +93,8 @@ class TrainingCoordinator:
             default_map_height=map_height or defaults.default_map_height,
             enemy_ai_controlled=False,
             time_limit=defaults.time_limit,  # Используем таймер из настроек по умолчанию (300 сек)
+            randomize_spawn_positions=True,  # Включаем рандомизацию spawn точек для тренировочного режима
+            randomize_spawn_assignment=True,  # Включаем рандомное распределение игроков по spawn точкам
         )
 
         if enemy_count is not None:

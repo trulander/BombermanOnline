@@ -198,6 +198,10 @@ class MapService:
                     needed = max_players - len(priority_positions)
                     priority_positions.extend(remaining_cells[:needed])
             
+            # Рандомизируем позиции если включена настройка
+            if self.game_settings.randomize_spawn_positions:
+                random.shuffle(priority_positions)
+            
             # Размещаем спавны игроков
             placed_spawns = 0
             for x, y in priority_positions[:max_players]:

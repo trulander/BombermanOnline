@@ -95,7 +95,7 @@ The Game Service's service layer contains the core business logic of the applica
 -   State storage: `players`, `enemies`, `weapons`, `power_ups`, `map`, `score`, `level`, `game_over`.
 -   **Team Integration**: Accepts `TeamService` in the constructor and uses it for the team scoring system.
 -   Map initialization (`initialize_map`): Loads a map from a template/chain via `MapService` or generates a random one, creates enemies.
--   Basic player addition/removal (placement on the map, color assignment).
+-   Basic player addition/removal (placement on the map, color assignment). When adding a player, spawn position randomization and player distribution randomization are used depending on the `randomize_spawn_positions` and `randomize_spawn_assignment` settings.
 -   State update (`update`): Calculates `delta_time`, updates players, enemies, weapons. Checks if the game is over.
 -   Logic for updating individual entities: `update_player`, `update_enemy`, `update_weapon`.
 -   Collision handling: `check_collision` (with map and static objects), `check_entity_collision` (between two entities), `check_explosion_collision`.
@@ -115,7 +115,7 @@ The Game Service's service layer contains the core business logic of the applica
 -   **`CampaignMode` (`app/services/modes/campaign_mode.py`)**
     -   Teams are configured via `TeamService` (all players in one team).
     -   The game ends if all players are dead or all enemies on the level are killed.
-    -   Upon killing all enemies, the game progresses to the next level (`_level_complete`): level increment, points awarded to the team, map reset, weapons, power-ups, player respawn.
+    -   Upon killing all enemies, the game progresses to the next level (`_level_complete`): level increment, points awarded to the team, map reset, weapons, power-ups, player respawn. When transitioning between levels, players are distributed to spawn points according to randomization settings.
 -   **`FreeForAllMode` (`app/services/modes/free_for_all_mode.py`)**
     -   Teams are configured via `TeamService` (each player in their own team).
     -   Enemies are disabled by default (`self.settings.enable_enemies = False`).
@@ -142,7 +142,7 @@ The Game Service's service layer contains the core business logic of the applica
     -   Creates a `Map` object with specified dimensions.
     -   Adds borders (`_add_border_walls`).
     -   Adds internal walls (in a checkerboard pattern `_add_internal_walls` or "snake" pattern `_add_snake_walls` depending on `game_settings.enable_snake_walls`).
-    -   Places player spawn points (`_add_player_spawns`), trying to use corners and distribute players.
+    -   Places player spawn points (`_add_player_spawns`), trying to use corners and distribute players. When `randomize_spawn_positions` is enabled, spawn point positions are shuffled before placement on the map.
     -   Places breakable blocks (`_add_breakable_blocks`) with a random probability depending on difficulty, avoiding areas near players.
     -   Places enemy spawn points (`_add_enemy_spawns`) on empty cells, considering settings (`allow_enemies_near_players`, `min_distance_from_players`).
 -   **Generating Enemies for Level (`generate_enemies_for_level`)**:

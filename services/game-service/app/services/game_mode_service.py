@@ -108,6 +108,10 @@ class GameModeService(ABC):
                     (self.map.width - 2, self.map.height - 2)
                 ]
             
+            # Рандомизируем spawn позиции если включена настройка (для шаблонов карт)
+            if self.settings.randomize_spawn_positions:
+                random.shuffle(spawn_positions)
+            
             # Найдем свободную позицию
             used_positions = set()
             for existing_player in self.players.values():
@@ -121,8 +125,11 @@ class GameModeService(ABC):
                 logger.debug(f"Cannot add player {player.id}: no available spawn positions")
                 return False
             
-            # Назначаем позицию
-            x, y = available_positions[0]
+            # Назначаем позицию (рандомно или первую доступную в зависимости от настройки)
+            if self.settings.randomize_spawn_assignment:
+                x, y = random.choice(available_positions)
+            else:
+                x, y = available_positions[0]
             #TODO вынести логику рассчета относительных координат в саму карту,
             # карта должна заниматься рассчетом относительных коодринат, чтобы вне оьекта карты небыло
             # абсолютных координат в формате хранения ячеек и относительных с перерасчетом на размер ячейки для отображения

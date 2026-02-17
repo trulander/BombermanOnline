@@ -88,6 +88,8 @@ These parameters are part of `GameSettings`, but are usually set globally for al
 | `enable_snake_walls`           | Use "snake" wall generation for random maps.       | `False`                                |
 | `allow_enemies_near_players`   | Allow enemy spawns near players on random maps. | `False`                                |
 | `min_distance_from_players`    | Minimum distance (in cells) from players for enemy spawns. | `1`                                    |
+| `randomize_spawn_positions`    | Randomize spawn point placement when generating maps and when loading from templates. | `True`                                 |
+| `randomize_spawn_assignment`   | Randomly assign players to spawn points instead of sequential assignment. | `True`                                 |
 
 ### 2.2. Parameters Configurable During Game Creation
 

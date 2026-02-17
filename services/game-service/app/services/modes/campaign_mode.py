@@ -1,4 +1,5 @@
 import logging
+import random
 from ..game_mode_service import GameModeService
 from ..ai_inference_service import AIInferenceService
 from ...models.game_models import GameSettings
@@ -104,7 +105,17 @@ class CampaignMode(GameModeService):
                 spawn_positions = [(1, 1), (self.map.width - 2, 1), 
                                  (1, self.map.height - 2), (self.map.width - 2, self.map.height - 2)]
             
-            for i, player in enumerate(self.players.values()):
+            # Рандомизируем spawn позиции если включена настройка
+            if self.settings.randomize_spawn_positions:
+                random.shuffle(spawn_positions)
+            
+            # Распределяем игроков по spawn позициям
+            players_list = list(self.players.values())
+            if self.settings.randomize_spawn_assignment:
+                # Рандомно перемешиваем игроков для случайного распределения
+                random.shuffle(players_list)
+            
+            for i, player in enumerate(players_list):
                 if i < len(spawn_positions):
                     x, y = spawn_positions[i]
                     player.x = x * self.settings.cell_size
