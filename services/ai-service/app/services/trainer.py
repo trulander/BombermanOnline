@@ -12,11 +12,12 @@ from stable_baselines3.common.callbacks import (
 )
 
 from app.ai_env.bomberman_env import BombermanEnv
-from app.config import settings, configure_logging
+from app.config import settings
+from app.logging_config import configure_logging
 from app.services.grpc_client import GameServiceGRPCClient
-from app.training.render_callback import TensorBoardRenderCallback
-from app.training.training_metrics_callback import TrainingMetricsCallback
-from app.training.cnn_feature_extractor import BombermanCombinedFeatureExtractor
+from app.services.training.render_callback import TensorBoardRenderCallback
+from app.services.training.training_metrics_callback import TrainingMetricsCallback
+from app.services.training.cnn_feature_extractor import BombermanCombinedFeatureExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -373,7 +374,7 @@ class TrainingService:
                 env=env,
                 verbose=0,
                 tensorboard_log=str(settings.LOGS_PATH),
-                policy_kwargs=policy_kwargs if policy_kwargs else None,
+                # policy_kwargs=policy_kwargs if policy_kwargs else None,
             )
 
         # --- Callbacks ---
@@ -426,7 +427,7 @@ class TrainingService:
                 best_model_save_path=str(best_model_path),
                 log_path=str(eval_log_dir),
                 eval_freq=eval_freq,
-                deterministic=False,
+                deterministic=True,
                 render=False,
                 n_eval_episodes=n_eval_episodes,
                 callback_on_new_best=stop_callback,

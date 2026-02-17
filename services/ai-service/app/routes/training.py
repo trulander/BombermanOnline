@@ -3,11 +3,12 @@ from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends
 
-from app.dependencies import get_training_service
+from app.fastapi_dependencies import get_training_service
 from app.models.training import StartTraining
 
+
 if TYPE_CHECKING:
-    from app.training.trainer import TrainingService
+    from app.services.trainer import TrainingService
 
 
 logger = logging.getLogger(__name__)

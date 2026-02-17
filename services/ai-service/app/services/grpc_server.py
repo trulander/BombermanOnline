@@ -4,10 +4,10 @@ from concurrent import futures
 
 import grpc
 
-from ..inference.inference_service import InferenceService
-from ..training.trainer import TrainingService
+from app.services.inference_service import InferenceService
+from app.services.trainer import TrainingService
 from ..config import settings
-
+from ..shared.proto.bomberman_ai_pb2 import Observation
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +22,7 @@ except ImportError as e:
 
 
 def _parse_observation_from_request(
-    observation: object,
+    observation: Observation,
 ) -> dict[str, np.ndarray] | None:
     if observation is None:
         return None

@@ -6,6 +6,7 @@ import numpy as np
 
 from .game_service_finder import GameServiceFinder
 from ..config import settings
+from ..shared.proto.bomberman_ai_pb2 import Observation
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +21,7 @@ except ImportError as e:
 
 
 
-def _parse_observation(observation: object) -> dict[str, np.ndarray]:
+def _parse_observation(observation: Observation) -> dict[str, np.ndarray]:
     grid_flat: np.ndarray = np.array(observation.grid_values, dtype=np.float32)
     stats: np.ndarray = np.array(observation.stats_values, dtype=np.float32)
 

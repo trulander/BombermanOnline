@@ -1,36 +1,8 @@
-import logging
 import socket
 from functools import lru_cache
 from pathlib import Path
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Конфигурация логирования
-def configure_logging(log_level: str, log_format: str, trace_caller: bool) -> None:
-    log_level = log_level.upper()
-    
-    # Configure json logger
-    if log_format == "text":
-        from pythonjsonlogger import jsonlogger
-        
-        formatter = jsonlogger.JsonFormatter()
-
-            
-        handler = logging.StreamHandler()
-        handler.setFormatter(formatter)
-        
-        # Clear existing handlers to prevent duplicate logs
-        logging.root.handlers = []
-        logging.root.addHandler(handler)
-        logging.root.setLevel(log_level)
-    else:
-        logging.basicConfig(level=log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-
-    logging.getLogger("uvicorn").propagate = False
-    logging.getLogger("uvicorn.access").propagate = False
-    logging.getLogger("uvicorn.error").propagate = False
-    logging.getLogger("fastapi").propagate = False
-    logging.getLogger("httpx").propagate = False
-    logging.getLogger("httpcore").propagate = False
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file='.env', extra='ignore')
@@ -83,10 +55,4 @@ class Settings(BaseSettings):
     NATS_URL: str = "nats://localhost:4222"
     GAME_ALLOCATOR_SERVICE_NATS_SUBJECT: str = "game.instances.request"
 
-@lru_cache()
-def get_settings() -> Settings:
-    settings = Settings()
-    configure_logging(settings.LOG_LEVEL, settings.LOG_FORMAT, settings.TRACE_CALLER)
-    return settings
-
-settings: Settings = get_settings()
+settings: Settings = Settings()

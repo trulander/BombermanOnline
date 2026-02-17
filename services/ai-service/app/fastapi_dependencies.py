@@ -2,15 +2,14 @@ from typing import TYPE_CHECKING
 
 from fastapi import Request
 
-from app.inference.inference_service import InferenceService
-
 if TYPE_CHECKING:
     from app.repositories.nats_repository import NatsRepository
     from app.repositories.redis_repository import RedisRepository
     from app.services.game_service_finder import GameServiceFinder
     from app.services.grpc_client import GameServiceGRPCClient
     from app.services.grpc_server import AIServiceServicer
-    from app.training.trainer import TrainingService
+    from app.services.inference_service import InferenceService
+    from app.services.trainer import TrainingService
 
 
 def get_redis_repository(request: Request) -> "RedisRepository":
