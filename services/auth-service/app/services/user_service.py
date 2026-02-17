@@ -4,29 +4,36 @@ from sqlalchemy.exc import IntegrityError
 from typing import Optional
 import uuid
 import logging
-from passlib.context import CryptContext
+import bcrypt
 from datetime import datetime, UTC
 import secrets
 
 from ..models.user import User, UserCreate, UserResponse, UserUpdate, UserSearchResponse, UserRole
-from ..config import settings
+
 
 logger = logging.getLogger(__name__)
-
-# Контекст для хеширования паролей
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 class UserService:
     def __init__(self, db: AsyncSession):
         self.db = db
     
     def hash_password(self, password: str) -> str:
-        """Хеширование пароля"""
-        return pwd_context.hash(password)
+        """Хеширование пароля с использованием bcrypt"""
+        # Преобразуем пароль в байты
+        password_bytes = password.encode('utf-8')
+        # Генерируем соль и хешируем пароль
+        salt = bcrypt.gensalt()
+        hashed = bcrypt.hashpw(password_bytes, salt)
+        # Возвращаем хеш как строку
+        return hashed.decode('utf-8')
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
-        """Проверка пароля"""
-        return pwd_context.verify(plain_password, hashed_password)
+        """Проверка пароля с использованием bcrypt"""
+        # Преобразуем пароль и хеш в байты
+        password_bytes = plain_password.encode('utf-8')
+        hashed_bytes = hashed_password.encode('utf-8')
+        # Проверяем пароль
+        return bcrypt.checkpw(password_bytes, hashed_bytes)
     
     async def get_by_id(self, user_id: str | uuid.UUID) -> Optional[User]:
         """Получение пользователя по ID"""
