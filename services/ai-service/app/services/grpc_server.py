@@ -86,14 +86,14 @@ class AIServiceServicer:
             return bomberman_ai_pb2.InferActionResponse(action=0)
 
         entity_id: str = request.entity_id or "unknown"
-        session_id: str | None = request.session_id if request.session_id else None
+        session_id: str = request.session_id or None
         try:
             action: int = self.inference_service.infer_action(
                 observation=obs,
                 entity_id=entity_id,
-                session_id=session_id,
+                session_id=session_id
             )
-            logger.debug(f"InferAction: predicted action={action} for entity={entity_id}, session={session_id}")
+            logger.debug(f"InferAction: predicted action={action}")
         except Exception as e:
             logger.error(f"InferAction: inference failed: {e}", exc_info=True)
             action = 0
