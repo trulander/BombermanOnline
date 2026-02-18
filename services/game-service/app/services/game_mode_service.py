@@ -244,8 +244,9 @@ class GameModeService(ABC):
         if task and not task.done():
             task.cancel()
 
-    def _handle_ai_action(self, *, entity: Entity, is_player: bool):
+    def _handle_ai_action(self, *, entity: Entity, is_cooperative: bool = False):
         entity_id = entity.id
+        is_player = isinstance(entity, Player)
 
         if entity_id in self._ai_pending_tasks:
             task = self._ai_pending_tasks[entity_id]
@@ -260,7 +261,7 @@ class GameModeService(ABC):
                     entity.ai_last_action_time = time.time()
                     logger.debug(
                         f"Applying AI action={action} to entity={entity_id} "
-                        f"(is_player={is_player}), current pos=({entity.x:.1f}, {entity.y:.1f})"
+                        f"(is_cooperative={is_cooperative}), current pos=({entity.x:.1f}, {entity.y:.1f})"
                     )
                     if is_player:
                         if action == 5:
@@ -268,6 +269,7 @@ class GameModeService(ABC):
                             entity.set_inputs(inputs=action_to_inputs(action=0))
                         else:
                             entity.set_inputs(inputs=action_to_inputs(action=action))
+                        #TODO Доработать под 2 других действия активировать 1 weapon и применить 2 weapon после того как они будут вообще имплементированы
                     else:
                         entity.direction = action_to_direction(action=action, current=entity.direction)
                         entity.move_timer = 0
@@ -278,11 +280,11 @@ class GameModeService(ABC):
             return
 
         enemies_positions: list[tuple[float, float]] = [
-            (e.x, e.y) for e in self.enemies if not e.destroyed and e.id != entity_id
+            (e.x, e.y) for e in self.enemies if not e.is_alive() and e.id != entity_id
         ]
-        if not is_player:
+        if not is_cooperative:
             enemies_positions.extend(
-                (p.x, p.y) for p in self.players.values() if p.is_alive()
+                (p.x, p.y) for p in self.players.values() if p.is_alive() and p.id != entity_id
             )
         weapons_positions: list[tuple[float, float]] = [
             (w.x, w.y) for w in self.weapons.values()
@@ -298,7 +300,7 @@ class GameModeService(ABC):
             entity_speed: float = entity.speed
         else:
             active_bombs = 0
-            max_bombs = 1
+            max_bombs = 0
             bomb_power = 0
             max_lives_val = max(1, entity.lives)
             entity_speed = entity.speed
@@ -355,7 +357,7 @@ class GameModeService(ABC):
                 return player.get_changes()
 
             if player.ai and player.can_handle_ai_action():
-                self._handle_ai_action(entity=player, is_player=True)
+                self._handle_ai_action(entity=player, is_cooperative=False)
 
             player.update(delta_time=delta_time)
 
@@ -387,7 +389,7 @@ class GameModeService(ABC):
                 return enemy.get_changes()
 
             if enemy.ai and enemy.can_handle_ai_action():
-                self._handle_ai_action(entity=enemy, is_player=False)
+                self._handle_ai_action(entity=enemy, is_cooperative=False)
 
             enemy.update(delta_time=delta_time)
             return enemy.get_changes()

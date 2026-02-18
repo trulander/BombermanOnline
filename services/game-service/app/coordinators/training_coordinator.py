@@ -87,7 +87,7 @@ class TrainingCoordinator:
         defaults = GameSettings()
         game_settings = GameSettings(
             game_id=str(uuid4()),
-            game_mode=GameModeType.TRAINING_IA,
+            game_mode=GameModeType.CAMPAIGN,#game_mode=GameModeType.TRAINING_IA,
             max_players=1,
             default_map_width=map_width or defaults.default_map_width,
             default_map_height=map_height or defaults.default_map_height,
