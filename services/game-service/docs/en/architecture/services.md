@@ -142,7 +142,10 @@ The Game Service's service layer contains the core business logic of the applica
     -   Creates a `Map` object with specified dimensions.
     -   Adds borders (`_add_border_walls`).
     -   Adds internal walls (in a checkerboard pattern `_add_internal_walls` or "snake" pattern `_add_snake_walls` depending on `game_settings.enable_snake_walls`).
-    -   Places player spawn points (`_add_player_spawns`), trying to use corners and distribute players. When `randomize_spawn_positions` is enabled, spawn point positions are shuffled before placement on the map.
+    -   Places player spawn points (`_add_player_spawns`), using the `_generate_spawn_positions` method to generate positions. The method supports various generation strategies:
+        -   Using map corners as priority positions (configurable via `use_corner_spawns`)
+        -   Generating more spawn points than players (via `spawn_points_count`) for greater randomization
+        -   When `randomize_spawn_positions` is enabled, spawn point positions are shuffled before placement on the map
     -   Places breakable blocks (`_add_breakable_blocks`) with a random probability depending on difficulty, avoiding areas near players.
     -   Places enemy spawn points (`_add_enemy_spawns`) on empty cells, considering settings (`allow_enemies_near_players`, `min_distance_from_players`).
 -   **Generating Enemies for Level (`generate_enemies_for_level`)**:

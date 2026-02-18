@@ -90,6 +90,9 @@ These parameters are part of `GameSettings`, but are usually set globally for al
 | `min_distance_from_players`    | Minimum distance (in cells) from players for enemy spawns. | `1`                                    |
 | `randomize_spawn_positions`    | Randomize spawn point placement when generating maps and when loading from templates. | `True`                                 |
 | `randomize_spawn_assignment`   | Randomly assign players to spawn points instead of sequential assignment. | `True`                                 |
+| `use_corner_spawns`            | Use map corners as priority positions for spawn points. | `True`                                 |
+| `spawn_points_count`           | Number of spawn points to generate (if `None`, uses `max_players`). Allows creating more spawn points than players for greater randomization. | `None`                                 |
+| `allow_spawn_on_empty_cells`   | Allow player spawn on empty cells without spawn points if there are not enough spawn points. | `False`                                |
 
 ### 2.2. Parameters Configurable During Game Creation
 

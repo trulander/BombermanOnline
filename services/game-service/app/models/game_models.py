@@ -190,6 +190,9 @@ class GameSettings(BaseModel):
     # Настройки рандомизации spawn точек
     randomize_spawn_positions: bool = True  # Рандомизировать расположение spawn точек при генерации карты
     randomize_spawn_assignment: bool = True  # Рандомно распределять игроков по spawn точкам
+    use_corner_spawns: bool = False  # Использовать углы карты для spawn точек
+    spawn_points_count: Optional[int] = 25  # Количество spawn точек для генерации (если None, то max_players)
+    allow_spawn_on_empty_cells: bool = True  # Разрешить спавн игроков на пустых клетках без spawn точек
 
     #Настраиваемые параметры во время создания игры
     game_id: str = None

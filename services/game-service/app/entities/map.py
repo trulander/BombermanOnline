@@ -158,14 +158,29 @@ class Map:
             logger.error(f"Error getting empty cells: {e}", exc_info=True)
             return []
     
-    def get_player_spawn_positions(self) -> List[Tuple[int, int]]:
-        """Получить позиции спавна игроков с помощью numpy"""
+    def get_player_spawn_positions(self, include_empty_cells: bool = False) -> List[Tuple[int, int]]:
+        """
+        Получить позиции спавна игроков с помощью numpy
+        
+        Args:
+            include_empty_cells: Если True, включает пустые клетки в результат (для рандомного спавна)
+            
+        Returns:
+            Список координат (x, y) для spawn точек
+        """
         try:
             spawn_mask = (self.grid == CellType.PLAYER_SPAWN)
             spawn_coords = np.where(spawn_mask)
             spawn_positions = list(zip(spawn_coords[1], spawn_coords[0]))  # (x, y) координаты
             
-            logger.debug(f"Found {len(spawn_positions)} player spawn positions")
+            # Если нужно включить пустые клетки, добавляем их к результату
+            if include_empty_cells:
+                empty_cells = self.get_empty_cells()
+                # Исключаем пустые клетки, которые уже являются spawn точками
+                empty_cells_filtered = [cell for cell in empty_cells if cell not in spawn_positions]
+                spawn_positions.extend(empty_cells_filtered)
+            
+            logger.debug(f"Found {len(spawn_positions)} player spawn positions (include_empty_cells={include_empty_cells})")
             return spawn_positions
             
         except Exception as e:

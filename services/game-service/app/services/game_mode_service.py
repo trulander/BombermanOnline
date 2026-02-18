@@ -96,11 +96,13 @@ class GameModeService(ABC):
                 return False
             
             # Получаем доступные позиции спавна
-            spawn_positions = self.map.get_player_spawn_positions()
+            # Если разрешен спавн на пустых клетках, включаем их в список доступных позиций
+            include_empty = self.settings.allow_spawn_on_empty_cells
+            spawn_positions = self.map.get_player_spawn_positions(include_empty_cells=include_empty)
             
             if not spawn_positions:
                 logger.warning("No player spawn positions found, using fallback positions")
-                #TODO переписать на получение пустых клеток с карты, вместо использования угловых клеток
+                # Используем углы карты как запасной вариант
                 spawn_positions = [
                     (1, 1),
                     (self.map.width - 2, 1),

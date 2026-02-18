@@ -148,33 +148,50 @@ class MapService:
         except Exception as e:
             logger.error(f"Error adding snake walls: {e}", exc_info=True)
     
-    def _add_player_spawns(self, game_map: Map) -> None:
-        """Добавить стартовые позиции игроков для случаев рандомной генерации карты"""
-        try:
-            # Получаем максимальное количество игроков из настроек
-            max_players = self.game_settings.max_players
+    def _generate_spawn_positions(
+        self,
+        game_map: Map,
+        count: int,
+        use_corners: bool = True,
+        use_additional: bool = True
+    ) -> List[Tuple[int, int]]:
+        """
+        Генерирует список позиций для spawn точек игроков
+        
+        Args:
+            game_map: Карта игры
+            count: Количество spawn точек для генерации
+            use_corners: Использовать углы карты как приоритетные позиции
+            use_additional: Использовать дополнительные позиции (центры сторон) для больших карт
             
+        Returns:
+            Список координат (x, y) для spawn точек
+        """
+        try:
             # Получаем все пустые клетки
             empty_cells = game_map.get_empty_cells()
             
             if not empty_cells:
                 logger.warning("No empty cells found for player spawns")
-                return
+                return []
             
-            # Определяем приоритетные позиции (углы карты)
-            corners = [
-                (1, 1),                                # Верхний левый
-                (game_map.width - 2, 1),               # Верхний правый
-                (1, game_map.height - 2),              # Нижний левый
-                (game_map.width - 2, game_map.height - 2)  # Нижний правый
-            ]
+            priority_positions: List[Tuple[int, int]] = []
             
-            # Фильтруем углы, которые являются пустыми клетками
-            available_corners = [corner for corner in corners if corner in empty_cells]
+            # Определяем приоритетные позиции (углы карты) если включено
+            if use_corners:
+                corners = [
+                    (1, 1),                                # Верхний левый
+                    (game_map.width - 2, 1),               # Верхний правый
+                    (1, game_map.height - 2),              # Нижний левый
+                    (game_map.width - 2, game_map.height - 2)  # Нижний правый
+                ]
+                
+                # Фильтруем углы, которые являются пустыми клетками
+                available_corners = [corner for corner in corners if corner in empty_cells]
+                priority_positions.extend(available_corners)
             
-            # Добавляем дополнительные позиции для больших карт если нужно больше спавнов
-            additional_positions = []
-            if max_players > len(available_corners) and game_map.width >= 15 and game_map.height >= 15:
+            # Добавляем дополнительные позиции для больших карт если нужно больше спавнов и включено
+            if use_additional and len(priority_positions) < count and game_map.width >= 15 and game_map.height >= 15:
                 additional_positions = [
                     (game_map.width // 2, 1),           # Верхний центр
                     (1, game_map.height // 2),          # Левый центр
@@ -182,34 +199,66 @@ class MapService:
                     (game_map.width // 2, game_map.height - 2),  # Нижний центр
                 ]
                 # Фильтруем дополнительные позиции
-                additional_positions = [pos for pos in additional_positions if pos in empty_cells]
-            
-            # Объединяем приоритетные позиции
-            priority_positions = available_corners + additional_positions
+                additional_positions = [pos for pos in additional_positions if pos in empty_cells and pos not in priority_positions]
+                priority_positions.extend(additional_positions)
             
             # Если все еще не хватает позиций, берем случайные пустые клетки
-            if len(priority_positions) < max_players:
+            if len(priority_positions) < count:
                 remaining_cells = [cell for cell in empty_cells if cell not in priority_positions]
                 if remaining_cells:
                     # Сортируем по расстоянию от центра карты для лучшего распределения
                     center_x, center_y = game_map.width // 2, game_map.height // 2
                     remaining_cells.sort(key=lambda pos: abs(pos[0] - center_x) + abs(pos[1] - center_y), reverse=True)
                     
-                    needed = max_players - len(priority_positions)
+                    needed = count - len(priority_positions)
+                    priority_positions.extend(remaining_cells[:needed])
+            
+            # Если все еще не хватает, используем случайный выбор из оставшихся
+            if len(priority_positions) < count:
+                remaining_cells = [cell for cell in empty_cells if cell not in priority_positions]
+                if remaining_cells:
+                    needed = count - len(priority_positions)
+                    random.shuffle(remaining_cells)
                     priority_positions.extend(remaining_cells[:needed])
             
             # Рандомизируем позиции если включена настройка
             if self.game_settings.randomize_spawn_positions:
                 random.shuffle(priority_positions)
             
-            # Размещаем спавны игроков
+            # Возвращаем только нужное количество
+            return priority_positions[:count]
+            
+        except Exception as e:
+            logger.error(f"Error generating spawn positions: {e}", exc_info=True)
+            return []
+    
+    def _add_player_spawns(self, game_map: Map) -> None:
+        """Добавить стартовые позиции игроков для случаев рандомной генерации карты"""
+        try:
+            # Определяем количество spawn точек для генерации
+            spawn_count = self.game_settings.spawn_points_count
+            if spawn_count is None:
+                spawn_count = self.game_settings.max_players
+            
+            # Генерируем позиции для spawn точек
+            spawn_positions = self._generate_spawn_positions(
+                game_map=game_map,
+                count=spawn_count,
+                use_corners=self.game_settings.use_corner_spawns,
+                use_additional=True
+            )
+            
+            if not spawn_positions:
+                logger.warning("No spawn positions generated")
+                return
+            
+            # Размещаем спавны игроков на карте
             placed_spawns = 0
-            for x, y in priority_positions[:max_players]:
+            for x, y in spawn_positions:
                 game_map.set_cell_type(x, y, CellType.PLAYER_SPAWN)
                 placed_spawns += 1
-
             
-            logger.debug(f"Added {placed_spawns} player spawn points for max_players={max_players}")
+            logger.debug(f"Added {placed_spawns} player spawn points (requested: {spawn_count}, max_players: {self.game_settings.max_players})")
             
         except Exception as e:
             logger.error(f"Error adding player spawns: {e}", exc_info=True)

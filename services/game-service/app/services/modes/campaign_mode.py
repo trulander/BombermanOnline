@@ -100,7 +100,9 @@ class CampaignMode(GameModeService):
             self.power_ups = {}
             
             # Сброс позиций игроков
-            spawn_positions = self.map.get_player_spawn_positions()
+            # Если разрешен спавн на пустых клетках, включаем их в список доступных позиций
+            include_empty = self.settings.allow_spawn_on_empty_cells
+            spawn_positions = self.map.get_player_spawn_positions(include_empty_cells=include_empty)
             if not spawn_positions:
                 spawn_positions = [(1, 1), (self.map.width - 2, 1), 
                                  (1, self.map.height - 2), (self.map.width - 2, self.map.height - 2)]
