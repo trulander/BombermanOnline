@@ -22,75 +22,10 @@ from app.services.training.cnn_feature_extractor import BombermanCombinedFeature
 logger = logging.getLogger(__name__)
 
 
-def make_env(
-    env_id: int, 
-    render_mode: str | None = None,
-    startup_delay: float = 0.0
-) -> Callable[[], BombermanEnv]:
-    """
-    Factory function to create environment instances for multiprocessing.
-    
-    Each process must have its own isolated instances of dependencies:
-    - NatsRepository (with its own NATS connection)
-    - GameServiceFinder (with its own NatsRepository)
-    - GameServiceGRPCClient (with its own GameServiceFinder)
-    - BombermanEnv (with its own GameServiceGRPCClient)
-    
-    This ensures that each subprocess in SubprocVecEnv has independent
-    connections and doesn't share state with other processes.
-    
-    Args:
-        env_id: Unique identifier for the environment (used for logging and delay calculation)
-        render_mode: Render mode for the environment (None, "rgb_array", etc.)
-        startup_delay: Delay in seconds before creating dependencies. Each process waits
-            startup_delay * env_id seconds before initialization to prevent simultaneous
-            selection of the same game-service instance. Process 0 starts immediately,
-            process 1 waits startup_delay seconds, process 2 waits 2*startup_delay, etc.
-    
-    Returns:
-        Callable that creates a BombermanEnv instance when called
-    """
-    def _init() -> BombermanEnv:
-        # Configure logging for this subprocess using existing configuration
-        # This ensures logs from child processes are visible
-        # from app.config import configure_logging, settings as app_settings
-        configure_logging()
-        # Get logger after configuration
-        logger = logging.getLogger(__name__)
-        logger.info(f"[ENV-{env_id}] Subprocess initialized")
-
-
-        # Add delay before creating dependencies to prevent simultaneous instance selection
-        if startup_delay > 0:
-            delay = startup_delay * env_id
-            logger.info(f"Environment {env_id}: waiting {delay:.2f}s before startup to avoid instance collision")
-            time.sleep(delay)
-
-        # Import dependencies inside the function to ensure they're available
-        # in each subprocess after fork/spawn
-        from app.repositories.nats_repository import NatsRepository
-        from app.services.game_service_finder import GameServiceFinder
-        from app.services.grpc_client import GameServiceGRPCClient
-
-        # Create isolated dependencies for this process
-        # Each process needs its own NATS connection
-        nats_repo = NatsRepository(nats_url=settings.NATS_URL)
-        # Connect synchronously (NatsRepository.connect() handles async internally)
-        nats_repo.connect()
-
-        # Create GameServiceFinder with the isolated NatsRepository
-        game_service_finder = GameServiceFinder(nats_repository=nats_repo)
-
-        # Create GameServiceGRPCClient with the isolated GameServiceFinder
-        grpc_client = GameServiceGRPCClient(game_service_finder=game_service_finder)
-
-        # Create and return the environment with isolated dependencies
-        env = BombermanEnv(grpc_client=grpc_client, render_mode=render_mode)
-        logger.info(f"Created environment {env_id} in subprocess with isolated dependencies")
-        return env
-
-    
-    return _init
+MAP_WIDTH = 20
+MAP_HEIGHT = 20
+ENEMY_COUNT = 10
+ENABLE_ENEMIES = True
 
 
 class TrainingService:
@@ -116,11 +51,11 @@ class TrainingService:
         n_eval_episodes: int | None = None,
         max_no_improvement_evals: int | None = None,
         min_evals: int | None = None,
-        use_cnn: bool = True,
+        use_cnn: bool = False,
         cnn_features_dim: int = 256,
         mlp_features_dim: int = 64,
         features_dim: int = 512,
-        count_cpu: int = 10,
+        count_cpu: int = 1,
         process_startup_delay: float = 0.5,
     ) -> Path:
         """
@@ -252,20 +187,29 @@ class TrainingService:
 
         render_mode: str | None = "rgb_array" if enable_render else None
 
+        options: dict = {
+            "map_width": MAP_WIDTH,
+            "map_height": MAP_HEIGHT,
+            "enemy_count": ENEMY_COUNT,
+            "enable_enemies": ENABLE_ENEMIES,
+            "seed": 0
+        }
+
         # Create vectorized environment based on count_cpu parameter
         if count_cpu == 1:
-            # Старая реализация - DummyVecEnv (однопроцессорный режим)
+            #DummyVecEnv (однопроцессорный режим)
             logger.info("Using DummyVecEnv (single process mode, count_cpu=1)")
             vec_env = DummyVecEnv(
                 env_fns=[
                     lambda: BombermanEnv(
                         grpc_client=self.grpc_client,
                         render_mode=render_mode,
+                        options=options
                     ),
                 ],
             )
         else:
-            # Новая реализация - SubprocVecEnv (многопроцессорный режим)
+            #SubprocVecEnv (многопроцессорный режим)
             logger.info(
                 f"Using SubprocVecEnv (multiprocessing mode, count_cpu={count_cpu}, "
                 f"process_startup_delay={process_startup_delay}s)"
@@ -275,11 +219,12 @@ class TrainingService:
                     make_env(
                         env_id=i, 
                         render_mode=render_mode, 
-                        startup_delay=process_startup_delay
+                        startup_delay=process_startup_delay,
+                        options=options
                     ) 
                     for i in range(count_cpu)
                 ],
-                # start_method="spawn"
+                start_method="forkserver"
             )
         
         # Wrap in VecMonitor to track and log episode metrics (ep_rew_mean, ep_len_mean, etc.)
@@ -296,6 +241,7 @@ class TrainingService:
                         lambda: BombermanEnv(
                             grpc_client=self.grpc_client,
                             render_mode=None,  # No rendering for evaluation
+                            options=options
                         ),
                     ],
                 )
@@ -305,7 +251,8 @@ class TrainingService:
                         make_env(
                             env_id=i,
                             render_mode=None,
-                            startup_delay=process_startup_delay
+                            startup_delay=process_startup_delay,
+                            options=options
                         )
                         for i in range(count_cpu)
                     ],
@@ -313,29 +260,40 @@ class TrainingService:
                 )
             eval_env = VecMonitor(eval_vec_env)
 
-        # --- Determine whether to resume from an existing model or create a new one ---
+
+        if model_name is None:
+            model_name = log_name
+
+        if not model_name.endswith(".zip"):
+            model_name = f"{model_name}.zip"
+
+        # Setup base directory for model: MODELS_PATH/{log_name}/
+        model_dir = settings.MODELS_PATH / log_name
+        model_dir.mkdir(parents=True, exist_ok=True)
+
+        # Setup subdirectories within model_dir
+        checkpoint_dir = model_dir / "checkpoints"
+        eval_log_dir = model_dir / "evaluations"
+        best_model_path = model_dir / "best_model.zip"
+
+        model_file = model_dir / model_name
+
         resume: bool = False
-        model_file: Path | None = None
 
-        if model_name is not None:
-            # If user passed a name without .zip, append it
-            if not model_name.endswith(".zip"):
-                model_name = f"{model_name}.zip"
-            model_file = settings.MODELS_PATH / model_name
-
-            if model_file.exists():
-                logger.info(f"Resuming training from existing model: {model_file}")
-                self.model = RecurrentPPO.load(
-                    path=model_file,
-                    env=env,
-                    device="auto",
-                    tensorboard_log=str(settings.LOGS_PATH),
-                )
-                resume = True
-            else:
-                logger.warning(
-                    f"Model file not found at {model_file}, starting fresh training"
-                )
+        # --- Determine whether to resume from an existing model or create a new one ---
+        if model_file.exists():
+            logger.info(f"Resuming training from existing model: {model_file}")
+            self.model = RecurrentPPO.load(
+                path=model_file,
+                env=env,
+                device="auto",
+                tensorboard_log=str(settings.LOGS_PATH),
+            )
+            resume = True
+        else:
+            logger.warning(
+                f"Model file not found at {model_file}, starting fresh training"
+            )
 
         if not resume:
             # Configure policy kwargs based on whether to use CNN
@@ -359,6 +317,7 @@ class TrainingService:
                         cnn_features_dim=cnn_features_dim,
                         mlp_features_dim=mlp_features_dim,
                     ),
+                    n_lstm_layers=2
                 )
             else:
                 logger.info("Using default MLP feature extractor for all observations")
@@ -369,20 +328,13 @@ class TrainingService:
                 env=env,
                 verbose=0,
                 tensorboard_log=str(settings.LOGS_PATH),
-                # policy_kwargs=policy_kwargs if policy_kwargs else None,
+                policy_kwargs=policy_kwargs if policy_kwargs else None,
+                ent_coef=0.02,
+                # learning_rate=1e-4
             )
 
         # --- Callbacks ---
         callbacks = []
-
-        # Setup base directory for model: MODELS_PATH/{log_name}/
-        model_dir = settings.MODELS_PATH / log_name
-        model_dir.mkdir(parents=True, exist_ok=True)
-        
-        # Setup subdirectories within model_dir
-        checkpoint_dir = model_dir / "checkpoints"
-        eval_log_dir = model_dir / "evaluations"
-        best_model_path = model_dir / "best_model.zip"
 
         # TrainingMetricsCallback - always enabled to track metrics
         metrics_callback = TrainingMetricsCallback(
@@ -440,7 +392,7 @@ class TrainingService:
                 best_model_save_path=str(model_dir),
                 log_path=str(eval_log_dir),
                 eval_freq=eval_callback_freq,
-                deterministic=True,
+                deterministic=False,
                 render=False,
                 n_eval_episodes=n_eval_episodes,
                 callback_on_new_best=stop_callback,
@@ -472,14 +424,82 @@ class TrainingService:
         elapsed: float = time.monotonic() - start_time
         logger.info(f"Training completed in {elapsed:.2f}s")
 
-        # No need to copy best_model - EvalCallback already saved it to model_dir/best_model.zip
-
         # If resuming, overwrite the same file; otherwise save with log_name.
-        # Save final model to model_dir/{log_name}.zip
-        if model_file is not None:
-            save_path = model_file
-        else:
-            save_path = model_dir / f"{log_name}.zip"
-        self.model.save(path=save_path)
-        logger.info(f"Final model saved to {save_path}")
-        return save_path
+        self.model.save(path=model_file)
+        logger.info(f"Final model saved to {model_file}")
+        return model_file
+
+
+def make_env(
+        env_id: int,
+        render_mode: str | None = None,
+        startup_delay: float = 0.0,
+        options: dict = {}
+) -> Callable[[], BombermanEnv]:
+    """
+    Factory function to create environment instances for multiprocessing.
+
+    Each process must have its own isolated instances of dependencies:
+    - NatsRepository (with its own NATS connection)
+    - GameServiceFinder (with its own NatsRepository)
+    - GameServiceGRPCClient (with its own GameServiceFinder)
+    - BombermanEnv (with its own GameServiceGRPCClient)
+
+    This ensures that each subprocess in SubprocVecEnv has independent
+    connections and doesn't share state with other processes.
+
+    Args:
+        env_id: Unique identifier for the environment (used for logging and delay calculation)
+        render_mode: Render mode for the environment (None, "rgb_array", etc.)
+        startup_delay: Delay in seconds before creating dependencies. Each process waits
+            startup_delay * env_id seconds before initialization to prevent simultaneous
+            selection of the same game-service instance. Process 0 starts immediately,
+            process 1 waits startup_delay seconds, process 2 waits 2*startup_delay, etc.
+
+    Returns:
+        Callable that creates a BombermanEnv instance when called
+    """
+
+    def _init() -> BombermanEnv:
+        # Configure logging for this subprocess using existing configuration
+        # This ensures logs from child processes are visible
+        # from app.config import configure_logging, settings as app_settings
+        configure_logging()
+        # Get logger after configuration
+        logger = logging.getLogger(__name__)
+        logger.info(f"[ENV-{env_id}] Subprocess initialized")
+
+        # Add delay before creating dependencies to prevent simultaneous instance selection
+        if startup_delay > 0:
+            delay = startup_delay * env_id
+            logger.info(f"Environment {env_id}: waiting {delay:.2f}s before startup to avoid instance collision")
+            time.sleep(delay)
+
+        # Import dependencies inside the function to ensure they're available
+        # in each subprocess after fork/spawn
+        from app.repositories.nats_repository import NatsRepository
+        from app.services.game_service_finder import GameServiceFinder
+        from app.services.grpc_client import GameServiceGRPCClient
+
+        # Create isolated dependencies for this process
+        # Each process needs its own NATS connection
+        nats_repo = NatsRepository(nats_url=settings.NATS_URL)
+        # Connect synchronously (NatsRepository.connect() handles async internally)
+        nats_repo.connect()
+
+        # Create GameServiceFinder with the isolated NatsRepository
+        game_service_finder = GameServiceFinder(nats_repository=nats_repo)
+
+        # Create GameServiceGRPCClient with the isolated GameServiceFinder
+        grpc_client = GameServiceGRPCClient(game_service_finder=game_service_finder)
+
+        # Create and return the environment with isolated dependencies
+        env = BombermanEnv(
+            grpc_client=grpc_client,
+            render_mode=render_mode,
+            options=options
+        )
+        logger.info(f"Created environment {env_id} in subprocess with isolated dependencies")
+        return env
+
+    return _init

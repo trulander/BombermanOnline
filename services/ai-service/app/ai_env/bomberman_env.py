@@ -10,7 +10,7 @@ from app.services.grpc_client import GameServiceGRPCClient
 
 logger = logging.getLogger(__name__)
 
-RENDER_SCALE: int = 32
+RENDER_SCALE: int = 5
 
 COLOR_BACKGROUND: tuple[int, int, int] = (25, 25, 25)
 COLOR_SOLID: tuple[int, int, int] = (120, 120, 120)
@@ -45,7 +45,9 @@ class BombermanEnv(gym.Env[dict[str, np.ndarray], int]):
         stats_size: int = settings.STATS_SIZE,
         action_count: int = 6,
         render_mode: str | None = None,
+        options: dict = {}
     ) -> None:
+        self.options = options
         self.grpc_client = grpc_client
         self.render_mode = render_mode
         self.action_space = spaces.Discrete(n=action_count)
@@ -89,9 +91,9 @@ class BombermanEnv(gym.Env[dict[str, np.ndarray], int]):
         options: dict[str, object] | None = None,
     ) -> tuple[dict[str, np.ndarray], dict]:
         super().reset(seed=seed)
-        logger.info(f"BombermanEnv.reset called: seed={seed}, options={options}")
+        logger.info(f"BombermanEnv.reset called: seed={seed}, options={self.options}")
         self._step_count = 0
-        observation, info, session_id = self.grpc_client.reset(options=options)
+        observation, info, session_id = self.grpc_client.reset(options=self.options)
         if observation is None:
             logger.warning("BombermanEnv.reset: received None observation, using zeros")
             observation = self._empty_obs()

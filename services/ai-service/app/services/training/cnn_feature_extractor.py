@@ -27,13 +27,13 @@ class BombermanCNN(BaseFeaturesExtractor):
         
         Args:
             observation_space: Gymnasium observation space for grid data.
-                Expected shape: (GRID_CHANNELS, WINDOW_SIZE, WINDOW_SIZE)
+                Expected shape: (GRID_CHANNELS, WINDOW_SIZE, WINDOW_SIZE) = (5, 15, 15)
             features_dim: Dimension of the output feature vector after CNN processing.
         """
         super().__init__(observation_space, features_dim)
         
         # Get number of input channels from observation space
-        # Expected shape: (channels, height, width) = (5, 15, 15) or (5, 7, 7) or similar
+        # Expected shape: (channels, height, width) = (5, 15, 15)
         n_input_channels: int = observation_space.shape[0]
         input_height: int = observation_space.shape[1]
         input_width: int = observation_space.shape[2]
@@ -43,91 +43,49 @@ class BombermanCNN(BaseFeaturesExtractor):
             f"features_dim={features_dim}"
         )
         
-        # Adaptive CNN architecture based on input size
-        # For small inputs (7x7), use smaller kernels and fewer layers
-        # For larger inputs (15x15), use standard architecture
-        if input_height <= 7 or input_width <= 7:
-            # Small input architecture (e.g., 7x7)
-            logger.info("Using small input CNN architecture (for 7x7 or smaller)")
-            self.cnn = nn.Sequential(
-                # First conv layer: small kernel for small inputs
-                nn.Conv2d(
-                    in_channels=n_input_channels,
-                    out_channels=32,
-                    kernel_size=3,
-                    stride=1,
-                    padding=1,  # Use padding to preserve size
-                ),
-                nn.ReLU(),
-                # Second conv layer: small kernel
-                nn.Conv2d(
-                    in_channels=32,
-                    out_channels=64,
-                    kernel_size=3,
-                    stride=1,
-                    padding=1,
-                ),
-                nn.ReLU(),
-                # Adaptive pooling to fixed size before flattening
-                nn.AdaptiveAvgPool2d(output_size=(2, 2)),  # Fixed output size
-                nn.Flatten(),
-            )
-            # Calculate flattened size: 64 channels * 2 * 2 = 256
-            n_flatten = 64 * 2 * 2
-        else:
-            # Standard architecture for larger inputs (15x15 or larger)
-            logger.info("Using standard CNN architecture (for 15x15 or larger)")
-            # Use smaller kernels and strides to avoid size issues
-            # For 15x15: 
-            # - Conv1: kernel=5, stride=2, padding=1 -> (15+2-5)/2+1 = 7x7
-            # - Conv2: kernel=3, stride=2, padding=1 -> (7+2-3)/2+1 = 4x4
-            # - Conv3: kernel=3, stride=1, padding=1 -> 4x4
-            # - Adaptive pooling to 2x2 -> 2x2
-            self.cnn = nn.Sequential(
-                # First conv layer: medium kernel with stride 2
-                # Input: (batch, 5, 15, 15) -> Output: (batch, 32, 7, 7)
-                nn.Conv2d(
-                    in_channels=n_input_channels,
-                    out_channels=32,
-                    kernel_size=5,
-                    stride=2,
-                    padding=1,
-                ),
-                nn.ReLU(),
-                # Second conv layer: small kernel with stride 2
-                # Input: (batch, 32, 7, 7) -> Output: (batch, 64, 4, 4)
-                nn.Conv2d(
-                    in_channels=32,
-                    out_channels=64,
-                    kernel_size=3,
-                    stride=2,
-                    padding=1,
-                ),
-                nn.ReLU(),
-                # Third conv layer: small kernel to extract features
-                # Input: (batch, 64, 4, 4) -> Output: (batch, 64, 4, 4)
-                nn.Conv2d(
-                    in_channels=64,
-                    out_channels=64,
-                    kernel_size=3,
-                    stride=1,
-                    padding=1,
-                ),
-                nn.ReLU(),
-                # Adaptive pooling to fixed size for consistent output
-                nn.AdaptiveAvgPool2d(output_size=(2, 2)),
-                nn.Flatten(),
-            )
-            
-            # Calculate the output size after conv layers dynamically
-            # This is needed to determine the input size for the linear layer
-            with torch.no_grad():
-                dummy_input = torch.zeros(1, n_input_channels, input_height, input_width)
-                cnn_output = self.cnn(dummy_input)
-                n_flatten: int = cnn_output.shape[1]
-
-
+        # Standard CNN architecture for 15x15 input (inspired by NatureCNN)
+        # Architecture:
+        # - Conv1: kernel=5, stride=2, padding=1 -> (15+2-5)/2+1 = 7x7
+        # - Conv2: kernel=3, stride=2, padding=1 -> (7+2-3)/2+1 = 4x4
+        # - Conv3: kernel=3, stride=1, padding=1 -> (4+2-3)/1+1 = 4x4
+        # Final output: 64 channels * 4 * 4 = 1024 features
+        # self.cnn = nn.Sequential(
+        #     # First conv layer: medium kernel with stride 2
+        #     nn.Conv2d(in_channels=n_input_channels, out_channels=16, kernel_size=5, stride=2, padding=0, ),
+        #     nn.ReLU(),
+        #     # Second conv layer: small kernel with stride 2
+        #     nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=2, padding=0, ),
+        #     nn.ReLU(),
+        #     # Third conv layer: small kernel to extract features
+        #     nn.Conv2d(in_channels=32, out_channels=64, kernel_size=2, stride=1, padding=0, ),
+        #     nn.ReLU(),
+        #     # Adaptive pooling to fixed size for consistent output
+        #     # nn.AdaptiveAvgPool2d(output_size=(2, 2)),
+        #     nn.Flatten(),
+        # )
+        self.cnn = nn.Sequential(
+            nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
+            nn.ReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d(output_size=(2, 2)),
+            nn.Flatten(),
+        )
         
+        # Calculate the output size after conv layers dynamically
+        # This is needed to determine the input size for the linear layer
+        with torch.no_grad():
+            dummy_input = torch.zeros(1, n_input_channels, input_height, input_width)
+            cnn_output = self.cnn(dummy_input)
+            n_flatten: int = cnn_output.shape[1]
+
+        # Compute shape by doing one forward pass
+        # with torch.no_grad():
+        #     n_flatten = self.cnn(torch.as_tensor(observation_space.sample()[None]).float()).shape[1]
+
+
         logger.info(
             f"CNN output size after conv layers: {n_flatten} "
             f"(input: {n_input_channels}x{input_height}x{input_width})"

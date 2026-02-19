@@ -39,7 +39,7 @@ class Settings(BaseSettings):
 
     #observation settings
     GRID_CHANNELS: int = 5
-    WINDOW_SIZE: int = 15
+    WINDOW_SIZE: int = 7
     STATS_SIZE: int = 7
 
     # Training settings
