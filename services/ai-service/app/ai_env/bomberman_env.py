@@ -10,7 +10,7 @@ from app.services.grpc_client import GameServiceGRPCClient
 
 logger = logging.getLogger(__name__)
 
-RENDER_SCALE: int = 5
+RENDER_SCALE: int = 32
 
 COLOR_BACKGROUND: tuple[int, int, int] = (25, 25, 25)
 COLOR_SOLID: tuple[int, int, int] = (120, 120, 120)
@@ -25,6 +25,7 @@ COLOR_GRID_LINE: tuple[int, int, int] = (50, 50, 50)
 STATS_LABELS: list[str] = [
     # "rel_x",
     # "rel_y",
+    "closest_enemy",
     "lives",
     "enemies",
     "bombs",

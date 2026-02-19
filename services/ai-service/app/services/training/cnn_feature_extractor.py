@@ -20,20 +20,20 @@ class BombermanCNN(BaseFeaturesExtractor):
     def __init__(
         self,
         observation_space,
-        features_dim: int = 512,
+        features_dim: int = 256,
     ) -> None:
         """
         Initialize CNN feature extractor for grid observations.
         
         Args:
             observation_space: Gymnasium observation space for grid data.
-                Expected shape: (GRID_CHANNELS, WINDOW_SIZE, WINDOW_SIZE) = (5, 15, 15)
+                Expected shape: (GRID_CHANNELS, WINDOW_SIZE, WINDOW_SIZE) = (5, 14, 14)
             features_dim: Dimension of the output feature vector after CNN processing.
         """
         super().__init__(observation_space, features_dim)
         
         # Get number of input channels from observation space
-        # Expected shape: (channels, height, width) = (5, 15, 15)
+        # Expected shape: (channels, height, width) = (5, 14, 14)
         n_input_channels: int = observation_space.shape[0]
         input_height: int = observation_space.shape[1]
         input_width: int = observation_space.shape[2]
@@ -43,34 +43,14 @@ class BombermanCNN(BaseFeaturesExtractor):
             f"features_dim={features_dim}"
         )
         
-        # Standard CNN architecture for 15x15 input (inspired by NatureCNN)
-        # Architecture:
-        # - Conv1: kernel=5, stride=2, padding=1 -> (15+2-5)/2+1 = 7x7
-        # - Conv2: kernel=3, stride=2, padding=1 -> (7+2-3)/2+1 = 4x4
-        # - Conv3: kernel=3, stride=1, padding=1 -> (4+2-3)/1+1 = 4x4
-        # Final output: 64 channels * 4 * 4 = 1024 features
-        # self.cnn = nn.Sequential(
-        #     # First conv layer: medium kernel with stride 2
-        #     nn.Conv2d(in_channels=n_input_channels, out_channels=16, kernel_size=5, stride=2, padding=0, ),
-        #     nn.ReLU(),
-        #     # Second conv layer: small kernel with stride 2
-        #     nn.Conv2d(in_channels=16, out_channels=32, kernel_size=3, stride=2, padding=0, ),
-        #     nn.ReLU(),
-        #     # Third conv layer: small kernel to extract features
-        #     nn.Conv2d(in_channels=32, out_channels=64, kernel_size=2, stride=1, padding=0, ),
-        #     nn.ReLU(),
-        #     # Adaptive pooling to fixed size for consistent output
-        #     # nn.AdaptiveAvgPool2d(output_size=(2, 2)),
-        #     nn.Flatten(),
-        # )
+
         self.cnn = nn.Sequential(
-            nn.Conv2d(n_input_channels, 32, kernel_size=8, stride=4, padding=0),
+            nn.Conv2d(n_input_channels, 32, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=0),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1),
             nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=0),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding=1),
             nn.ReLU(),
-            nn.AdaptiveAvgPool2d(output_size=(2, 2)),
             nn.Flatten(),
         )
         

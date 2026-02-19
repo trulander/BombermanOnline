@@ -45,13 +45,13 @@ class TrainingService:
         render_freq: int = 500,
         model_name: str | None = None,
         enable_checkpointing: bool = True,
-        checkpoint_freq: int | None = None,
+        checkpoint_freq: int = 10000,
         enable_evaluation: bool = True,
-        eval_freq: int | None = None,
+        eval_freq: int = 2000,
         n_eval_episodes: int | None = None,
         max_no_improvement_evals: int | None = None,
         min_evals: int | None = None,
-        use_cnn: bool = False,
+        use_cnn: bool = True,
         cnn_features_dim: int = 256,
         mlp_features_dim: int = 64,
         features_dim: int = 512,
@@ -317,7 +317,7 @@ class TrainingService:
                         cnn_features_dim=cnn_features_dim,
                         mlp_features_dim=mlp_features_dim,
                     ),
-                    n_lstm_layers=2
+                    n_lstm_layers=3
                 )
             else:
                 logger.info("Using default MLP feature extractor for all observations")

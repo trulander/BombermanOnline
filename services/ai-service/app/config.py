@@ -39,8 +39,8 @@ class Settings(BaseSettings):
 
     #observation settings
     GRID_CHANNELS: int = 5
-    WINDOW_SIZE: int = 7
-    STATS_SIZE: int = 7
+    WINDOW_SIZE: int = 14
+    STATS_SIZE: int = 8
 
     # Training settings
     CHECKPOINT_FREQ: int = 10000
