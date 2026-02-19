@@ -305,6 +305,11 @@ class GameModeService(ABC):
             max_lives_val = max(1, entity.lives)
             entity_speed = entity.speed
 
+        closest_dist: float = self.get_closest_enemy_distance(
+            px=entity.x,
+            py=entity.y,
+        )
+
         obs_data = build_observation(
             map_grid=self.map.grid, map_width=self.map.width, map_height=self.map.height,
             cell_size=self.settings.cell_size,
@@ -324,7 +329,8 @@ class GameModeService(ABC):
             time_limit=float(self.settings.time_limit or 0),
             enemies_positions=enemies_positions,
             weapons_positions=weapons_positions,
-            power_ups_positions=power_ups_positions
+            power_ups_positions=power_ups_positions,
+            closest_enemy=closest_dist
         )
         # Use game_id as session_id to track episodes per game
         # This allows LSTM states to be reset when a new game starts
@@ -346,6 +352,20 @@ class GameModeService(ABC):
         )
         self._ai_pending_tasks[entity_id] = task
 
+    def get_closest_enemy_distance(
+        self,
+        *,
+        px: float,
+        py: float,
+    ) -> float:
+        min_dist: float = 9999.0
+        for e in self.enemies:
+            if e.destroyed:
+                continue
+            dist: float = math.hypot(e.x - px, e.y - py)
+            if dist < min_dist:
+                min_dist = dist
+        return min_dist
 
     def update_player(self, player: Player, delta_time: float) -> PlayerUpdate | None:
         """Обновить одного игрока"""

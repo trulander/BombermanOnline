@@ -237,8 +237,7 @@ class TrainingCoordinator:
         else:
             session.idle_steps += 1
 
-        closest_dist: float = self._closest_enemy_distance(
-            game_service=game_service,
+        closest_dist: float = game_service.game_mode.get_closest_enemy_distance(
             px=px,
             py=py,
         )
@@ -333,19 +332,3 @@ class TrainingCoordinator:
             power_ups_positions=power_ups_positions,
             closest_enemy=session.last_closest_enemy_dist
         )
-
-    def _closest_enemy_distance(
-        self,
-        *,
-        game_service: GameService,
-        px: float,
-        py: float,
-    ) -> float:
-        min_dist: float = 9999.0
-        for e in game_service.game_mode.enemies:
-            if e.destroyed:
-                continue
-            dist: float = math.hypot(e.x - px, e.y - py)
-            if dist < min_dist:
-                min_dist = dist
-        return min_dist
