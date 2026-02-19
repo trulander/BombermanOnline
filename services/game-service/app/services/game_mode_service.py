@@ -324,8 +324,7 @@ class GameModeService(ABC):
             time_limit=float(self.settings.time_limit or 0),
             enemies_positions=enemies_positions,
             weapons_positions=weapons_positions,
-            power_ups_positions=power_ups_positions,
-            window_size=15,
+            power_ups_positions=power_ups_positions
         )
         # Use game_id as session_id to track episodes per game
         # This allows LSTM states to be reset when a new game starts

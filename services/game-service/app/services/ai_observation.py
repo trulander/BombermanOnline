@@ -14,7 +14,7 @@ CELL_TERRAIN: dict[int, float] = {
     5: 0.25,
 }
 
-DEFAULT_WINDOW_SIZE: int = 15
+DEFAULT_WINDOW_SIZE: int = 7
 GRID_CHANNELS: int = 5
 STATS_SIZE: int = 7  # lives, enemy, bombs_left, blast_range, invuln, speed, time_left
 GRID_SIZE: int = GRID_CHANNELS * DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_SIZE

@@ -354,8 +354,7 @@ class TrainingCoordinator:
             time_limit=float(game_service.settings.time_limit or 0),
             enemies_positions=enemies_positions,
             weapons_positions=weapons_positions,
-            power_ups_positions=power_ups_positions,
-            window_size=15,
+            power_ups_positions=power_ups_positions
         )
 
     def _closest_enemy_distance(
