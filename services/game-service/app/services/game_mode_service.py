@@ -265,7 +265,7 @@ class GameModeService(ABC):
                     )
                     if is_player:
                         if action == 5:
-                            self.place_weapon(player=entity, weapon_action=WeaponAction.PLACEWEAPON1)
+                            si_placed_weapon = self.place_weapon(player=entity, weapon_action=WeaponAction.PLACEWEAPON1)
                             entity.set_inputs(inputs=action_to_inputs(action=0))
                         else:
                             entity.set_inputs(inputs=action_to_inputs(action=action))
@@ -565,14 +565,18 @@ class GameModeService(ABC):
     def handle_enemy_hit(self, enemy: Enemy, attacker_id: str = None) -> None:
         """Обработать попадание во врага"""
         try:
-            enemy.set_hit()
-            if enemy.destroyed:
-                # Начисляем очки команде атакующего игрока
-                if attacker_id:
+            is_hit = enemy.set_hit()
+            if is_hit:
+                if enemy.destroyed:
+                    # Начисляем очки команде атакующего игрока за уничтожение врага
                     self.team_service.add_score_to_player_team(attacker_id, self.settings.enemy_destroy_score)
-                # Шанс появления бонуса
-                if random.random() < self.settings.enemy_powerup_drop_chance:
-                    self.spawn_power_up(round(enemy.x), round(enemy.y))
+                    # Шанс появления бонуса
+                    if random.random() < self.settings.enemy_powerup_drop_chance:
+                        self.spawn_power_up(round(enemy.x), round(enemy.y))
+                else:
+                    # Начисляем очки команде атакующего игрока за попадение во врага
+                    self.team_service.add_score_to_player_team(attacker_id, self.settings.enemy_hit_score)
+
                     
         except Exception as e:
             logger.error(f"Error handling enemy hit: {e}", exc_info=True)

@@ -14,9 +14,9 @@ CELL_TERRAIN: dict[int, float] = {
     5: 0.25,
 }
 
-DEFAULT_WINDOW_SIZE: int = 7
+DEFAULT_WINDOW_SIZE: int = 14
 GRID_CHANNELS: int = 5
-STATS_SIZE: int = 7  # lives, enemy, bombs_left, blast_range, invuln, speed, time_left
+STATS_SIZE: int = 8  # closest_enemy, lives, enemy, bombs_left, blast_range, invuln, speed, time_left
 GRID_SIZE: int = GRID_CHANNELS * DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_SIZE
 
 
@@ -82,6 +82,7 @@ def build_observation(
     max_speed: float,
     time_left: float,
     time_limit: float,
+    closest_enemy: float,
     enemies_positions: list[tuple[float, float]] | None = None,
     weapons_positions: list[tuple[float, float]] | None = None,
     power_ups_positions: list[tuple[float, float]] | None = None,
@@ -180,7 +181,7 @@ def build_observation(
 
     stats: list[float] = [
         # rel_x,
-        # rel_y,
+        closest_enemy,
         lives_norm,
         enemy_norm,
         bombs_left_norm,

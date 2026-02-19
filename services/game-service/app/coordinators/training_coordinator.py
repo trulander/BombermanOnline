@@ -1,17 +1,14 @@
 import json
 import math
 import random
-import time
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
-import numpy as np
 
 from app.entities.game_mode import GameModeType
 from app.entities.player import UnitType
 from app.entities.weapon import WeaponAction
-from app.entities.cell_type import CellType
 
 from app.services.ai_action_mapper import action_to_inputs
 
@@ -25,7 +22,6 @@ if TYPE_CHECKING:
     from app.repositories.map_repository import MapRepository
     from app.services.ai_inference_service import AIInferenceService
 
-MAX_STEPS_PER_EPISODE: int = 1000
 IDLE_LIMIT: int = 50
 
 
@@ -39,10 +35,9 @@ class TrainingSession:
     last_x: float = 0.0
     last_y: float = 0.0
     last_closest_enemy_dist: float = 0.0
-    last_breakable_count: int = 0
-    visited_cells: set[tuple[int, int]] = field(default_factory=set)
     total_steps: int = 0
     idle_steps: int = 0
+    last_player_score: int = 0
 
 
 @dataclass
@@ -87,7 +82,7 @@ class TrainingCoordinator:
         defaults = GameSettings()
         game_settings = GameSettings(
             game_id=str(uuid4()),
-            game_mode=GameModeType.CAMPAIGN,#game_mode=GameModeType.TRAINING_IA,
+            game_mode=GameModeType.TRAINING_IA,
             max_players=1,
             default_map_width=map_width or defaults.default_map_width,
             default_map_height=map_height or defaults.default_map_height,
@@ -132,19 +127,15 @@ class TrainingCoordinator:
         game_service.start_game()
 
         enemy_total = len(game_service.game_mode.enemies)
-        cell_size: int = game_service.settings.cell_size
 
         player_x: float = player.x if player else 0.0
         player_y: float = player.y if player else 0.0
-        player_cx: int = int(player_x / cell_size) if cell_size > 0 else 0
-        player_cy: int = int(player_y / cell_size) if cell_size > 0 else 0
 
         closest_dist: float = self._closest_enemy_distance(
             game_service=game_service,
             px=player_x,
             py=player_y,
         )
-        breakable_count: int = self._count_breakable(game_service=game_service)
 
         session_id = str(uuid4())
         self._sessions[session_id] = TrainingSession(
@@ -156,10 +147,9 @@ class TrainingCoordinator:
             last_x=player_x,
             last_y=player_y,
             last_closest_enemy_dist=closest_dist,
-            last_breakable_count=breakable_count,
-            visited_cells={(player_cx, player_cy)},
             total_steps=0,
             idle_steps=0,
+            last_player_score=0
         )
 
         obs: ObservationData = self._build_observation(
@@ -214,17 +204,22 @@ class TrainingCoordinator:
 
         inputs = action_to_inputs(action=action)
         player.set_inputs(inputs=inputs)
-        status = None
         if action == 5:
-            status = game_service.place_weapon(
+            is_placed_weapon = game_service.place_weapon(
                 player_id=player.id,
                 weapon_action=WeaponAction.PLACEWEAPON1,
             )
+            game_service.team_service.add_score_to_player_team(
+                player_id=player.id,
+                points=game_service.settings.placed_bomb_score if is_placed_weapon else game_service.settings.couldnt_place_bomb
+            )
 
         await game_service.update(delta_seconds=delta_seconds)
+
         time_to_target = player.get_remaining_movement_time()
         if time_to_target:
             await game_service.update(delta_seconds=time_to_target+0.01)
+
         session.total_steps += 1
 
         obs: ObservationData = self._build_observation(
@@ -233,58 +228,29 @@ class TrainingCoordinator:
         )
 
         enemy_total = len(game_service.game_mode.enemies)
-        cell_size: int = game_service.settings.cell_size
         px: float = player.x
         py: float = player.y
-        cx: int = int(px / cell_size) if cell_size > 0 else 0
-        cy: int = int(py / cell_size) if cell_size > 0 else 0
 
         moved: bool = abs(px - session.last_x) > 1.0 or abs(py - session.last_y) > 1.0
-        new_cell: bool = (cx, cy) not in session.visited_cells
+        if moved:
+            session.idle_steps = 0
+        else:
+            session.idle_steps += 1
 
         closest_dist: float = self._closest_enemy_distance(
             game_service=game_service,
             px=px,
             py=py,
         )
-        breakable_count: int = self._count_breakable(game_service=game_service)
-
-        reward = self._calculate_reward(
-            player_lives=player.lives,
-            last_player_lives=session.last_player_lives,
-            enemy_count=enemy_total,
-            last_enemy_count=session.last_enemy_count,
-            game_over=game_service.game_mode.game_over,
-            player_alive=player.is_alive(),
-            moved=moved,
-            applied_weapon=status,
-            new_cell=new_cell,
-            action=action,
-            closest_enemy_dist=closest_dist,
-            last_closest_enemy_dist=session.last_closest_enemy_dist,
-            breakable_count=breakable_count,
-            last_breakable_count=session.last_breakable_count,
-        )
-
-        if moved:
-            session.idle_steps = 0
-        else:
-            session.idle_steps += 1
-
-        if new_cell:
-            session.visited_cells.add((cx, cy))
 
         session.last_player_lives = player.lives
-        session.last_enemy_count = enemy_total
         session.last_x = px
         session.last_y = py
         session.last_closest_enemy_dist = closest_dist
-        session.last_breakable_count = breakable_count
 
         terminated: bool = game_service.game_mode.game_over or not player.is_alive()
         # Truncate если превышен лимит шагов, лимит простоя, или истёк таймер
         truncated: bool = (
-            # session.total_steps >= MAX_STEPS_PER_EPISODE or
             session.idle_steps >= IDLE_LIMIT
         )
 
@@ -294,10 +260,15 @@ class TrainingCoordinator:
                 "player_id": player.id,
                 "enemy_count": enemy_total,
                 "total_steps": session.total_steps,
-                "visited_cells": len(session.visited_cells),
                 "idle_steps": session.idle_steps,
             }
         )
+
+        player_team = game_service.team_service.get_player_team(player_id=player.id)
+        reward = 0
+        if player_team:
+            reward = player_team.score - session.last_player_score
+            session.last_player_score = player_team.score
 
         return TrainingStepResult(
             grid_values=obs.grid_values,
@@ -307,6 +278,7 @@ class TrainingCoordinator:
             truncated=truncated,
             info_json=info_json,
         )
+
 
     def _build_observation(self, *, session: TrainingSession, player_id: str) -> ObservationData:
         game_service: GameService = session.game_service
@@ -319,9 +291,13 @@ class TrainingCoordinator:
         map_width: int = game_service.game_mode.map.width
         map_height: int = game_service.game_mode.map.height
         map_grid = game_service.game_mode.map.grid
+
         enemies_positions: list[tuple[float, float]] = [
             (e.x, e.y) for e in game_service.game_mode.enemies if not e.destroyed
         ]
+        enemies_positions.extend(
+            (p.x, p.y) for p in game_service.game_mode.players.values() if p.is_alive() and p.id != player.id
+        )
         weapons_positions: list[tuple[float, float]] = [
             (w.x, w.y) for w in game_service.game_mode.weapons.values()
         ]
@@ -354,7 +330,8 @@ class TrainingCoordinator:
             time_limit=float(game_service.settings.time_limit or 0),
             enemies_positions=enemies_positions,
             weapons_positions=weapons_positions,
-            power_ups_positions=power_ups_positions
+            power_ups_positions=power_ups_positions,
+            closest_enemy=session.last_closest_enemy_dist
         )
 
     def _closest_enemy_distance(
@@ -372,61 +349,3 @@ class TrainingCoordinator:
             if dist < min_dist:
                 min_dist = dist
         return min_dist
-
-    def _count_breakable(self, *, game_service: GameService) -> int:
-        if game_service.game_mode.map is None:
-            return 0
-        grid: np.ndarray = np.asarray(game_service.game_mode.map.grid)
-        return int(np.sum(grid == CellType.BREAKABLE_BLOCK))
-
-    def _calculate_reward(
-        self,
-        *,
-        player_lives: int,
-        last_player_lives: int,
-        enemy_count: int,
-        last_enemy_count: int,
-        game_over: bool,
-        player_alive: bool,
-        moved: bool,
-        applied_weapon: dict,
-        new_cell: bool,
-        action: int,
-        closest_enemy_dist: float,
-        last_closest_enemy_dist: float,
-        breakable_count: int,
-        last_breakable_count: int,
-    ) -> float:
-        reward: float = -1
-
-        if not moved and action < 5:
-            reward -= 4
-
-        if new_cell:
-            reward += 1
-
-        # dist_delta: float = last_closest_enemy_dist - closest_enemy_dist
-        # reward += dist_delta * 0.005
-
-        if action == 5:
-            if applied_weapon and applied_weapon['success']:
-                walls_destroyed: int = last_breakable_count - breakable_count
-                if walls_destroyed > 0:
-                    reward += float(walls_destroyed) * 30
-                else:
-                    reward += 20
-            else:
-                reward -= 4
-
-
-
-        if player_lives < last_player_lives:
-            reward -= 300
-
-        if enemy_count < last_enemy_count:
-            reward += float(last_enemy_count - enemy_count) * 500
-
-        if game_over:
-            reward += 500 if player_alive else -300
-
-        return reward

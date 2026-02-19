@@ -175,8 +175,11 @@ class GameCoordinator:
         player = game.get_player(player_id)
 
         if player:
-            result = game.place_weapon(player_id=player_id, weapon_action=weapon_action)
-
+            status = game.place_weapon(player_id=player_id, weapon_action=weapon_action)
+            if status:
+                result = {"success": status, "message": "weapon was applied"}
+            else:
+                result = {"success": status, "message": "weapon wasn't applied"}
             logger.info(f"Weapon {weapon_action.value} applied by player {player_id} in game {game_id}, result: {result}")
             return result
 

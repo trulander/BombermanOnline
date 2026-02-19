@@ -274,7 +274,7 @@ class Entity:
             return False
 
 
-    def update(self, delta_time: float = None) -> None:
+    def update(self, delta_time: float = None) -> bool:
         """Обновляет состояние сущности. Должен быть расширен в дочерних классах."""
         try:
             # Update invulnerability
@@ -286,11 +286,11 @@ class Entity:
                     self.invulnerable_timer = 0
 
             #Update moving
-            self.move(delta_time=delta_time)
-            #TODO доработать возврат boot из move чтобы если entity в итоге не двинулся, не проверять колизии
+            return self.move(delta_time=delta_time)
 
         except Exception as e:
             logger.error(f"Error updating entity {self.id} ({self.name}): {e}", exc_info=True)
+            return False
 
 
     def check_collision(

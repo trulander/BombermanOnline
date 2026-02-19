@@ -343,32 +343,33 @@ class GameService:
             )
 
     
-    def place_weapon(self, player_id: str, weapon_action: WeaponAction) -> dict:
+    def place_weapon(self, player_id: str, weapon_action: WeaponAction) -> bool:
         """Применить оружие игрока"""
         try:
             if self.status != GameStatus.ACTIVE:
                 message = f"Cannot apply weapon: game status is {self.status}"
                 logger.debug(message)
-                return {"success": False, "message": message}
+                return False
             
             player = self.game_mode.get_player(player_id)
             if not player:
                 message = f"Player {player_id} not found to apply weapon."
                 logger.warning(message)
-                return {"success": False, "message": message}
+                return False
             
             result = self.game_mode.place_weapon(player, weapon_action)
             if result:
                 self.updated_at = datetime.utcnow()
-                return {"success": True, "message": "Weapon applied successfully"}
+                logger.debug({"message": "Weapon applied successfully"})
+                return True
             else:
                 message = f"Failed to apply weapon {weapon_action.value} for player {player_id}."
                 logger.warning(message)
-                return {"success": False, "message": message}
+                return False
         except Exception as e:
             message = f"Error applying weapon for player {player_id}: {e}"
             logger.error(message, exc_info=True)
-            return {"success": False, "message": message}
+            return False
 
 
 

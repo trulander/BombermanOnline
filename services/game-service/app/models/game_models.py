@@ -179,6 +179,19 @@ class GameSettings(BaseModel):
     powerup_collect_score: int = 30
     level_complete_score: int = 500
 
+    #очки при обучении AI модели
+    player_moved_score: int = -1
+    played_did_not_moved_score: int = -4
+    placed_bomb_score: int = 20
+    couldnt_place_bomb: int = -4
+    hit_by_enemy_score: int = -300
+    hit_by_itself_score: int = -300
+    killed_by_enemy_score: int = -500
+    player_hit_score: int = 500
+    enemy_hit_score: int = 500
+    game_over_score: int = -500# не учитываем если игра проиграна после player destroyed
+
+
     # Вероятности появления
     powerup_drop_chance: float = 0.2
     enemy_powerup_drop_chance: float = 0.3
