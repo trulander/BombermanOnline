@@ -6,6 +6,8 @@ from .weapon import Weapon, WeaponType
 import logging
 
 from typing import TYPE_CHECKING
+from . import CellType
+
 if TYPE_CHECKING:
     from . import Map
     from ..models.game_models import GameSettings
@@ -38,6 +40,11 @@ class Bomb(Weapon):
             settings=settings
         )
         self.power: int = power
+        map.set_cell_type(
+            x=int(self.x / self.settings.cell_size),
+            y=int(self.y / self.settings.cell_size),
+            cell_type=CellType.BLOCKED_BOMB
+        )
         
         logger.debug(f"Bomb created: position=({x}, {y}), power={power}, owner={owner_id}, timer={self.settings.bomb_timer}")
 
@@ -45,6 +52,11 @@ class Bomb(Weapon):
     def activate(self, **kwargs) -> None:
         """Активировать взрыв бомбы"""
         super().activate(**kwargs)
+        self.map.set_cell_type(
+            x=int(self.x / self.settings.cell_size),
+            y=int(self.y / self.settings.cell_size),
+            cell_type=CellType.EMPTY
+        )
         logger.info(f"Bomb {self.id} exploded!")
 
     

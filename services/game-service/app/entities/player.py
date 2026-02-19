@@ -119,16 +119,16 @@ class Player(Entity, ABC):
                     self.inputs[key] = value
                     changed_inputs.append(f"{key}={value}")
             
-            # Обновляем направление для танка на основе движения
-            if self.unit_type == UnitType.TANK:
-                if self.inputs.get('up'):
-                    self.direction = (0, -1)
-                elif self.inputs.get('down'):
-                    self.direction = (0, 1)
-                elif self.inputs.get('left'):
-                    self.direction = (-1, 0)
-                elif self.inputs.get('right'):
-                    self.direction = (1, 0)
+            # # Обновляем направление для танка на основе движения
+            # if self.unit_type == UnitType.TANK:
+            if self.inputs.get('up'):
+                self.direction = (0, -1)
+            elif self.inputs.get('down'):
+                self.direction = (0, 1)
+            elif self.inputs.get('left'):
+                self.direction = (-1, 0)
+            elif self.inputs.get('right'):
+                self.direction = (1, 0)
             
             if changed_inputs:
                 logger.debug(f"Player {self.id} inputs updated: {', '.join(changed_inputs)}")

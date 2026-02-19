@@ -8,3 +8,4 @@ class CellType(IntEnum):
     PLAYER_SPAWN = 3
     ENEMY_SPAWN = 4
     LEVEL_EXIT = 5
+    BLOCKED_BOMB = 6

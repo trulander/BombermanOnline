@@ -298,27 +298,71 @@ class Entity:
             new_x: float,
             new_y: float,
     ) -> bool:
-        """Проверить коллизию сущности"""
+        """
+        Проверить коллизию сущности.
+        
+        Проверяет только клетки, в которые сущность входит при движении,
+        исключая текущую клетку, чтобы игрок мог уйти с клетки с бомбой.
+        Оптимизировано: проверяет только углы в направлении движения.
+        
+        Args:
+            new_x: Новая X координата сущности в пикселях
+            new_y: Новая Y координата сущности в пикселях
+            
+        Returns:
+            True если обнаружена коллизия, False иначе
+        """
         try:
-            # Вычисляем клетки сетки, с которыми пересекается сущность
-            grid_left: int = int(new_x / self.settings.cell_size)
-            grid_right: int = int((new_x + self.width) / self.settings.cell_size)
-            grid_top: int = int(new_y / self.settings.cell_size)
-            grid_bottom: int = int((new_y + self.height) / self.settings.cell_size)
+            # Вычисляем клетки сетки новой позиции
+            new_grid_left: int = int(new_x / self.settings.cell_size)
+            new_grid_right: int = int((new_x + self.width) / self.settings.cell_size)
+            new_grid_top: int = int(new_y / self.settings.cell_size)
+            new_grid_bottom: int = int((new_y + self.height) / self.settings.cell_size)
 
-            # Check all corners in the map
-            if (self.map.is_solid(grid_left, grid_top) or
-                    self.map.is_solid(grid_right, grid_top) or
-                    self.map.is_solid(grid_left, grid_bottom) or
-                    self.map.is_solid(grid_right, grid_bottom)):
-                return True
+            # Вычисляем текущую клетку сущности (где находится центр)
+            # Это нужно, чтобы исключить текущую клетку из проверки коллизий
+            current_cell_x: int = int((self.x + self.width / 2) / self.settings.cell_size)
+            current_cell_y: int = int((self.y + self.height / 2) / self.settings.cell_size)
+
+            # Определяем, по какой оси происходит движение
+            # Метод вызывается отдельно для X и Y, поэтому проверяем только измененную ось
+            dir_x, dir_y = self.direction
+            
+            # Движение по оси X (влево или вправо)
+            if dir_x != 0:
+                if dir_x > 0:  # Движение вправо - проверяем только правые углы
+                    if ((new_grid_right != current_cell_x or new_grid_top != current_cell_y) and 
+                        self.map.is_solid(new_grid_right, new_grid_top)):
+                        return True
+                    if ((new_grid_right != current_cell_x or new_grid_bottom != current_cell_y) and 
+                        self.map.is_solid(new_grid_right, new_grid_bottom)):
+                        return True
+                else:  # Движение влево - проверяем только левые углы
+                    if ((new_grid_left != current_cell_x or new_grid_top != current_cell_y) and 
+                        self.map.is_solid(new_grid_left, new_grid_top)):
+                        return True
+                    if ((new_grid_left != current_cell_x or new_grid_bottom != current_cell_y) and 
+                        self.map.is_solid(new_grid_left, new_grid_bottom)):
+                        return True
+
+            # Движение по оси Y (вверх или вниз)
+            if dir_y != 0:
+                if dir_y > 0:  # Движение вниз - проверяем только нижние углы
+                    if ((new_grid_left != current_cell_x or new_grid_bottom != current_cell_y) and 
+                        self.map.is_solid(new_grid_left, new_grid_bottom)):
+                        return True
+                    if ((new_grid_right != current_cell_x or new_grid_bottom != current_cell_y) and 
+                        self.map.is_solid(new_grid_right, new_grid_bottom)):
+                        return True
+                else:  # Движение вверх - проверяем только верхние углы
+                    if ((new_grid_left != current_cell_x or new_grid_top != current_cell_y) and 
+                        self.map.is_solid(new_grid_left, new_grid_top)):
+                        return True
+                    if ((new_grid_right != current_cell_x or new_grid_top != current_cell_y) and 
+                        self.map.is_solid(new_grid_right, new_grid_top)):
+                        return True
+
             return False
-
-            # x_grid = round(new_x / self.settings.cell_size)
-            # y_grid = round(new_y / self.settings.cell_size)
-            # if self.map.is_solid(x_grid, y_grid):
-            #     return True
-            # return False
 
         except Exception as e:
             logger.error(f"Error updating entity {self.id} ({self.name}): {e}", exc_info=True)

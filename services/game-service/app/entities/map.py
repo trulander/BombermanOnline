@@ -95,7 +95,7 @@ class Map:
     def is_solid(self, x: int, y: int) -> bool:
         """Проверяет, является ли ячейка твердой (стена или разрушаемый блок)"""
         cell_type = self.get_cell_type(x, y)
-        return cell_type in (CellType.SOLID_WALL, CellType.BREAKABLE_BLOCK)
+        return cell_type in (CellType.SOLID_WALL, CellType.BREAKABLE_BLOCK, CellType.BLOCKED_BOMB)
     
     def is_empty(self, x: int, y: int) -> bool:
         """Проверяет, является ли ячейка пустой"""
