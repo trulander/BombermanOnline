@@ -1,4 +1,5 @@
 import logging
+import random
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -28,6 +29,43 @@ ENEMY_COUNT = 10
 ENABLE_ENEMIES = True
 
 
+def generate_randomized_options(env_id: int, base_options: dict) -> dict:
+    """
+    Генерирует рандомизированные параметры среды на основе env_id.
+    
+    Каждый процесс получает уникальные параметры в заданных диапазонах:
+    - MAP_WIDTH: от 14 до 30 (включительно)
+    - MAP_HEIGHT: от 14 до 30 (включительно)
+    - ENEMY_COUNT: от 3 до 30 (включительно)
+    
+    Использует env_id как seed для детерминированной генерации,
+    чтобы каждый процесс получал разные, но воспроизводимые параметры.
+    
+    Args:
+        env_id: Уникальный идентификатор окружения (используется как seed)
+        base_options: Базовый словарь опций, из которого берутся остальные параметры
+            (enable_enemies, seed и т.д.)
+    
+    Returns:
+        dict: Словарь опций с рандомизированными параметрами map_width, map_height, enemy_count
+    """
+    # Set seed based on env_id for deterministic but different generation per process
+    random.seed(env_id)
+    
+    # Generate random parameters within specified ranges
+    map_width: int = random.randint(settings.WINDOW_SIZE, 30)
+    map_height: int = random.randint(settings.WINDOW_SIZE, 30)
+    enemy_count: int = random.randint(3, 30)
+    
+    # Create new options dict with randomized parameters
+    randomized_options: dict = base_options.copy()
+    randomized_options["map_width"] = map_width
+    randomized_options["map_height"] = map_height
+    randomized_options["enemy_count"] = enemy_count
+    
+    return randomized_options
+
+
 class TrainingService:
     def __init__(
         self,
@@ -55,7 +93,7 @@ class TrainingService:
         cnn_features_dim: int = 256,
         mlp_features_dim: int = 64,
         features_dim: int = 512,
-        count_cpu: int = 1,
+        count_cpu: int = 8,
         process_startup_delay: float = 0.5,
     ) -> Path:
         """
@@ -212,7 +250,7 @@ class TrainingService:
             #SubprocVecEnv (многопроцессорный режим)
             logger.info(
                 f"Using SubprocVecEnv (multiprocessing mode, count_cpu={count_cpu}, "
-                f"process_startup_delay={process_startup_delay}s)"
+                f"process_startup_delay={process_startup_delay}s) with randomized environment parameters"
             )
             vec_env = SubprocVecEnv(
                 env_fns=[
@@ -220,7 +258,8 @@ class TrainingService:
                         env_id=i, 
                         render_mode=render_mode, 
                         startup_delay=process_startup_delay,
-                        options=options
+                        options=options,
+                        randomize_params=True
                     ) 
                     for i in range(count_cpu)
                 ],
@@ -252,7 +291,8 @@ class TrainingService:
                             env_id=i,
                             render_mode=None,
                             startup_delay=process_startup_delay,
-                            options=options
+                            options=options,
+                            randomize_params=True
                         )
                         for i in range(count_cpu)
                     ],
@@ -434,7 +474,8 @@ def make_env(
         env_id: int,
         render_mode: str | None = None,
         startup_delay: float = 0.0,
-        options: dict = {}
+        options: dict = {},
+        randomize_params: bool = False
 ) -> Callable[[], BombermanEnv]:
     """
     Factory function to create environment instances for multiprocessing.
@@ -455,6 +496,9 @@ def make_env(
             startup_delay * env_id seconds before initialization to prevent simultaneous
             selection of the same game-service instance. Process 0 starts immediately,
             process 1 waits startup_delay seconds, process 2 waits 2*startup_delay, etc.
+        options: Base options dictionary with environment parameters
+        randomize_params: If True, generates randomized parameters (map_width, map_height, enemy_count)
+            for each process based on env_id. Used in multiprocessing mode to train on diverse configurations.
 
     Returns:
         Callable that creates a BombermanEnv instance when called
@@ -474,6 +518,18 @@ def make_env(
             delay = startup_delay * env_id
             logger.info(f"Environment {env_id}: waiting {delay:.2f}s before startup to avoid instance collision")
             time.sleep(delay)
+
+        # Generate randomized parameters if requested (for multiprocessing mode)
+        # Each process gets unique parameters based on env_id
+        env_options: dict = options
+        if randomize_params:
+            env_options = generate_randomized_options(env_id=env_id, base_options=options)
+            logger.info(
+                f"[ENV-{env_id}] Randomized parameters: "
+                f"map_width={env_options['map_width']}, "
+                f"map_height={env_options['map_height']}, "
+                f"enemy_count={env_options['enemy_count']}"
+            )
 
         # Import dependencies inside the function to ensure they're available
         # in each subprocess after fork/spawn
@@ -497,7 +553,7 @@ def make_env(
         env = BombermanEnv(
             grpc_client=grpc_client,
             render_mode=render_mode,
-            options=options
+            options=env_options
         )
         logger.info(f"Created environment {env_id} in subprocess with isolated dependencies")
         return env
