@@ -131,8 +131,7 @@ class TrainingCoordinator:
         player_x: float = player.x if player else 0.0
         player_y: float = player.y if player else 0.0
 
-        closest_dist: float = self._closest_enemy_distance(
-            game_service=game_service,
+        closest_dist: float = game_service.game_mode.get_closest_enemy_distance(
             px=player_x,
             py=player_y,
         )
