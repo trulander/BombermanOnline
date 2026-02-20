@@ -8,6 +8,24 @@ class Settings(BaseSettings):
     PORT: int = 5005
 
     GAME_CACHE_TTL: int = 60
+    
+    # Load balancing settings
+    LOAD_THRESHOLD: float = 2.0  # Absolute percentage difference threshold for equal load instances
+    
+    # Service configuration for automatic handler registration
+    SERVICE_CONFIGS: list[dict] = [
+        {
+            "service_name": "game-service",
+            "instance_request_event": "game.instance.request",  # Request for one instance
+            "instances_request_event": "game.instances.request",  # Request for all instances
+            "assign_event": "game.assign.request",  # Game assignment request
+        },
+        {
+            "service_name": "ai-service",
+            "instance_request_event": "ai.instance.request",  # Request for one instance
+            "instances_request_event": "ai.instances.request",  # Request for all instances
+        },
+    ]
 
     # Redis settings
     REDIS_HOST: str = "localhost"

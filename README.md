@@ -164,7 +164,7 @@ The heart of the game logic. It manages the state of active game sessions: proce
 Responsible for everything related to users: registration, authentication, JWT token and role management. It provides a `Forward Auth` mechanism for Traefik to protect other services.
 
 ### Game Allocator Service
-A dispatcher service responsible for efficiently distributing game sessions across available `Game Service` instances. It monitors the current load and finds the most suitable server for a new game, ensuring scalability and fault tolerance.
+A universal dispatcher service responsible for efficiently distributing load across available service instances (`Game Service`, `AI Service`, and others). It monitors current load (CPU and RAM) through Prometheus, identifies equally loaded instance groups, and uses round-robin rotation for even request distribution. The service automatically registers handlers for all configured services through configuration, ensuring scalability and fault tolerance.
 
 ### AI Service
 Manages the behavior of AI units (bots) in the game. The service subscribes to game state events from NATS, makes decisions based on trained models, and sends control commands for the AI back to the `Game Service` via NATS.

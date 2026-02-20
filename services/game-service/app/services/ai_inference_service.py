@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import grpc
 
@@ -30,14 +30,21 @@ class AIInferenceService:
         self._channel: grpc.aio.Channel | None = None
         self._stub: bomberman_ai_pb2_grpc.AIServiceStub | None = None
         self._last_action_at: dict[str, float] = {}
+        self._cached_instance: dict[str, Any] | None = None  # Cache for ai-service instance
 
     async def connect(self) -> None:
         if self._channel is not None:
             return
-        game_instances = await self.event_service.get_game_service_instances()
-        if not game_instances:
-            logger.error("game_instances are not available to connect to the game-service-grpc server")
-        target = f"{game_instances[-1]['address']}:{game_instances[-1]['grpc_port']}"
+        
+        # Use cached instance if available, otherwise fetch new one
+        if not self._cached_instance:
+            self._cached_instance = await self.event_service.get_ai_service_instance()
+        
+        if not self._cached_instance:
+            logger.error("ai-service instance is not available to connect to the ai-service-grpc server")
+            return
+        
+        target = f"{self._cached_instance['address']}:{self._cached_instance['grpc_port']}"
         self._channel = grpc.aio.insecure_channel(target=target)
         self._stub = bomberman_ai_pb2_grpc.AIServiceStub(self._channel)
         logger.info(f"Connected to ai-service gRPC at {target}")
@@ -48,6 +55,7 @@ class AIInferenceService:
         await self._channel.close()
         self._channel = None
         self._stub = None
+        # Note: Keep cached instance for reuse, only clear on explicit reset if needed
 
     def _can_request_action(self, *, entity_id: str) -> bool:
         now = time.time()

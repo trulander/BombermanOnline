@@ -53,6 +53,6 @@ class Settings(BaseSettings):
 
     # NATS settings for game-allocator-service
     NATS_URL: str = "nats://localhost:4222"
-    GAME_ALLOCATOR_SERVICE_NATS_SUBJECT: str = "game.instances.request"
+    GAME_ALLOCATOR_SERVICE_NATS_SUBJECT: str = "game.instance.request"
 
 settings: Settings = Settings()

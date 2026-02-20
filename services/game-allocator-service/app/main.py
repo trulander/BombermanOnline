@@ -1,7 +1,6 @@
 import logging
 import socket
-from enum import Enum
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 
 import asyncio
 import json
@@ -15,6 +14,7 @@ from logging_config import configure_logging
 from nats_repository import NatsRepository
 from game_cache import GameInstanceCache
 from redis_repository import RedisRepository
+from load_balancer import LoadBalancer
 from nats.aio.msg import Msg
 
 
@@ -43,10 +43,7 @@ async def start_healthcheck_server(port: int) -> None:
     logger.info(f"Healthcheck server started on 0.0.0.0:{port}")
 
 
-class NatsEvents(Enum):
-    GAME_ID_ASSIGN_GAME_SERVER = "game.assign.request"
-    GAME_INSTANCES_REQUEST = "game.instances.request"
-    AI_INSTANCES_REQUEST = "ai.instances.request"
+# NatsEvents enum removed - events are now configured via SERVICE_CONFIGS
 
 
 class GameAllocatorService:
@@ -56,77 +53,98 @@ class GameAllocatorService:
         self.consul = consul.Consul(host=settings.CONSUL_HOST, port=8500)
         self.prom = PrometheusConnect(url=settings.PROMETHEUS_URL, disable_ssl=True)
         self.cache = GameInstanceCache(redis_repository=self.redis_repository, ttl=settings.GAME_CACHE_TTL)
-
-    # def subscribe_events(self):
-
-    def get_instance_load(self, instance_id, address):
-        logger.debug(f"get_instance_load - instance_id:{instance_id}, address:{address}")
-        # CPU usage (PromQL)
-        cpu_query = f'rate(container_cpu_usage_seconds_total{{container_label_com_docker_compose_service="game-service", instance=~".*{address}.*"}}[5m])'
-        cpu_result = self.prom.custom_query(cpu_query)
-        cpu_usage = float(cpu_result[0]["value"][1]) if cpu_result else 0.0
-
-        # RAM usage
-        ram_query = f'container_memory_usage_bytes{{container_label_com_docker_compose_service="game-service", instance=~".*{address}.*"}}'
-        ram_result = self.prom.custom_query(ram_query)
-        ram_usage = float(ram_result[0]["value"][1]) if ram_result else 0.0
-
-        result = {
-            "instance_id": instance_id,
-            "cpu_usage": cpu_usage,
-            "ram_usage": ram_usage,
-            "address": address
-        }
-        logger.debug(f"get_instance_load - result:{result}")
-        return result
-
-    async def assign_game_instance(self, game_id: str, game_settings: dict):
-        logger.debug(f"assign_game_instance - game_id:{game_id}, game_settings:{game_settings}")
-        # Получить здоровые инстансы из Consul
-        _, services = self.consul.health.service("game-service", passing=True)
-        if not services:
-            return None
-
-        # Собираем метрики нагрузки
-        instance_loads = [
-            self.get_instance_load(s["Service"]["ID"], s["Service"]["Address"])
-            for s in services
-        ]
-
-        # Выбираем инстанс с минимальной загрузкой
-        min_load_instance = min(
-            instance_loads,
-            key=lambda x: x["cpu_usage"] if game_settings.get("resource_level", "low") == "low" else x["ram_usage"]
+        self.load_balancer = LoadBalancer(
+            consul_client=self.consul,
+            prometheus_client=self.prom,
+            load_threshold=settings.LOAD_THRESHOLD
         )
 
-        # Сохраняем в кэш
-        instance_id = min_load_instance["address"]
-        await self.cache.set_instance(game_id, instance_id)
+    async def get_service_instance(
+        self,
+        service_name: str,
+        resource_type: str = "cpu"
+    ) -> Optional[dict]:
+        """
+        Get best service instance using load balancing logic.
+        
+        Args:
+            service_name: Name of the service
+            resource_type: Type of resource to optimize for ("cpu" or "ram")
+            
+        Returns:
+            Instance dictionary with address, rest_port, grpc_port or None
+        """
+        logger.debug(f"get_service_instance - service_name:{service_name}, resource_type:{resource_type}")
+        
+        # Get healthy instances from Consul
+        _, services = self.consul.health.service(service_name, passing=True)
+        if not services:
+            logger.warning(f"No healthy {service_name} instances found")
+            return None
+        
+        # Use LoadBalancer to select best instance
+        instance = await self.load_balancer.select_best_instance(
+            service_name=service_name,
+            instances=services,
+            resource_type=resource_type
+        )
+        
+        if instance:
+            logger.debug(f"get_service_instance - selected instance: {instance}")
+        else:
+            logger.warning(f"get_service_instance - no instance selected for {service_name}")
+        
+        return instance
 
-        # # Уведомляем через NATS
-        # await self.nats_repository.publish_event(
-        #     subject_base=f"game.{instance_id}.assign",
-        #     payload={
-        #         "game_id": game_id,
-        #         "user_id": game_settings.get("user_id"),
-        #         "instance_id": instance_id
-        #     }
-        # )
-        return instance_id
+    async def get_all_service_instances(self, service_name: str) -> list[dict]:
+        """
+        Get all healthy service instances from Consul.
+        
+        Args:
+            service_name: Name of the service
+            
+        Returns:
+            List of instance dictionaries with address, rest_port, grpc_port
+        """
+        logger.debug(f"get_all_service_instances - service_name:{service_name}")
+        
+        _, services = self.consul.health.service(service_name, passing=True)
+        if not services:
+            logger.warning(f"No healthy {service_name} instances found")
+            return []
+        
+        instances = [
+            {
+                "address": s["Service"]["Address"],
+                "rest_port": int(s["Service"].get("Meta", {}).get("rest_api_port", 0)),
+                "grpc_port": int(s["Service"].get("Meta", {}).get("grpc_port", 0)),
+            }
+            for s in services
+        ]
+        
+        logger.debug(f"get_all_service_instances - found {len(instances)} instances")
+        return instances
 
-    async def subscribe_handler(self, event: NatsEvents) -> None:
-        def subscribe_wrapper(handler: Callable) -> Any:
+    async def subscribe_handler(self, subject: str, handler: Callable) -> None:
+        """
+        Subscribe to NATS event with handler.
+        
+        Args:
+            subject: NATS subject to subscribe to
+            handler: Handler function to process messages
+        """
+        def subscribe_wrapper(handler_func: Callable) -> Any:
             async def callback_wrapper(msg: Msg) -> None:
                 try:
                     decoded_data = json.loads(msg.data.decode())
-                    response = await handler(data=decoded_data)
+                    response = await handler_func(data=decoded_data)
                     if msg.reply:
                         await self.nats_repository.publish_simple(
                             subject=msg.reply,
                             payload=response
                         )
                 except Exception as e:
-                    error_msg = f"Error processing event: {e}"
+                    error_msg = f"Error processing event {subject}: {e}"
                     logger.error(error_msg, exc_info=True)
                     if msg and msg.reply:
                         await self.nats_repository.publish_simple(
@@ -139,75 +157,92 @@ class GameAllocatorService:
 
             return callback_wrapper
 
-        cb = None
-        match event:
-            case NatsEvents.GAME_ID_ASSIGN_GAME_SERVER:
-                cb = subscribe_wrapper(handler=self._handler_game_id_assign)
-            case NatsEvents.GAME_INSTANCES_REQUEST:
-                cb = subscribe_wrapper(handler=self._handler_game_instances_request)
-            case NatsEvents.AI_INSTANCES_REQUEST:
-                cb = subscribe_wrapper(handler=self._handler_ai_instances_request)
-            case _:
-                pass
+        cb = subscribe_wrapper(handler)
+        await self.nats_repository.subscribe(subject=subject, callback=cb)
+        logger.info(f"Subscribed to NATS subject: {subject}")
 
-        if cb:
-            await self.nats_repository.subscribe(subject=event.value, callback=cb)
-        else:
-            logger.error(f"No match handler for event: {event}")
+    def _create_instance_request_handler(self, service_name: str):
+        """Create handler for instance request event (returns one instance)."""
+        async def handler(data: dict) -> dict:
+            logger.debug(f"_handler_instance_request - service_name:{service_name}")
+            resource_type = data.get("resource_type", "cpu")
+            instance = await self.get_service_instance(
+                service_name=service_name,
+                resource_type=resource_type
+            )
+            if instance:
+                return {"success": True, "instance": instance}
+            else:
+                return {"success": False, "message": f"No healthy {service_name} instances available"}
+        return handler
 
+    def _create_instances_request_handler(self, service_name: str):
+        """Create handler for instances request event (returns all instances)."""
+        async def handler(data: dict) -> dict:
+            logger.debug(f"_handler_instances_request - service_name:{service_name}")
+            instances = await self.get_all_service_instances(service_name=service_name)
+            return {"success": True, "instances": instances}
+        return handler
 
-    async def _handler_game_id_assign(self, data: dict) -> dict:
-        game_id = data["game_id"]
-        game_settings = data.get("settings", {"resource_level": "low"})
-        instance_id = await self.assign_game_instance(game_id, game_settings)
-        logger.info(f"Assigned game {game_id} to instance {instance_id}")
-        return {
+    def _create_assign_request_handler(self, service_name: str):
+        """Create handler for assign request event (for game-service)."""
+        async def handler(data: dict) -> dict:
+            logger.debug(f"_handler_assign_request - service_name:{service_name}")
+            game_id = data.get("game_id")
+            if not game_id:
+                return {"success": False, "message": "game_id is required"}
+            
+            game_settings = data.get("settings", {"resource_level": "low"})
+            resource_type = "cpu" if game_settings.get("resource_level", "low") == "low" else "ram"
+            
+            instance = await self.get_service_instance(
+                service_name=service_name,
+                resource_type=resource_type
+            )
+            
+            if not instance:
+                return {"success": False, "message": f"No healthy {service_name} instances available"}
+            
+            instance_id = instance["address"]
+            await self.cache.set_instance(game_id, instance_id)
+            logger.info(f"Assigned game {game_id} to {service_name} instance {instance_id}")
+            
+            return {
                 "success": True,
                 "instance_id": instance_id
             }
-
-    async def _handler_game_instances_request(self, data: dict) -> dict:
-        logger.debug("_handler_game_instances_request - getting game-service instances")
-        _, services = self.consul.health.service("game-service", passing=True)
-        if not services:
-            logger.warning("No healthy game-service instances found")
-            return {"success": True, "instances": []}
-        
-        instances = [
-            {
-                "address": s["Service"]["Address"],
-                "rest_port": int(s["Service"]["Meta"]["rest_api_port"]),
-                "grpc_port": int(s["Service"]["Meta"]["grpc_port"]),
-            }
-            for s in services
-        ]
-        
-        logger.debug(f"_handler_game_instances_request - found {len(instances)} instances")
-        return {"success": True, "instances": instances}
-
-    async def _handler_ai_instances_request(self, data: dict) -> dict:
-        logger.debug("_handler_ai_instances_request - getting ai-service instances")
-        _, services = self.consul.health.service("ai-service", passing=True)
-        if not services:
-            logger.warning("No healthy ai-service instances found")
-            return {"success": True, "instances": []}
-        
-        instances = [
-            {
-                "address": s["Service"]["Address"],
-                "rest_port": int(s["Service"]["Meta"]["rest_api_port"]),
-                "grpc_port": int(s["Service"]["Meta"]["grpc_port"]),
-            }
-            for s in services
-        ]
-        logger.debug(f"_handler_ai_instances_request - found {len(instances)} instances")
-        return {"success": True, "instances": instances}
+        return handler
 
 
     async def initialize_handlers(self) -> None:
-        await self.subscribe_handler(event=NatsEvents.GAME_ID_ASSIGN_GAME_SERVER)
-        await self.subscribe_handler(event=NatsEvents.GAME_INSTANCES_REQUEST)
-        await self.subscribe_handler(event=NatsEvents.AI_INSTANCES_REQUEST)
+        """
+        Initialize NATS handlers based on SERVICE_CONFIGS.
+        Automatically registers handlers for all configured services.
+        """
+        logger.info("Initializing NATS handlers from SERVICE_CONFIGS")
+        
+        for service_config in settings.SERVICE_CONFIGS:
+            service_name = service_config["service_name"]
+            
+            # Register instance request handler (one instance)
+            if "instance_request_event" in service_config:
+                event = service_config["instance_request_event"]
+                handler = self._create_instance_request_handler(service_name)
+                await self.subscribe_handler(subject=event, handler=handler)
+            
+            # Register instances request handler (all instances)
+            if "instances_request_event" in service_config:
+                event = service_config["instances_request_event"]
+                handler = self._create_instances_request_handler(service_name)
+                await self.subscribe_handler(subject=event, handler=handler)
+            
+            # Register assign request handler (for game-service)
+            if "assign_event" in service_config:
+                event = service_config["assign_event"]
+                handler = self._create_assign_request_handler(service_name)
+                await self.subscribe_handler(subject=event, handler=handler)
+        
+        logger.info("All NATS handlers initialized")
 
 
     async def run(self):

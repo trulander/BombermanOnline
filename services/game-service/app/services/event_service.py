@@ -97,25 +97,25 @@ class EventService:
             specific_suffix=game_id
         )
 
-    async def get_game_service_instances(self) -> list[dict[str, Any]]:
-        """Получить список всех инстансов ai-service"""
+    async def get_ai_service_instance(self) -> dict[str, Any] | None:
+        """Get one best ai-service instance using load balancing"""
         try:
             response = await self.nats_repository.request(
-                subject="ai.instances.request",
-                payload=json.dumps({}).encode(),
+                subject="ai.instance.request",
+                payload=json.dumps({"resource_type": "cpu"}).encode(),
                 timeout=5.0
             )
             result = json.loads(response.data.decode())
-            if result.get('success'):
-                instances = result.get('instances', [])
-                logger.debug(f"Retrieved {len(instances)} ai-service instances")
-                return instances
+            if result.get('success') and result.get('instance'):
+                instance = result.get('instance')
+                logger.debug(f"Retrieved ai-service instance: {instance}")
+                return instance
             else:
-                logger.warning(f"Failed to get ai-service instances: {result.get('message')}")
-                return []
+                logger.warning(f"Failed to get ai-service instance: {result.get('message', 'Unknown error')}")
+                return None
         except Exception as e:
-            logger.error(f"Error getting ai-service instances: {e}", exc_info=True)
-            return []
+            logger.error(f"Error getting ai-service instance: {e}", exc_info=True)
+            return None
 
     async def handle_create_game(self, data: dict, callback: Callable) -> dict:
         """Обработчик создания новой игры"""
