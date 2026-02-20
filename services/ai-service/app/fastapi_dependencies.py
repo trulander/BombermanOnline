@@ -9,7 +9,7 @@ if TYPE_CHECKING:
     from app.services.grpc_client import GameServiceGRPCClient
     from app.services.grpc_server import AIServiceServicer
     from app.services.inference_service import InferenceService
-    from app.services.trainer import TrainingService
+    from app.services.trainer_service import TrainingService
 
 
 def get_redis_repository(request: Request) -> "RedisRepository":

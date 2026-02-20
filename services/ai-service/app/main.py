@@ -20,7 +20,7 @@ from aioprometheus import MetricsMiddleware
 from aioprometheus.asgi.starlette import metrics
 
 from app.services.inference_service import InferenceService
-from app.services.trainer import TrainingService
+from app.services.trainer_service import TrainingService
 
 configure_logging()
 logger = logging.getLogger(__name__)

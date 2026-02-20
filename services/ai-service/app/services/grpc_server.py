@@ -5,7 +5,7 @@ from concurrent import futures
 import grpc
 
 from app.services.inference_service import InferenceService
-from app.services.trainer import TrainingService
+from app.services.trainer_service import TrainingService
 from ..config import settings
 from ..shared.proto.bomberman_ai_pb2 import Observation
 

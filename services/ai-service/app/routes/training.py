@@ -8,7 +8,7 @@ from app.models.training import StartTraining
 
 
 if TYPE_CHECKING:
-    from app.services.trainer import TrainingService
+    from app.services.trainer_service import TrainingService
 
 
 logger = logging.getLogger(__name__)
