@@ -29,43 +29,6 @@ ENEMY_COUNT = 10
 ENABLE_ENEMIES = True
 
 
-def generate_randomized_options(env_id: int, base_options: dict) -> dict:
-    """
-    Генерирует рандомизированные параметры среды на основе env_id.
-    
-    Каждый процесс получает уникальные параметры в заданных диапазонах:
-    - MAP_WIDTH: от 14 до 30 (включительно)
-    - MAP_HEIGHT: от 14 до 30 (включительно)
-    - ENEMY_COUNT: от 3 до 30 (включительно)
-    
-    Использует env_id как seed для детерминированной генерации,
-    чтобы каждый процесс получал разные, но воспроизводимые параметры.
-    
-    Args:
-        env_id: Уникальный идентификатор окружения (используется как seed)
-        base_options: Базовый словарь опций, из которого берутся остальные параметры
-            (enable_enemies, seed и т.д.)
-    
-    Returns:
-        dict: Словарь опций с рандомизированными параметрами map_width, map_height, enemy_count
-    """
-    # Set seed based on env_id for deterministic but different generation per process
-    random.seed(env_id)
-    
-    # Generate random parameters within specified ranges
-    map_width: int = random.randint(settings.WINDOW_SIZE, 30)
-    map_height: int = random.randint(settings.WINDOW_SIZE, 30)
-    enemy_count: int = random.randint(3, 30)
-    
-    # Create new options dict with randomized parameters
-    randomized_options: dict = base_options.copy()
-    randomized_options["map_width"] = map_width
-    randomized_options["map_height"] = map_height
-    randomized_options["enemy_count"] = enemy_count
-    
-    return randomized_options
-
-
 class TrainingService:
     def __init__(
         self,
@@ -93,8 +56,8 @@ class TrainingService:
         cnn_features_dim: int = 256,
         mlp_features_dim: int = 64,
         features_dim: int = 512,
-        count_cpu: int = 8,
-        process_startup_delay: float = 0.5,
+        count_cpu: int = 20,
+        process_startup_delay: float = 0,
     ) -> Path:
         """
         Запускает процесс обучения модели с использованием RecurrentPPO.
@@ -226,9 +189,6 @@ class TrainingService:
         render_mode: str | None = "rgb_array" if enable_render else None
 
         options: dict = {
-            "map_width": MAP_WIDTH,
-            "map_height": MAP_HEIGHT,
-            "enemy_count": ENEMY_COUNT,
             "enable_enemies": ENABLE_ENEMIES,
             "seed": 0
         }
@@ -259,8 +219,7 @@ class TrainingService:
                         render_mode=render_mode, 
                         startup_delay=process_startup_delay,
                         options=options,
-                        randomize_params=True
-                    ) 
+                    )
                     for i in range(count_cpu)
                 ],
                 start_method="forkserver"
@@ -291,8 +250,7 @@ class TrainingService:
                             env_id=i,
                             render_mode=None,
                             startup_delay=process_startup_delay,
-                            options=options,
-                            randomize_params=True
+                            options=options
                         )
                         for i in range(count_cpu)
                     ],
@@ -357,7 +315,8 @@ class TrainingService:
                         cnn_features_dim=cnn_features_dim,
                         mlp_features_dim=mlp_features_dim,
                     ),
-                    n_lstm_layers=3
+                    lstm_hidden_size=64,
+                    n_lstm_layers=1,
                 )
             else:
                 logger.info("Using default MLP feature extractor for all observations")
@@ -370,7 +329,9 @@ class TrainingService:
                 tensorboard_log=str(settings.LOGS_PATH),
                 policy_kwargs=policy_kwargs if policy_kwargs else None,
                 ent_coef=0.02,
-                # learning_rate=1e-4
+                learning_rate=1e-4,
+                n_steps=64,
+                batch_size=256
             )
 
         # --- Callbacks ---
@@ -475,7 +436,6 @@ def make_env(
         render_mode: str | None = None,
         startup_delay: float = 0.0,
         options: dict = {},
-        randomize_params: bool = False
 ) -> Callable[[], BombermanEnv]:
     """
     Factory function to create environment instances for multiprocessing.
@@ -519,18 +479,6 @@ def make_env(
             logger.info(f"Environment {env_id}: waiting {delay:.2f}s before startup to avoid instance collision")
             time.sleep(delay)
 
-        # Generate randomized parameters if requested (for multiprocessing mode)
-        # Each process gets unique parameters based on env_id
-        env_options: dict = options
-        if randomize_params:
-            env_options = generate_randomized_options(env_id=env_id, base_options=options)
-            logger.info(
-                f"[ENV-{env_id}] Randomized parameters: "
-                f"map_width={env_options['map_width']}, "
-                f"map_height={env_options['map_height']}, "
-                f"enemy_count={env_options['enemy_count']}"
-            )
-
         # Import dependencies inside the function to ensure they're available
         # in each subprocess after fork/spawn
         from app.repositories.nats_repository import NatsRepository
@@ -553,7 +501,7 @@ def make_env(
         env = BombermanEnv(
             grpc_client=grpc_client,
             render_mode=render_mode,
-            options=env_options
+            options=options
         )
         logger.info(f"Created environment {env_id} in subprocess with isolated dependencies")
         return env

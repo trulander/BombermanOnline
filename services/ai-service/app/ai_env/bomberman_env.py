@@ -1,4 +1,5 @@
 import logging
+import random
 
 import numpy as np
 import gymnasium as gym
@@ -85,6 +86,37 @@ class BombermanEnv(gym.Env[dict[str, np.ndarray], int]):
             "stats": np.zeros(self._stats_size, dtype=np.float32),
         }
 
+    def generate_randomized_options(self, base_options: dict) -> dict:
+        """
+
+        Каждый процесс получает уникальные параметры в заданных диапазонах:
+        - MAP_WIDTH: от 14 до 30 (включительно)
+        - MAP_HEIGHT: от 14 до 30 (включительно)
+        - ENEMY_COUNT: от 3 до 30 (включительно)
+
+
+
+        Args:
+            base_options: Базовый словарь опций, из которого берутся остальные параметры
+                (enable_enemies, seed и т.д.)
+
+        Returns:
+            dict: Словарь опций с рандомизированными параметрами map_width, map_height, enemy_count
+        """
+
+        # Generate random parameters within specified ranges
+        map_width: int = random.randint(settings.WINDOW_SIZE, 30)
+        map_height: int = random.randint(settings.WINDOW_SIZE, 30)
+        enemy_count: int = random.randint(10, 30)
+
+        # Create new options dict with randomized parameters
+        randomized_options: dict = base_options.copy()
+        randomized_options["map_width"] = map_width
+        randomized_options["map_height"] = map_height
+        randomized_options["enemy_count"] = enemy_count
+
+        return randomized_options
+
     def reset(
         self,
         *,
@@ -94,7 +126,11 @@ class BombermanEnv(gym.Env[dict[str, np.ndarray], int]):
         super().reset(seed=seed)
         logger.info(f"BombermanEnv.reset called: seed={seed}, options={self.options}")
         self._step_count = 0
-        observation, info, session_id = self.grpc_client.reset(options=self.options)
+        observation, info, session_id = self.grpc_client.reset(
+            options=self.generate_randomized_options(
+                base_options=self.options
+            )
+        )
         if observation is None:
             logger.warning("BombermanEnv.reset: received None observation, using zeros")
             observation = self._empty_obs()
