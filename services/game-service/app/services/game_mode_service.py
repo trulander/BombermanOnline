@@ -358,14 +358,66 @@ class GameModeService(ABC):
         px: float,
         py: float,
     ) -> float:
-        min_dist: float = 9999.0
+        """
+        Calculate normalized distance to the closest enemy in grid cells.
+        
+        Returns a value from 0.0 (enemy in the same cell) to 1.0 (maximum distance on map).
+        If no enemies exist, returns 1.0.
+        
+        Uses grid-based distance calculation for better performance and simpler logic.
+        Positions are rounded to nearest cell coordinates.
+        
+        Args:
+            px: Player X coordinate in pixels
+            py: Player Y coordinate in pixels
+            
+        Returns:
+            Normalized distance (0.0 to 1.0)
+        """
+        # If no map is available, return maximum distance
+        if self.map is None:
+            return 1.0
+        
+        # Convert player position to grid cells (rounded to nearest cell)
+        player_cell_x: int = round(px / self.settings.cell_size)
+        player_cell_y: int = round(py / self.settings.cell_size)
+        
+        # Calculate maximum possible distance on the map in cells (diagonal from corner to corner)
+        max_distance_cells: float = math.hypot(self.map.width, self.map.height)
+        
+        # If no enemies exist, return maximum distance (normalized to 1.0)
+        if not self.enemies:
+            return 1.0
+        
+        # Find closest enemy distance in cells
+        min_dist_cells: float = max_distance_cells
         for e in self.enemies:
             if e.destroyed:
                 continue
-            dist: float = math.hypot(e.x - px, e.y - py)
-            if dist < min_dist:
-                min_dist = dist
-        return min_dist
+            # Convert enemy position to grid cells (rounded to nearest cell)
+            enemy_cell_x: int = round(e.x / self.settings.cell_size)
+            enemy_cell_y: int = round(e.y / self.settings.cell_size)
+            
+            # Calculate distance in cells using Manhattan or Euclidean distance
+            # Using Euclidean for more accurate distance representation
+            dist_cells: float = math.hypot(
+                enemy_cell_x - player_cell_x,
+                enemy_cell_y - player_cell_y
+            )
+            if dist_cells < min_dist_cells:
+                min_dist_cells = dist_cells
+        
+        # If no valid enemies found, return maximum distance
+        if min_dist_cells >= max_distance_cells:
+            return 1.0
+        
+        # If enemy is in the same cell (distance = 0), return 0.0
+        if min_dist_cells <= 0.0:
+            return 0.0
+        
+        # Normalize distance: 0.0 (same cell) to 1.0 (maximum distance)
+        normalized: float = min(1.0, min_dist_cells / max_distance_cells)
+        return normalized
 
     def update_player(self, player: Player, delta_time: float) -> PlayerUpdate | None:
         """Обновить одного игрока"""
