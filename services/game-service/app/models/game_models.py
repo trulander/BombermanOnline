@@ -173,20 +173,20 @@ class GameSettings(BaseModel):
     enemy_ai_controlled: bool = True
 
     # Настройки очков
-    block_destroy_score: int = 30
+    block_destroy_score: int = 50
     enemy_destroy_score: int = 500
     player_destroy_score: int = 500
-    powerup_collect_score: int = 30
+    powerup_collect_score: int = 50
     level_complete_score: int = 500
 
     #очки при обучении AI модели
     player_moved_score: int = -1
     played_did_not_moved_score: int = -4
-    placed_bomb_score: int = 20
-    couldnt_place_bomb: int = -4
-    hit_by_enemy_score: int = -300
-    hit_by_itself_score: int = -300
-    killed_by_enemy_score: int = -500
+    placed_bomb_score: int = 25
+    couldnt_place_bomb: int = -5
+    hit_by_enemy_score: int = -200
+    hit_by_itself_score: int = -200
+    killed_by_enemy_score: int = -300
     player_hit_score: int = 500
     enemy_hit_score: int = 500
     game_over_score: int = -500# не учитываем если игра проиграна после player destroyed
