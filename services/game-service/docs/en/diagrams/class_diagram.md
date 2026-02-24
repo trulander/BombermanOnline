@@ -68,14 +68,14 @@ classDiagram
         +float timer
         +activate() None
         +update(float delta_time) None
-        +get_damage_area() list
+        +get_damage_area() set
     }
 
     class Bomb {
         +int power
         +bool exploded
         +float explosion_timer
-        +list explosion_cells
+        +set explosion_cells
     }
 
     class Bullet {

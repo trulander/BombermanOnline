@@ -67,10 +67,12 @@ class GameServiceServicer:
                 info_json="",
             )
         result = await self.training_coordinator.reset(
-            map_width=request.map_width or None,
-            map_height=request.map_height or None,
-            enemy_count=request.enemy_count if request.enemy_count != 0 else None,
-            enable_enemies=request.enable_enemies,
+            map_width=request.map_width,
+            map_height=request.map_height,
+            enemy_count=request.enemy_count,
+            bomb_power=request.bomb_power,
+            count_bombs=request.count_bombs,
+            player_lives=request.player_lives,
             seed=request.seed if request.seed != 0 else None,
         )
         return bomberman_ai_pb2.TrainingResetResponse(

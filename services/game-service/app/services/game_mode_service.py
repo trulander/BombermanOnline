@@ -255,7 +255,7 @@ class GameModeService(ABC):
                 try:
                     action = task.result()
                 except Exception:
-                    action = None
+                    action = 0
 
                 if action is not None:
                     entity.ai_last_action_time = time.time()
@@ -295,42 +295,34 @@ class GameModeService(ABC):
         if is_player:
             active_bombs: int = sum(1 for w in self.weapons.values() if w.owner_id == entity_id)
             max_bombs: int = entity.primary_weapon_max_count
-            bomb_power: int = entity.primary_weapon_power
             max_lives_val: int = self.settings.player_max_lives
-            entity_speed: float = entity.speed
         else:
             active_bombs = 0
             max_bombs = 0
-            bomb_power = 0
             max_lives_val = max(1, entity.lives)
-            entity_speed = entity.speed
 
-        closest_dist: float = self.get_closest_enemy_distance(
-            px=entity.x,
-            py=entity.y,
-        )
+        in_blast_zone: float = 1.0 if self.is_entity_in_any_blast_zone(entity_x=entity.x, entity_y=entity.y) else 0.0
 
         obs_data = build_observation(
-            map_grid=self.map.grid, map_width=self.map.width, map_height=self.map.height,
+            map_grid=self.map.grid,
+            map_width=self.map.width,
+            map_height=self.map.height,
             cell_size=self.settings.cell_size,
-            entity_x=entity.x, entity_y=entity.y,
+            entity_x=entity.x,
+            entity_y=entity.y,
             lives=entity.lives,
             max_lives=max_lives_val,
             enemy_count=len(self.enemies),
             max_enemies=self.map_service.enemy_count + (len(self.players) - 1),
             bombs_left=max(0, max_bombs - active_bombs),
             max_bombs=max_bombs,
-            bomb_power=bomb_power,
-            max_bomb_power=self.settings.max_bomb_power,
             is_invulnerable=entity.invulnerable,
-            speed=entity_speed,
-            max_speed=self.settings.player_max_speed,
+            in_blast_zone=in_blast_zone,
             time_left=self.time_remaining,
             time_limit=float(self.settings.time_limit or 0),
             enemies_positions=enemies_positions,
             weapons_positions=weapons_positions,
             power_ups_positions=power_ups_positions,
-            closest_enemy=closest_dist
         )
         # Use game_id as session_id to track episodes per game
         # This allows LSTM states to be reset when a new game starts
@@ -352,72 +344,13 @@ class GameModeService(ABC):
         )
         self._ai_pending_tasks[entity_id] = task
 
-    def get_closest_enemy_distance(
-        self,
-        *,
-        px: float,
-        py: float,
-    ) -> float:
-        """
-        Calculate normalized distance to the closest enemy in grid cells.
-        
-        Returns a value from 0.0 (enemy in the same cell) to 1.0 (maximum distance on map).
-        If no enemies exist, returns 1.0.
-        
-        Uses grid-based distance calculation for better performance and simpler logic.
-        Positions are rounded to nearest cell coordinates.
-        
-        Args:
-            px: Player X coordinate in pixels
-            py: Player Y coordinate in pixels
-            
-        Returns:
-            Normalized distance (0.0 to 1.0)
-        """
-        # If no map is available, return maximum distance
-        if self.map is None:
-            return 1.0
-        
-        # Convert player position to grid cells (rounded to nearest cell)
-        player_cell_x: int = round(px / self.settings.cell_size)
-        player_cell_y: int = round(py / self.settings.cell_size)
-        
-        # Calculate maximum possible distance on the map in cells (diagonal from corner to corner)
-        max_distance_cells: float = math.hypot(self.map.width, self.map.height)
-        
-        # If no enemies exist, return maximum distance (normalized to 1.0)
-        if not self.enemies:
-            return 1.0
-        
-        # Find closest enemy distance in cells
-        min_dist_cells: float = max_distance_cells
-        for e in self.enemies:
-            if e.destroyed:
-                continue
-            # Convert enemy position to grid cells (rounded to nearest cell)
-            enemy_cell_x: int = round(e.x / self.settings.cell_size)
-            enemy_cell_y: int = round(e.y / self.settings.cell_size)
-            
-            # Calculate distance in cells using Manhattan or Euclidean distance
-            # Using Euclidean for more accurate distance representation
-            dist_cells: float = math.hypot(
-                enemy_cell_x - player_cell_x,
-                enemy_cell_y - player_cell_y
-            )
-            if dist_cells < min_dist_cells:
-                min_dist_cells = dist_cells
-        
-        # If no valid enemies found, return maximum distance
-        if min_dist_cells >= max_distance_cells:
-            return 1.0
-        
-        # If enemy is in the same cell (distance = 0), return 0.0
-        if min_dist_cells <= 0.0:
-            return 0.0
-        
-        # Normalize distance: 0.0 (same cell) to 1.0 (maximum distance)
-        normalized: float = min(1.0, min_dist_cells / max_distance_cells)
-        return normalized
+
+    def is_entity_in_any_blast_zone(self, entity_x: float, entity_y: float) -> bool:
+        """Check if entity at (entity_x, entity_y) is inside any active weapon's blast zone."""
+        for weapon in self.weapons.values():
+            if weapon.is_entity_in_blast_zone(entity_x=entity_x, entity_y=entity_y):
+                return True
+        return False
 
     def update_player(self, player: Player, delta_time: float) -> PlayerUpdate | None:
         """Обновить одного игрока"""

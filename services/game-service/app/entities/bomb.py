@@ -45,7 +45,8 @@ class Bomb(Weapon):
             y=int(self.y / self.settings.cell_size),
             cell_type=CellType.BLOCKED_BOMB
         )
-        
+        self._fill_explosion_area_geometry()
+
         logger.debug(f"Bomb created: position=({x}, {y}), power={power}, owner={owner_id}, timer={self.settings.bomb_timer}")
 
 
@@ -65,6 +66,6 @@ class Bomb(Weapon):
         super().update(**kwargs)
 
     
-    def get_damage_area(self) -> list[tuple[int, int]]:
+    def get_damage_area(self) -> set[tuple[int, int]]:
         """Получить область поражения взрыва"""
         return super().get_damage_area()

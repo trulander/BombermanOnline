@@ -23,18 +23,24 @@ class Observation(_message.Message):
     def __init__(self, grid_values: _Optional[_Iterable[float]] = ..., stats_values: _Optional[_Iterable[float]] = ...) -> None: ...
 
 class TrainingResetRequest(_message.Message):
-    __slots__ = ("map_width", "map_height", "enemy_count", "enable_enemies", "seed")
+    __slots__ = ("map_width", "map_height", "enemy_count", "enable_enemies", "bomb_power", "count_bombs", "player_lives", "seed")
     MAP_WIDTH_FIELD_NUMBER: _ClassVar[int]
     MAP_HEIGHT_FIELD_NUMBER: _ClassVar[int]
     ENEMY_COUNT_FIELD_NUMBER: _ClassVar[int]
     ENABLE_ENEMIES_FIELD_NUMBER: _ClassVar[int]
+    BOMB_POWER_FIELD_NUMBER: _ClassVar[int]
+    COUNT_BOMBS_FIELD_NUMBER: _ClassVar[int]
+    PLAYER_LIVES_FIELD_NUMBER: _ClassVar[int]
     SEED_FIELD_NUMBER: _ClassVar[int]
     map_width: int
     map_height: int
     enemy_count: int
     enable_enemies: bool
+    bomb_power: int
+    count_bombs: int
+    player_lives: int
     seed: int
-    def __init__(self, map_width: _Optional[int] = ..., map_height: _Optional[int] = ..., enemy_count: _Optional[int] = ..., enable_enemies: bool = ..., seed: _Optional[int] = ...) -> None: ...
+    def __init__(self, map_width: _Optional[int] = ..., map_height: _Optional[int] = ..., enemy_count: _Optional[int] = ..., enable_enemies: bool = ..., bomb_power: _Optional[int] = ..., count_bombs: _Optional[int] = ..., player_lives: _Optional[int] = ..., seed: _Optional[int] = ...) -> None: ...
 
 class TrainingResetResponse(_message.Message):
     __slots__ = ("session_id", "observation", "info_json")

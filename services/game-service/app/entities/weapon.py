@@ -32,7 +32,7 @@ class WeaponUpdate(TypedDict):
     direction: NotRequired[tuple[float, float]]
     activated: NotRequired[bool]
     exploded: NotRequired[bool]
-    explosion_cells: NotRequired[list[tuple[int, int]]]
+    explosion_cells: NotRequired[set[tuple[int, int]]]
     owner_id: NotRequired[str]
 
 
@@ -73,22 +73,27 @@ class Weapon(Entity, ABC):
         # self.exploded: bool = False
         self.activated_timer: float = 0
 
-        # Explosion cells will be populated when the bomb explodes
-        self.explosion_cells_grid: list[tuple[int, int]] = []
-        self.explosion_cells: list[tuple[int, int]] = []
-        #блоки разрушенные при взрыве.
+        # Explosion cells will be populated when the bomb explodes (or pre-filled in Bomb/Mine __init__)
+        self.explosion_cells_grid: set[tuple[int, int]] = set()
+        # Blocks destroyed by this explosion (filled in activate() when iterating explosion_cells_grid)
         self.destroyed_blocks: list[tuple[int, int]] = []
-        
+
         logger.debug(f"Weapon created: type={self.weapon_type.value}, position=({x}, {y}), owner={owner_id}")
 
 
     def activate(self, **kwargs) -> bool:
-        """Активировать оружие (взрыв, выстрел и т.д.)"""
+        """Activate weapon (explosion, shot, etc.). Explosion geometry must already be in explosion_cells_grid
+        (filled by _fill_explosion_area_geometry in Bomb/Mine __init__, or by subclass before super().activate()).
+        Destroys breakable blocks for each cell in explosion_cells_grid, then marks activated and runs handler.
+        """
         if not self.activated:
-            self.calc_explosion_area()
             handle_weapon_explosion: Callable = kwargs.get('handle_weapon_explosion')
+            # Destroy breakable blocks for each cell in pre-filled explosion area (no geometry calc here)
+            for cell_x, cell_y in self.explosion_cells_grid:
+                if self.map.is_breakable_block(cell_x, cell_y):
+                    if self.map.destroy_block(cell_x, cell_y):
+                        self.destroyed_blocks.append((cell_x, cell_y))
             self.activated = True
-
             if handle_weapon_explosion:
                 handle_weapon_explosion(self)
             return True
@@ -106,11 +111,11 @@ class Weapon(Entity, ABC):
             self.activated_timer += kwargs.get("delta_time", 0)
 
     
-    def get_damage_area(self) -> list[tuple[int, int]]:
-        """Получить область поражения взрыва"""
-        if self.activated:
-            return self.explosion_cells_grid
-        return []
+    def get_damage_area(self) -> set[tuple[int, int]]:
+        """Return explosion damage area (grid cells). Always returns explosion_cells_grid so collision
+        and 'entity in blast zone' checks work even before activation (e.g. for placed bombs/mines).
+        """
+        return self.explosion_cells_grid
 
 
     def get_destroyed_blocks(self) -> list[tuple[int, int]]:
@@ -119,35 +124,34 @@ class Weapon(Entity, ABC):
         return []
 
 
-    def calc_explosion_area(self):
-        # Получаем координаты бомбы в сетке
+    def _fill_explosion_area_geometry(self) -> None:
         grid_x: int = int(self.x / self.settings.cell_size)
         grid_y: int = int(self.y / self.settings.cell_size)
 
-        # Добавляем центр взрыва
-        self.explosion_cells_grid.append((grid_x, grid_y))
-        self.explosion_cells.append((grid_x * self.settings.cell_size, grid_y * self.settings.cell_size))
+        self.explosion_cells_grid.add((grid_x, grid_y))
 
-        # Проверяем в каждом из четырех направлений
         directions: list[tuple[int, int]] = [(0, -1), (1, 0), (0, 1), (-1, 0)]
-
         for dx, dy in directions:
             for i in range(1, self.power + 1):
                 check_x: int = grid_x + (dx * i)
                 check_y: int = grid_y + (dy * i)
 
-                # Останавливаемся при попадании в стену
                 if self.map.is_wall(check_x, check_y):
                     break
 
-                self.explosion_cells_grid.append((check_x, check_y))
-                self.explosion_cells.append((check_x * self.settings.cell_size, check_y * self.settings.cell_size))
+                self.explosion_cells_grid.add((check_x, check_y))
 
-                # Если попали в разрушаемый блок, разрушаем его и останавливаем взрыв
+                # Include breakable cell in zone but stop the ray (no destroy_block here)
                 if self.map.is_breakable_block(check_x, check_y):
-                    if self.map.destroy_block(check_x, check_y):
-                        self.destroyed_blocks.append((check_x, check_y))
                     break
+
+
+    def is_entity_in_blast_zone(self, entity_x: float, entity_y: float) -> bool:
+        """Check if entity at (entity_x, entity_y) is inside this weapon's blast zone (grid cell)."""
+        cell_size: int = self.settings.cell_size
+        gx: int = round(entity_x / cell_size)
+        gy: int = round(entity_y / cell_size)
+        return (gx, gy) in self.explosion_cells_grid
 
 
     def is_exploded(self) -> bool:
@@ -164,7 +168,7 @@ class Weapon(Entity, ABC):
             "direction": self.direction,
             "activated": self.activated,
             "exploded": self.is_exploded(),
-            "explosion_cells": self.explosion_cells.copy(),
+            "explosion_cells": self.explosion_cells_grid.copy(),
             "owner_id": self.owner_id
         }
         changes = {

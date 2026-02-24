@@ -119,13 +119,7 @@ class GameServiceGRPCClient:
             raise Exception({"error": "Wasn't able to connect to the game-service grpc server"})
 
         options = options or {}
-        request = bomberman_ai_pb2.TrainingResetRequest(
-            map_width=int(options.get("map_width", 0)),
-            map_height=int(options.get("map_height", 0)),
-            enemy_count=int(options.get("enemy_count", 0)),
-            enable_enemies=bool(options.get("enable_enemies", True)),
-            seed=int(options.get("seed", 0)),
-        )
+        request = bomberman_ai_pb2.TrainingResetRequest(**options)
         try:
             response = self.stub.Reset(request)
         except Exception as exc:

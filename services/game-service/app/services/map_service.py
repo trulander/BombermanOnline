@@ -319,6 +319,10 @@ class MapService:
     def generate_enemies_for_level(self, game_map: Map, level: int) -> List[Dict[str, Any]]:
         """Генерировать врагов для уровня"""
         try:
+            #TODO проработать этот момент, что с ростом уровня повышается количество монстров и
+            # их скорость до бесконечности, и игра падает из за того что не остается мест для
+            # размещения enemy или игроков
+            level = min(10, level)
             # Получаем позиции спавна врагов с учетом настроек
             min_distance = self.game_settings.min_distance_from_players
             allow_near_players = self.game_settings.allow_enemies_near_players
@@ -341,10 +345,10 @@ class MapService:
             self.enemy_count = int(base_enemy_count + level * level_multiplier)
             
             # Ограничиваем количество доступными позициями
-            self.enemy_count = min(self.enemy_count, len(enemy_spawns))
+            self.enemy_count = max(0, min(self.enemy_count, len(enemy_spawns)))
             
             if self.enemy_count == 0:
-                logger.warning("No valid enemy spawn positions found")
+                logger.debug("No valid enemy spawn positions found")
                 return []
             
             # Выбираем случайные позиции

@@ -25,7 +25,7 @@ class FreeForAllMode(GameModeService):
         )
         
         # Отключаем врагов в режиме FFA
-        self.settings.enable_enemies = False
+        self.settings.enable_enemies = True
         
         self.setup_teams()
     

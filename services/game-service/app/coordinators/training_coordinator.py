@@ -1,7 +1,6 @@
 import json
-import math
 import random
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import uuid4
 
@@ -12,7 +11,7 @@ from app.entities.weapon import WeaponAction
 
 from app.services.ai_action_mapper import action_to_inputs
 
-from app.services.ai_observation import build_observation, ObservationData, GRID_SIZE, STATS_SIZE
+from app.services.ai_observation import build_observation, ObservationData, GRID_SIZE, STATS_SIZE, DEFAULT_WINDOW_SIZE
 from app.services.game_service import GameService
 from app.services.map_service import MapService
 from app.models.game_models import GameSettings
@@ -34,7 +33,6 @@ class TrainingSession:
     last_enemy_count: int
     last_x: float = 0.0
     last_y: float = 0.0
-    last_closest_enemy_dist: float = 0.0
     total_steps: int = 0
     idle_steps: int = 0
     last_player_score: int = 0
@@ -71,36 +69,40 @@ class TrainingCoordinator:
     async def reset(
         self,
         *,
-        map_width: int | None,
-        map_height: int | None,
-        enemy_count: int | None,
-        enable_enemies: bool | None,
+        map_width: int = DEFAULT_WINDOW_SIZE,
+        map_height: int = DEFAULT_WINDOW_SIZE,
+        enemy_count: int = 3,
+        bomb_power: int = 1,
+        count_bombs: int = 1,
+        player_lives: int = 3,
         seed: int | None,
     ) -> TrainingResetResult:
-        if seed is not None:
-            random.seed(a=seed)
+        # if seed is not None:
+        #     random.seed(a=seed)
         defaults = GameSettings()
         game_settings = GameSettings(
             game_id=str(uuid4()),
             game_mode=GameModeType.TRAINING_IA,
-            max_players=1,
+            max_players=10,
             default_map_width=map_width or defaults.default_map_width,
             default_map_height=map_height or defaults.default_map_height,
             enemy_ai_controlled=False,
+            enable_enemies=True,
             time_limit=defaults.time_limit,  # Используем таймер из настроек по умолчанию (300 сек)
             randomize_spawn_positions=True,  # Включаем рандомизацию spawn точек для тренировочного режима
             randomize_spawn_assignment=True,  # Включаем рандомное распределение игроков по spawn точкам
+            spawn_points_count=1,
+            allow_spawn_on_empty_cells=True,
+            default_bomb_power=bomb_power,
+            default_count_bombs=count_bombs,
+            player_start_lives=player_lives,
+            powerup_drop_chance=0.7,
+            enemy_powerup_drop_chance=0.7
         )
 
-        if enemy_count is not None:
-            if enemy_count <= 0:
-                game_settings.enable_enemies = False
-                game_settings.enemy_count_multiplier = -3.0
-            else:
-                game_settings.enable_enemies = True
-                game_settings.enemy_count_multiplier = float(enemy_count - 3)
-        if enable_enemies is not None:
-            game_settings.enable_enemies = enable_enemies
+        player_ai_count: int = random.randint(0,enemy_count)
+
+        game_settings.enemy_count_multiplier = float((enemy_count - 3) - player_ai_count)# -4 потому что есть базовое значение +3 в расчете на уровень
 
         map_service = MapService(
             map_repository=self._map_repository,
@@ -124,17 +126,19 @@ class TrainingCoordinator:
 
         player.can_handle_ai_action = lambda x=None: False# patching to avoid back requests to the ai-service
 
+        for i in range(player_ai_count):
+            game_service.add_player(
+                player_id=str(uuid4()),
+                unit_type=UnitType.BOMBERMAN,
+                ai_player=True
+            )
+
         game_service.start_game()
 
         enemy_total = len(game_service.game_mode.enemies)
 
         player_x: float = player.x if player else 0.0
         player_y: float = player.y if player else 0.0
-
-        closest_dist: float = game_service.game_mode.get_closest_enemy_distance(
-            px=player_x,
-            py=player_y,
-        )
 
         session_id = str(uuid4())
         self._sessions[session_id] = TrainingSession(
@@ -145,7 +149,6 @@ class TrainingCoordinator:
             last_enemy_count=enemy_total,
             last_x=player_x,
             last_y=player_y,
-            last_closest_enemy_dist=closest_dist,
             total_steps=0,
             idle_steps=0,
             last_player_score=0
@@ -236,15 +239,9 @@ class TrainingCoordinator:
         else:
             session.idle_steps += 1
 
-        closest_dist: float = game_service.game_mode.get_closest_enemy_distance(
-            px=px,
-            py=py,
-        )
-
         session.last_player_lives = player.lives
         session.last_x = px
         session.last_y = py
-        session.last_closest_enemy_dist = closest_dist
 
         terminated: bool = game_service.game_mode.game_over or not player.is_alive()
         # Truncate если превышен лимит шагов, лимит простоя, или истёк таймер
@@ -306,6 +303,11 @@ class TrainingCoordinator:
             1 for w in game_service.game_mode.weapons.values()
             if w.owner_id == player_id
         )
+        in_blast_zone: float = (
+            1.0
+            if game_service.game_mode.is_entity_in_any_blast_zone(entity_x=player.x, entity_y=player.y)
+            else 0.0
+        )
         return build_observation(
             map_grid=map_grid,
             map_width=map_width,
@@ -319,15 +321,11 @@ class TrainingCoordinator:
             max_enemies=game_service.map_service.enemy_count + (len(game_service.game_mode.players) - 1),
             bombs_left=max(0, player.primary_weapon_max_count - active_bombs),
             max_bombs=player.primary_weapon_max_count,
-            bomb_power=player.primary_weapon_power,
-            max_bomb_power=game_service.settings.max_bomb_power,
             is_invulnerable=player.invulnerable,
-            speed=player.speed,
-            max_speed=game_service.settings.player_max_speed,
+            in_blast_zone=in_blast_zone,
             time_left=game_service.game_mode.time_remaining,
             time_limit=float(game_service.settings.time_limit or 0),
             enemies_positions=enemies_positions,
             weapons_positions=weapons_positions,
             power_ups_positions=power_ups_positions,
-            closest_enemy=session.last_closest_enemy_dist
         )

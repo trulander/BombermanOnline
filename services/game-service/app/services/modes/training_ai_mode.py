@@ -215,7 +215,7 @@ class TrainingAiMode(GameModeService):
             return True
         
         # Проверяем завершение уровня (все враги убиты)
-        if self.settings.enable_enemies and len(self.enemies) == 0:
+        if len(self.players) == 1 and len(self.enemies) == 0:
             return True
 
         # Если таймер активен и истёк — игрок проиграл (не успел уничтожить всех врагов)
@@ -230,11 +230,11 @@ class TrainingAiMode(GameModeService):
         """Обработать окончание игры в режиме прохождения"""
         try:
             alive_players = [p for p in self.players.values() if p.lives > 0]
-            
+
             if not alive_players:
                 # Все игроки мертвы - поражение
                 self.game_over = True
-                logger.info("Campaign mode: All players dead - game over")
+                logger.info("Training ai mode: All players dead - game over")
             elif self.settings.time_limit and self.settings.time_limit > 0 and self.time_remaining <= 0:
                 # Время истекло — поражение (не успел уничтожить всех врагов)
                 self.game_over = True
@@ -243,16 +243,16 @@ class TrainingAiMode(GameModeService):
                         player_id=player.id,
                         points=self.settings.game_over_score
                     )
-                logger.info("Campaign mode: Time expired - game over (defeat)")
-            elif self.settings.enable_enemies and len(self.enemies) == 0:
+                logger.info("Training ai mode: Time expired - game over (defeat)")
+            elif len(self.players) == 1 and len(self.enemies) == 0:
                 # Уровень завершен - переход на следующий уровень
                 await self._level_complete()
                 # Сбрасываем таймер на новый уровень
                 self.time_remaining = float(self.settings.time_limit or 0)
-                logger.info(f"Campaign mode: Level {self.level} completed")
+                logger.info(f"Training ai mode: Level {self.level} completed")
             
         except Exception as e:
-            logger.error(f"Error handling campaign game over: {e}", exc_info=True)
+            logger.error(f"Error handling Training ai game over: {e}", exc_info=True)
             self.game_over = True
     
     async def _level_complete(self) -> None:
@@ -277,7 +277,7 @@ class TrainingAiMode(GameModeService):
             self.power_ups = {}
             
             # Сброс позиций игроков
-            spawn_positions = self.map.get_player_spawn_positions()
+            spawn_positions = self.map.get_player_spawn_positions(include_empty_cells=True)
             if not spawn_positions:
                 spawn_positions = [(1, 1), (self.map.width - 2, 1), 
                                  (1, self.map.height - 2), (self.map.width - 2, self.map.height - 2)]

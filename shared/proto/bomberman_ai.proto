@@ -25,7 +25,10 @@ message TrainingResetRequest {
   int32 map_height = 2;
   int32 enemy_count = 3;
   bool enable_enemies = 4;
-  int32 seed = 5;
+  int32 bomb_power = 5;
+  int32 count_bombs = 6;
+  int32 player_lives = 7;
+  int32 seed = 8;
 }
 
 message TrainingResetResponse {

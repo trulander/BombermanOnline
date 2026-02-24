@@ -364,7 +364,7 @@ class GameService:
                 return True
             else:
                 message = f"Failed to apply weapon {weapon_action.value} for player {player_id}."
-                logger.warning(message)
+                logger.debug(message)
                 return False
         except Exception as e:
             message = f"Error applying weapon for player {player_id}: {e}"

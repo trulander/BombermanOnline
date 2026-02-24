@@ -272,7 +272,7 @@ class WeaponState(BaseModel):
     direction: Optional[tuple[float, float]] = None
     activated: bool
     exploded: bool
-    explosion_cells: list[tuple[int, int]]
+    explosion_cells: set[tuple[int, int]]
     owner_id: str
 
 

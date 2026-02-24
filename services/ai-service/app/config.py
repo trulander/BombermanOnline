@@ -37,10 +37,10 @@ class Settings(BaseSettings):
     MODELS_PATH: Path = Path("./app/ai_models")
     LOGS_PATH: Path = Path("./app/ai_logs")
 
-    #observation settings
+    # observation settings (stats: closest_enemy, lives, enemies, bombs, invuln, in_blast_zone, time)
     GRID_CHANNELS: int = 5
-    WINDOW_SIZE: int = 14
-    STATS_SIZE: int = 8
+    WINDOW_SIZE: int = 7
+    STATS_SIZE: int = 7
 
     # Training settings
     CHECKPOINT_FREQ: int = 10000

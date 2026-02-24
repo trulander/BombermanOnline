@@ -506,9 +506,11 @@ export class Renderer {
                 } else {
                     // Draw explosion with smooth movement
                     for (const cell of weapon.explosion_cells) {
-                        if (!this.isObjectVisible(cell[0], cell[1], this.cellSize, this.cellSize)) continue;
-                        const expRenderX = this.getRelativeX(cell[0]) + offsetDiffX;
-                        const expRenderY = this.getRelativeY(cell[1]) + offsetDiffY;
+                        const counted_x: number = cell[0] * this.cellSize
+                        const counted_y: number = cell[1] * this.cellSize
+                        if (!this.isObjectVisible(counted_x, counted_y, this.cellSize, this.cellSize)) continue;
+                        const expRenderX = this.getRelativeX(counted_x) + offsetDiffX;
+                        const expRenderY = this.getRelativeY(counted_y) + offsetDiffY;
                         
                         // Explosion gradient
                         const gradient = this.ctx.createRadialGradient(
@@ -562,9 +564,11 @@ export class Renderer {
                 } else {
                     // Explosion rendering for mine (can reuse bomb explosion logic or simplify)
                     for (const cell of weapon.explosion_cells) {
-                        if (!this.isObjectVisible(cell[0], cell[1], this.cellSize, this.cellSize)) continue;
-                        const expRenderX = this.getRelativeX(cell[0]) + offsetDiffX;
-                        const expRenderY = this.getRelativeY(cell[1]) + offsetDiffY;
+                        const counted_x: number = cell[0] * this.cellSize
+                        const counted_y: number = cell[1] * this.cellSize
+                        if (!this.isObjectVisible(counted_x, counted_y, this.cellSize, this.cellSize)) continue;
+                        const expRenderX = this.getRelativeX(counted_x) + offsetDiffX;
+                        const expRenderY = this.getRelativeY(counted_y) + offsetDiffY;
                         this.ctx.fillStyle = "rgba(255, 140, 0, 0.6)"; // Orange for mine explosion
                         this.ctx.fillRect(expRenderX, expRenderY, this.cellSize, this.cellSize);
                     }

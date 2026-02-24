@@ -189,7 +189,6 @@ class TrainingService:
         render_mode: str | None = "rgb_array" if enable_render else None
 
         options: dict = {
-            "enable_enemies": ENABLE_ENEMIES,
             "seed": 0
         }
 

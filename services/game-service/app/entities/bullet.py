@@ -40,7 +40,10 @@ class Bullet(Weapon):
     
 
     def activate(self, **kwargs) -> None:
-        """Пуля активируется при попадании в цель"""
+        """Bullet activates on hit; fill single cell for damage area before base activate()."""
+        grid_x: int = int(self.x / self.settings.cell_size)
+        grid_y: int = int(self.y / self.settings.cell_size)
+        self.explosion_cells_grid.append((grid_x, grid_y))
         super().activate(**kwargs)
         logger.debug(f"Bullet {self.id} hit target!")
 
@@ -63,7 +66,7 @@ class Bullet(Weapon):
             return (0, 1)
 
 
-    def get_damage_area(self) -> list[tuple[int, int]]:
+    def get_damage_area(self) -> set[tuple[int, int]]:
         """Получить текущую позицию пули в координатах сетки"""
         return super().get_damage_area()
 

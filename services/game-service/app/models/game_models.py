@@ -155,6 +155,7 @@ class GameSettings(BaseModel):
     player_invulnerable_time: float = 2.0
     player_max_speed: float = 6.0
     player_max_lives: int = 10
+    player_start_lives: int = 3
     destroy_disconnected_time: float = 25
 
     # Настройки оружия
@@ -176,7 +177,7 @@ class GameSettings(BaseModel):
     block_destroy_score: int = 50
     enemy_destroy_score: int = 500
     player_destroy_score: int = 500
-    powerup_collect_score: int = 50
+    powerup_collect_score: int = 80
     level_complete_score: int = 500
 
     #очки при обучении AI модели
@@ -204,7 +205,7 @@ class GameSettings(BaseModel):
     randomize_spawn_positions: bool = True  # Рандомизировать расположение spawn точек при генерации карты
     randomize_spawn_assignment: bool = True  # Рандомно распределять игроков по spawn точкам
     use_corner_spawns: bool = False  # Использовать углы карты для spawn точек
-    spawn_points_count: Optional[int] = 25  # Количество spawn точек для генерации (если None, то max_players)
+    spawn_points_count: Optional[int] = 1  # Количество spawn точек для генерации (если None, то max_players)
     allow_spawn_on_empty_cells: bool = True  # Разрешить спавн игроков на пустых клетках без spawn точек
 
     #Настраиваемые параметры во время создания игры
@@ -213,7 +214,6 @@ class GameSettings(BaseModel):
     game_mode: GameModeType = GameModeType.CAMPAIGN
     # Настройки игроков и команд
     max_players: int = 15
-    player_start_lives: int = 3
     # Настройки врагов
     enable_enemies: bool = True
     # Настройки карт
@@ -234,7 +234,7 @@ class GameSettings(BaseModel):
                 return TeamModeSettings(
                     game_mode=GameModeType.FREE_FOR_ALL,
                     default_team_count=0,  # Каждый игрок в своей команде
-                    max_team_count=8,
+                    max_team_count=15,
                     min_players_per_team=1,
                     max_players_per_team=1,
                     auto_distribute_players=True,
@@ -251,6 +251,17 @@ class GameSettings(BaseModel):
                     auto_distribute_players=True,
                     allow_uneven_teams=False,
                     default_team_names=["Red Team", "Blue Team", "Green Team", "Yellow Team"]
+                )
+            case GameModeType.TRAINING_IA:
+                return TeamModeSettings(
+                    game_mode=GameModeType.TRAINING_IA,
+                    default_team_count=0,
+                    max_team_count=10,
+                    min_players_per_team=1,
+                    max_players_per_team=1,
+                    auto_distribute_players=True,
+                    allow_uneven_teams=True,
+                    default_team_names=[]
                 )
             case _: # значение по умолчанию для GameModeType.CAMPAIGN
                 return TeamModeSettings(

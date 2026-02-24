@@ -24,15 +24,12 @@ COLOR_POWERUP: tuple[int, int, int] = (200, 0, 255)
 COLOR_GRID_LINE: tuple[int, int, int] = (50, 50, 50)
 
 STATS_LABELS: list[str] = [
-    # "rel_x",
-    # "rel_y",
     "closest_enemy",
     "lives",
     "enemies",
     "bombs",
-    "range",
     "invuln",
-    "speed",
+    "in_blast_zone",
     "time",
 ]
 
@@ -107,13 +104,19 @@ class BombermanEnv(gym.Env[dict[str, np.ndarray], int]):
         # Generate random parameters within specified ranges
         map_width: int = random.randint(settings.WINDOW_SIZE, 30)
         map_height: int = random.randint(settings.WINDOW_SIZE, 30)
-        enemy_count: int = random.randint(10, 30)
+        enemy_count: int = random.randint(3, 10)
+        bomb_power: int = random.randint(1, 6)
+        count_bombs: int = random.randint(1, 4)
+        player_lives: int = random.randint(3, 6)
 
         # Create new options dict with randomized parameters
         randomized_options: dict = base_options.copy()
         randomized_options["map_width"] = map_width
         randomized_options["map_height"] = map_height
         randomized_options["enemy_count"] = enemy_count
+        randomized_options["bomb_power"] = bomb_power
+        randomized_options["count_bombs"] = count_bombs
+        randomized_options["player_lives"] = player_lives
 
         return randomized_options
 

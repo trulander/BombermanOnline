@@ -5,7 +5,7 @@ import warnings
 
 from app.shared.proto import bomberman_ai_pb2 as app_dot_shared_dot_proto_dot_bomberman__ai__pb2
 
-GRPC_GENERATED_VERSION = '1.76.0'
+GRPC_GENERATED_VERSION = '1.78.0'
 GRPC_VERSION = grpc.__version__
 _version_not_supported = False
 

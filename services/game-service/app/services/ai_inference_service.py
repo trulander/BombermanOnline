@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import time
 from typing import TYPE_CHECKING, Any
@@ -35,7 +36,9 @@ class AIInferenceService:
     async def connect(self) -> None:
         if self._channel is not None:
             return
-        
+
+        # await asyncio.sleep(0.5)
+
         # Use cached instance if available, otherwise fetch new one
         if not self._cached_instance:
             self._cached_instance = await self.event_service.get_ai_service_instance()
@@ -95,4 +98,4 @@ class AIInferenceService:
         except Exception as exc:
             logger.error(f"AI inference failed: {exc}", exc_info=True)
             await self.disconnect()
-            return None
+            return 0

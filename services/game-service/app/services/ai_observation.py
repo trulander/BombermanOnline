@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
+from typing import Tuple
 
 import numpy as np
 
@@ -14,9 +16,10 @@ CELL_TERRAIN: dict[int, float] = {
     5: 0.25,
 }
 
-DEFAULT_WINDOW_SIZE: int = 14
+DEFAULT_WINDOW_SIZE: int = 7
 GRID_CHANNELS: int = 5
-STATS_SIZE: int = 8  # closest_enemy, lives, enemy, bombs_left, blast_range, invuln, speed, time_left
+# closest_enemy, lives, enemies, bombs_left, invuln, in_blast_zone, time_left
+STATS_SIZE: int = 7
 GRID_SIZE: int = GRID_CHANNELS * DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_SIZE
 
 
@@ -60,6 +63,67 @@ def _place_on_channel(
         if 0 <= lx < window_size and 0 <= ly < window_size:
             channel[ly, lx] = 1.0
 
+def _get_closest_enemy_distance(
+        *,
+        px: float,
+        py: float,
+        enemies: list[Tuple[float, float]],
+        cell_size: int,
+        map_width: int,
+        map_height: int
+) -> float:
+    """
+    Calculate normalized distance to the closest enemy in grid cells.
+
+    Returns a value from 0.0 (enemy in the same cell) to 1.0 (maximum distance on map).
+    If no enemies exist, returns 1.0.
+
+    Uses grid-based distance calculation for better performance and simpler logic.
+    Positions are rounded to nearest cell coordinates.
+
+    Args:
+        px: Entity X coordinate in pixels
+        py: Entity Y coordinate in pixels
+
+    Returns:
+        Normalized distance (0.0 to 1.0)
+    """
+
+    # Convert player position to grid cells (rounded to nearest cell)
+    player_cell_x: int = round(px / cell_size)
+    player_cell_y: int = round(py / cell_size)
+
+    # Calculate maximum possible distance on the map in cells (diagonal from corner to corner)
+    max_distance_cells: float = math.hypot(map_width, map_height)
+
+    # If no enemies exist, return maximum distance (normalized to 1.0)
+    if not enemies:
+        return 1.0
+
+    # Find closest enemy distance in cells
+    min_dist_cells: float = max_distance_cells
+    for e in enemies:
+        # Convert enemy position to grid cells (rounded to nearest cell)
+        enemy_cell_x: int = round(e[0] / cell_size)
+        enemy_cell_y: int = round(e[1] / cell_size)
+
+        # Calculate distance in cells using Manhattan or Euclidean distance
+        # Using Euclidean for more accurate distance representation
+        dist_cells: float = math.hypot(
+            enemy_cell_x - player_cell_x,
+            enemy_cell_y - player_cell_y
+        )
+        if dist_cells < min_dist_cells:
+            min_dist_cells = dist_cells
+
+    # If enemy is in the same cell (distance = 0), return 0.0
+    if min_dist_cells <= 0.0:
+        return 0.0
+
+    # Normalize distance: 0.0 (same cell) to 1.0 (maximum distance)
+    normalized: float = min(1.0, min_dist_cells / max_distance_cells)
+    return normalized
+
 
 def build_observation(
     *,
@@ -75,14 +139,10 @@ def build_observation(
     max_enemies: int,
     bombs_left: int,
     max_bombs: int,
-    bomb_power: int,
-    max_bomb_power: int,
     is_invulnerable: bool,
-    speed: float,
-    max_speed: float,
+    in_blast_zone: float,
     time_left: float,
     time_limit: float,
-    closest_enemy: float,
     enemies_positions: list[tuple[float, float]] | None = None,
     weapons_positions: list[tuple[float, float]] | None = None,
     power_ups_positions: list[tuple[float, float]] | None = None,
@@ -169,25 +229,28 @@ def build_observation(
         axis=0,
     )
 
-    # rel_x: float = float(center_x - start_x) / float(max(1, window_size - 1))
-    # rel_y: float = float(center_y - start_y) / float(max(1, window_size - 1))
     lives_norm: float = float(lives) / float(max(1, max_lives))
     enemy_norm: float = float(enemy_count) / float(max(1, max_enemies))
     bombs_left_norm: float = float(bombs_left) / float(max(1, max_bombs))
-    blast_range_norm: float = float(bomb_power) / float(max(1, max_bomb_power))
     invulnerable_val: float = 1.0 if is_invulnerable else 0.0
-    speed_norm: float = float(speed) / float(max(1.0, max_speed))
     time_left_norm: float = float(time_left) / float(max(1.0, time_limit)) if time_limit > 0 else 0.0
 
+    closest_enemy = _get_closest_enemy_distance(
+        px=entity_x,
+        py=entity_y,
+        enemies=enemies_positions,
+        cell_size=cell_size,
+        map_width=map_width,
+        map_height=map_height
+    )
+
     stats: list[float] = [
-        # rel_x,
         closest_enemy,
         lives_norm,
         enemy_norm,
         bombs_left_norm,
-        blast_range_norm,
         invulnerable_val,
-        speed_norm,
+        in_blast_zone,
         time_left_norm,
     ]
 

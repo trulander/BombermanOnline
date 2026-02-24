@@ -32,6 +32,7 @@ class Mine(Weapon):
             settings=settings
         )
         self.power: int = 1
+        self._fill_explosion_area_geometry()
         logger.debug(f"Mine created: position=({x}, {y}), owner={owner_id}")
 
 
@@ -46,6 +47,6 @@ class Mine(Weapon):
         super().update(**kwargs)
 
 
-    def get_damage_area(self) -> list[tuple[int, int]]:
+    def get_damage_area(self) -> set[tuple[int, int]]:
         """Получить область поражения мины (3x3 область)"""
         return super().get_damage_area()

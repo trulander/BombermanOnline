@@ -96,7 +96,7 @@ class TeamService:
         """Создает команды по умолчанию для текущего игрового режима."""
         self.teams.clear()
         
-        if self.mode_settings.game_mode == GameModeType.FREE_FOR_ALL:
+        if self.mode_settings.game_mode in [GameModeType.FREE_FOR_ALL, GameModeType.TRAINING_IA]:
             # Для FFA команды создаются для каждого игрока отдельно
             return
         
@@ -130,7 +130,7 @@ class TeamService:
         if not unassigned_players:
             return
         
-        if self.mode_settings.game_mode == GameModeType.FREE_FOR_ALL:
+        if self.mode_settings.game_mode in [GameModeType.FREE_FOR_ALL, GameModeType.TRAINING_IA]:
             # Каждый игрок в своей команде
             self._distribute_ffa_players(unassigned_players)
         else:
