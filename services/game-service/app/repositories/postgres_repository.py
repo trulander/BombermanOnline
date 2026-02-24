@@ -25,7 +25,7 @@ class PostgresRepository:
             if not self.async_session:
                 await self.connect()
             # Проверяем состояние SQLAlchemy engine
-            if self.engine is None or self.engine.pool._disposed:
+            if self.engine is None:
                 await self.connect()
         except Exception as e:
             logger.warning(f"Connection check failed, reconnecting: {e}")
