@@ -53,6 +53,13 @@ class Settings(BaseSettings):
 
     AI_ACTION_INTERVAL: float = 0.33  # минимальный интервал в секундах между командами AI (3 команды/сек)
 
+    # AI inference resilience: timeout for gRPC InferAction (seconds)
+    AI_INFERENCE_TIMEOUT_SEC: float = 1.0
+    # Backoff after consecutive inference errors: initial delay, step, max delay (seconds)
+    AI_INFERENCE_BACKOFF_INITIAL_SEC: float = 0.5
+    AI_INFERENCE_BACKOFF_STEP_SEC: float = 0.5
+    AI_INFERENCE_BACKOFF_MAX_SEC: float = 3.0
+
     # gRPC settings
     GRPC_HOST: str = "0.0.0.0"
     GRPC_PORT: int = 50051

@@ -132,6 +132,10 @@ The service is configured using environment variables. An example file with envi
 -   `LOG_LEVEL`, `LOG_FORMAT`, `TRACE_CALLER`: Logging settings.
 -   `GAME_UPDATE_FPS`: Game loop update frequency (frames per second).
 -   `AI_ACTION_INTERVAL`: Interval between AI inference requests (seconds).
+-   `AI_INFERENCE_TIMEOUT_SEC`: Timeout for gRPC inference call (seconds).
+-   `AI_INFERENCE_BACKOFF_INITIAL_SEC`, `AI_INFERENCE_BACKOFF_STEP_SEC`, `AI_INFERENCE_BACKOFF_MAX_SEC`: backoff after repeated inference errors — delay increases up to max (default 3 s) so the service does not hammer an unavailable ai-service.
+
+**Inference resilience when ai-service is unavailable:** a single shared gRPC channel is used for the whole service; all AI entities share it. When ai-service is down: requests are limited by timeout; on errors a soft channel reset (no blocking close) is performed, instance cache is cleared, and a new instance is fetched on next connect; backoff up to 3 s applies on repeated errors to avoid overloading the unavailable service.
 
 ## Secrets Management
 

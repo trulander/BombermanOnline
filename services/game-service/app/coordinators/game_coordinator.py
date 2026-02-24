@@ -40,34 +40,40 @@ class GameCoordinator:
         """Запуск игрового цикла"""
         logger.info("Starting game loop")
 
-        # Используем настройки FPS из конфигурации
         fps = settings.GAME_UPDATE_FPS
         interval = 1 / fps
+        # Max time for one iteration (update all games + sleep); on timeout loop continues
+        iteration_timeout_sec: float = 60.0
 
         while True:
             try:
-                active_games = 0
-                start_time = time.time()
+                async def _one_iteration() -> None:
+                    active_games = 0
+                    start_time = time.time()
 
-                for game_id, game in list(self.games.items()):
-                    if game.game_mode.is_alive() and game.is_active():
-                        active_games += 1
-                        updated_state = await game.update(delta_seconds=None)
-                        # Отправляем обновление через NATS всем подключенным клиентам
-                        await self.notification_service.send_game_update(data=updated_state.model_dump(mode="json"))
-                    elif game.is_active() and not game.game_mode.is_game_over():
-                        # Игра окончена, отправляем уведомление всем игрокам
-                        logger.info(f"Game {game_id} is over or has no players, sending game over notification")
-                        await self.notification_service.send_game_over(game_id=game_id)
-                        del self.games[game_id]
+                    for game_id, game in list(self.games.items()):
+                        if game.game_mode.is_alive() and game.is_active():
+                            active_games += 1
+                            updated_state = await game.update(delta_seconds=None)
+                            await self.notification_service.send_game_update(data=updated_state.model_dump(mode="json"))
+                        elif game.is_active() and not game.game_mode.is_game_over():
+                            logger.info(f"Game {game_id} is over or has no players, sending game over notification")
+                            await self.notification_service.send_game_over(game_id=game_id)
+                            del self.games[game_id]
 
-                if active_games > 0:
-                    logger.debug(f"Game loop update: {active_games} active games")
+                    if active_games > 0:
+                        logger.debug(f"Game loop update: {active_games} active games")
 
-                time_difference = interval - (time.time() - start_time)
-                sleep_duration = max(0, time_difference)
-                await asyncio.sleep(sleep_duration)
+                    time_difference = interval - (time.time() - start_time)
+                    sleep_duration = max(0, time_difference)
+                    await asyncio.sleep(sleep_duration)
 
+                await asyncio.wait_for(_one_iteration(), timeout=iteration_timeout_sec)
+            except asyncio.CancelledError:
+                logger.info("Game loop task was cancelled")
+                raise
+            except asyncio.TimeoutError:
+                logger.error(f"Game loop iteration timed out after {iteration_timeout_sec}s")
             except Exception as e:
                 logger.error(f"Error in game loop: {e}", exc_info=True)
 
