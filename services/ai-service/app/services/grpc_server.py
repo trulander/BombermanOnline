@@ -45,6 +45,7 @@ class AIServiceServicer:
     ) -> None:
         self.training_service = training_service
         self.inference_service = inference_service
+        self.inference_service.load_model()
 
     def StartTraining(
         self,
