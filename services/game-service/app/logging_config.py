@@ -87,6 +87,10 @@ def configure_logging():
     root_logger.handlers = [log_handler]
 
     # Настраиваем стандартные библиотеки
+    logging.getLogger("sqlalchemy.engine.Engine").setLevel(log_level)
+
+    logging.getLogger("sqlalchemy").setLevel(logging.WARNING)
+    logging.getLogger("sqlalchemy.engine").setLevel(logging.WARNING)
     logging.getLogger("uvicorn").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.error").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)

@@ -37,7 +37,6 @@ class PostgresRepository:
             # Создаем движок SQLAlchemy для асинхронной работы
             self.engine = sa_asyncio.create_async_engine(
                 settings.ASYNC_DATABASE_URI,
-                echo=settings.DEBUG,
                 future=True,
             )
 
