@@ -1,5 +1,6 @@
 import logging
 import random
+from typing import TYPE_CHECKING
 
 import numpy as np
 import gymnasium as gym
@@ -7,7 +8,9 @@ from gymnasium import spaces
 from PIL import Image, ImageDraw
 
 from app.config import settings
-from app.services.grpc_client import GameServiceGRPCClient
+
+if TYPE_CHECKING:
+    from app.services.grpc_client import GameServiceGRPCClient
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +21,7 @@ COLOR_SOLID: tuple[int, int, int] = (120, 120, 120)
 COLOR_BREAKABLE: tuple[int, int, int] = (160, 82, 45)
 COLOR_EXIT: tuple[int, int, int] = (0, 200, 80)
 COLOR_PLAYER: tuple[int, int, int] = (0, 120, 255)
+COLOR_PLAYERS: tuple[int, int, int] = (120, 120, 200)
 COLOR_ENEMY: tuple[int, int, int] = (220, 30, 30)
 COLOR_WEAPON: tuple[int, int, int] = (255, 220, 0)
 COLOR_POWERUP: tuple[int, int, int] = (200, 0, 255)
@@ -39,10 +43,10 @@ class BombermanEnv(gym.Env[dict[str, np.ndarray], int]):
 
     def __init__(
         self,
-        grpc_client: GameServiceGRPCClient,
-        grid_shape: tuple[int, ...] = (settings.GRID_CHANNELS, settings.WINDOW_SIZE, settings.WINDOW_SIZE),
-        stats_size: int = settings.STATS_SIZE,
-        action_count: int = 6,
+        grpc_client: "GameServiceGRPCClient",
+        grid_shape: tuple[int, ...],
+        stats_size: int,
+        action_count: int,
         render_mode: str | None = None,
         options: dict = {}
     ) -> None:
@@ -95,7 +99,7 @@ class BombermanEnv(gym.Env[dict[str, np.ndarray], int]):
 
         Args:
             base_options: Базовый словарь опций, из которого берутся остальные параметры
-                (enable_enemies, seed и т.д.)
+
 
         Returns:
             dict: Словарь опций с рандомизированными параметрами map_width, map_height, enemy_count
@@ -132,7 +136,9 @@ class BombermanEnv(gym.Env[dict[str, np.ndarray], int]):
         observation, info, session_id = self.grpc_client.reset(
             options=self.generate_randomized_options(
                 base_options=self.options
-            )
+            ),
+            shape=self._grid_shape,
+            stats_size=self._stats_size
         )
         if observation is None:
             logger.warning("BombermanEnv.reset: received None observation, using zeros")
@@ -151,11 +157,15 @@ class BombermanEnv(gym.Env[dict[str, np.ndarray], int]):
         observation, reward, terminated, truncated, info = self.grpc_client.step(
             action=action,
             session_id=self.session_id,
+            shape=self._grid_shape,
+            stats_size=self._stats_size
         )
         if observation is None:
             logger.warning("BombermanEnv.step: received None observation, using zeros")
             observation = self._empty_obs()
         self._last_obs = observation
+        self._last_reward = reward
+        self._last_action = action
         if terminated or truncated:
             logger.info(
                 f"BombermanEnv episode ended: session_id={self.session_id}, "
@@ -179,10 +189,15 @@ class BombermanEnv(gym.Env[dict[str, np.ndarray], int]):
         img[(terrain > 0.4) & (terrain < 0.6)] = COLOR_BREAKABLE
         img[(terrain > 0.2) & (terrain < 0.3)] = COLOR_EXIT
 
-        img[grid[4] == 1.0] = COLOR_POWERUP
         img[grid[3] == 1.0] = COLOR_WEAPON
-        img[grid[2] == 1.0] = COLOR_ENEMY
+        img[grid[2] == 1.0] = COLOR_PLAYERS
         img[grid[1] == 1.0] = COLOR_PLAYER
+
+        if self._grid_shape[0] > 4:
+            img[grid[4] == 1.0] = COLOR_ENEMY
+        if self._grid_shape[0] > 5:
+            img[grid[5] == 1.0] = COLOR_POWERUP
+
 
         scaled: np.ndarray = np.repeat(np.repeat(img, RENDER_SCALE, axis=0), RENDER_SCALE, axis=1)
 
@@ -199,6 +214,11 @@ class BombermanEnv(gym.Env[dict[str, np.ndarray], int]):
             if i < len(stats):
                 draw.text(xy=(4, y_offset), text=f"{label}: {stats[i]:.2f}", fill=(255, 255, 255))
                 y_offset += 16
+        draw.text(xy=(4, y_offset), text=f"reward: {self._last_reward}", fill=(255, 255, 255))
+        y_offset += 16
+        draw.text(xy=(4, y_offset), text=f"action: {self._last_action}", fill=(255, 255, 255))
+        y_offset += 16
+
 
         return np.array(pil_img)
 

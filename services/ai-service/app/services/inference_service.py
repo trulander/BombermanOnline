@@ -1,5 +1,6 @@
 import logging
-from functools import lru_cache
+from functools import lru_cache, cache
+from threading import Lock
 from typing import Any
 
 import numpy as np
@@ -11,31 +12,42 @@ logger = logging.getLogger(__name__)
 
 
 class InferenceService:
+
     def __init__(self) -> None:
         self.model_path = settings.MODELS_PATH
-        self.model: RecurrentPPO | None = None
-        # self._lstm_states: dict[str, dict[str, Any]] = {}
         logger.info(f"InferenceService initialized, model_path={self.model_path}")
+        self._storage: dict = {}
+        self._model_lock: Lock = Lock()
+
 
     def load_model(
         self,
-        model_name: str = "200010",
-    ) -> bool:
-        model_file = self.model_path / model_name / f"{model_name}.zip"
-        logger.info(f"Loading model from {model_file}")
-        if not model_file.exists():
-            logger.warning(f"Model file not found: {model_file}")
-            return False
-        try:
-            self.model = RecurrentPPO.load(
-                path=model_file,
-                device="cpu",
-            )
-            logger.info(f"Model loaded successfully from {model_file}")
-        except Exception as e:
-            logger.error(f"Failed to load model from {model_file}: {e}", exc_info=True)
-            return False
-        return True
+        model_name: str
+    ) -> RecurrentPPO | None:
+
+        model = self._storage.get(model_name)
+        if model is None:
+            with self._model_lock:
+                model = self._storage.get(model_name)
+                if model is None:
+                    model_file = self.model_path / model_name / f"{model_name}.zip"
+                    # model_file = self.model_path / model_name / "best_model.zip"
+                    logger.info(f"Loading model from {model_file}")
+                    if not model_file.exists():
+                        logger.warning(f"Model file not found: {model_file}")
+                        return None
+                    try:
+                        model = RecurrentPPO.load(
+                            path=model_file,
+                            device="cpu",
+                        )
+                        self._storage[model_name] = model
+                        logger.info(f"Model loaded successfully from {model_file}")
+                        return model
+                    except Exception as e:
+                        logger.error(f"Failed to load model from {model_file}: {e}", exc_info=True)
+                        return None
+        return model
 
     @lru_cache
     def _get_state(self, session_id: str) -> dict[str, Any]:
@@ -48,7 +60,8 @@ class InferenceService:
         self,
         observation: dict[str, np.ndarray],
         entity_id: str,
-        session_id: str
+        session_id: str,
+        model_name: str
     ) -> int:
         """
         Выполняет инференс действия для указанной сущности в сессии.
@@ -64,7 +77,8 @@ class InferenceService:
         Raises:
             RuntimeError: Если модель не загружена
         """
-        if self.model is None:
+        model = self.load_model(model_name=model_name)
+        if model is None:
             logger.error("infer_action called but model is not loaded")
             raise RuntimeError("model is not loaded")
         
@@ -74,7 +88,7 @@ class InferenceService:
         episode_start: bool = session.get("episode_start")
 
         # Выполняем предсказание действия
-        action, new_lstm_state = self.model.predict(
+        action, new_lstm_state = model.predict(
             observation=observation,
             state=lstm_state,
             episode_start=np.array([episode_start]),

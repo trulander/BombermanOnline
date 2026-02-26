@@ -20,7 +20,8 @@ from aioprometheus import MetricsMiddleware
 from aioprometheus.asgi.starlette import metrics
 
 from app.services.inference_service import InferenceService
-from app.services.trainer_service import TrainingService
+from app.services.trainer_enemy_service import TrainingEnemyService
+from app.services.trainer_player_service import TrainingPlayerService
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -37,7 +38,7 @@ def register_service():
             url=f"http://{settings.HOSTNAME}:{settings.PORT}/health",
             interval="10s",
             timeout="1s",
-            deregister="60s"
+            deregister="600s"
         )
     }
     c.agent.service.register(
@@ -82,13 +83,15 @@ async def lifespan(app: FastAPI):
     app.state.grpc_client = GameServiceGRPCClient(
         game_service_finder=app.state.game_service_finder
     )
-    app.state.training_service = TrainingService(
+    app.state.training_player_service = TrainingPlayerService(
+        grpc_client=app.state.grpc_client,
+    )
+    app.state.training_enemy_service = TrainingEnemyService(
         grpc_client=app.state.grpc_client,
     )
     app.state.inference_service = InferenceService()
 
     app.state.ai_service = AIServiceServicer(
-        training_service=app.state.training_service,
         inference_service=app.state.inference_service
     )
     app.state.ai_service.start_grpc()

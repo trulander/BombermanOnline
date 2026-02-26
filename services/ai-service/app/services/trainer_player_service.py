@@ -1,8 +1,8 @@
 import logging
-import random
 import time
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from sb3_contrib import RecurrentPPO
 from stable_baselines3.common.vec_env import DummyVecEnv, SubprocVecEnv, VecMonitor
@@ -15,28 +15,31 @@ from stable_baselines3.common.callbacks import (
 from app.ai_env.bomberman_env import BombermanEnv
 from app.config import settings
 from app.logging_config import configure_logging
-from app.services.grpc_client import GameServiceGRPCClient
+
 from app.services.training.render_callback import TensorBoardRenderCallback
 from app.services.training.training_metrics_callback import TrainingMetricsCallback
 from app.services.training.cnn_feature_extractor import BombermanCombinedFeatureExtractor
 
+if TYPE_CHECKING:
+    from app.services.grpc_client import GameServiceGRPCClient
+
+
 logger = logging.getLogger(__name__)
 
 
-MAP_WIDTH = 20
-MAP_HEIGHT = 20
-ENEMY_COUNT = 10
-ENABLE_ENEMIES = True
+STATS_PLAYER_INFERENCE_SIZE: int = 7
+GRID_PLAYER_INFERENCE_CHANNELS: int = 6
+ACTION_PLAYER_INFERENCE_COUNT: int = 6
 
 
-class TrainingService:
+class TrainingPlayerService:
     def __init__(
         self,
-        grpc_client: GameServiceGRPCClient,
+        grpc_client: "GameServiceGRPCClient",
     ) -> None:
         self.grpc_client = grpc_client
         self.model: RecurrentPPO | None = None
-        logger.info("TrainingService initialized")
+        logger.info("TrainingEnemyService initialized")
 
     def start_training(
         self,
@@ -56,7 +59,7 @@ class TrainingService:
         cnn_features_dim: int = 256,
         mlp_features_dim: int = 64,
         features_dim: int = 512,
-        count_cpu: int = 20,
+        count_cpu: int = 1,
         process_startup_delay: float = 0,
     ) -> Path:
         """
@@ -189,7 +192,8 @@ class TrainingService:
         render_mode: str | None = "rgb_array" if enable_render else None
 
         options: dict = {
-            "seed": 0
+            "seed": 0,
+            "training_player": True #Player, False is Enemy
         }
 
         # Create vectorized environment based on count_cpu parameter
@@ -199,6 +203,9 @@ class TrainingService:
             vec_env = DummyVecEnv(
                 env_fns=[
                     lambda: BombermanEnv(
+                        grid_shape=(GRID_PLAYER_INFERENCE_CHANNELS, settings.WINDOW_SIZE, settings.WINDOW_SIZE),
+                        action_count=ACTION_PLAYER_INFERENCE_COUNT,
+                        stats_size=STATS_PLAYER_INFERENCE_SIZE,
                         grpc_client=self.grpc_client,
                         render_mode=render_mode,
                         options=options
@@ -236,6 +243,9 @@ class TrainingService:
                 eval_vec_env = DummyVecEnv(
                     env_fns=[
                         lambda: BombermanEnv(
+                            grid_shape=(GRID_PLAYER_INFERENCE_CHANNELS, settings.WINDOW_SIZE, settings.WINDOW_SIZE),
+                            action_count=ACTION_PLAYER_INFERENCE_COUNT,
+                            stats_size=STATS_PLAYER_INFERENCE_SIZE,
                             grpc_client=self.grpc_client,
                             render_mode=None,  # No rendering for evaluation
                             options=options
@@ -261,17 +271,17 @@ class TrainingService:
         if model_name is None:
             model_name = log_name
 
-        if not model_name.endswith(".zip"):
-            model_name = f"{model_name}.zip"
-
-        # Setup base directory for model: MODELS_PATH/{log_name}/
-        model_dir = settings.MODELS_PATH / log_name
+        # Setup base directory for model: MODELS_PATH/{model_name}/
+        model_dir = settings.MODELS_PATH / model_name
         model_dir.mkdir(parents=True, exist_ok=True)
 
         # Setup subdirectories within model_dir
         checkpoint_dir = model_dir / "checkpoints"
         eval_log_dir = model_dir / "evaluations"
         best_model_path = model_dir / "best_model.zip"
+
+        if not model_name.endswith(".zip"):
+            model_name = f"{model_name}.zip"
 
         model_file = model_dir / model_name
 
@@ -424,7 +434,7 @@ class TrainingService:
         elapsed: float = time.monotonic() - start_time
         logger.info(f"Training completed in {elapsed:.2f}s")
 
-        # If resuming, overwrite the same file; otherwise save with log_name.
+        # If resuming, overwrite the same file; otherwise save with model_name.
         self.model.save(path=model_file)
         logger.info(f"Final model saved to {model_file}")
         return model_file
@@ -498,6 +508,9 @@ def make_env(
 
         # Create and return the environment with isolated dependencies
         env = BombermanEnv(
+            grid_shape=(GRID_PLAYER_INFERENCE_CHANNELS, settings.WINDOW_SIZE, settings.WINDOW_SIZE),
+            action_count=ACTION_PLAYER_INFERENCE_COUNT,
+            stats_size=STATS_PLAYER_INFERENCE_SIZE,
             grpc_client=grpc_client,
             render_mode=render_mode,
             options=options

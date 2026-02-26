@@ -20,7 +20,7 @@ class FakeInference:
 
 def test_grpc_infer_action_roundtrip() -> None:
     server = grpc.server(thread_pool=futures.ThreadPoolExecutor(max_workers=1))
-    servicer = AIServiceServicer(training_service=None, inference_service=FakeInference())
+    servicer = AIServiceServicer(training_player_service=None, inference_service=FakeInference())
     bomberman_ai_pb2_grpc.add_AIServiceServicer_to_server(servicer, server)
     port = server.add_insecure_port("localhost:0")
     server.start()

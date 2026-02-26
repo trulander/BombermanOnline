@@ -20,7 +20,7 @@ class GameServiceFinder:
             response = self.nats_repository.request(
                 subject=subject,
                 data={"resource_type": "cpu"},
-                timeout=5.0
+                timeout=settings.NATS_TIMEOUT
             )
             if response and response.get("success") and response.get("instance"):
                 instance = response.get("instance")

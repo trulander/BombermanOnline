@@ -20,7 +20,7 @@ class FakeInference:
 
 def test_infer_action_empty_observation_returns_zero() -> None:
     inference_service = FakeInference()
-    servicer = AIServiceServicer(training_service=None, inference_service=inference_service)
+    servicer = AIServiceServicer(training_player_service=None, inference_service=inference_service)
     request = bomberman_ai_pb2.InferActionRequest(
         session_id="s1",
         entity_id="e1",
@@ -34,7 +34,7 @@ def test_infer_action_empty_observation_returns_zero() -> None:
 
 def test_infer_action_returns_value() -> None:
     inference_service = FakeInference()
-    servicer = AIServiceServicer(training_service=None, inference_service=inference_service)
+    servicer = AIServiceServicer(training_player_service=None, inference_service=inference_service)
     request = bomberman_ai_pb2.InferActionRequest(
         session_id="s1",
         entity_id="e1",

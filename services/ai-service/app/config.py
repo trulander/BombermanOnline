@@ -38,9 +38,7 @@ class Settings(BaseSettings):
     LOGS_PATH: Path = Path("./app/ai_logs")
 
     # observation settings (stats: closest_enemy, lives, enemies, bombs, invuln, in_blast_zone, time)
-    GRID_CHANNELS: int = 5
     WINDOW_SIZE: int = 7
-    STATS_SIZE: int = 7
 
     # Training settings
     CHECKPOINT_FREQ: int = 10000
@@ -53,6 +51,7 @@ class Settings(BaseSettings):
 
     # NATS settings for game-allocator-service
     NATS_URL: str = "nats://localhost:4222"
+    NATS_TIMEOUT: float = 5
     GAME_ALLOCATOR_SERVICE_NATS_SUBJECT: str = "game.instance.request"
 
 settings: Settings = Settings()

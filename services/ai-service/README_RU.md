@@ -53,17 +53,18 @@ AI Сервис — компонент платформы Bomberman Online, от
   - Evaluation окружение всегда использует `DummyVecEnv` для стабильности, независимо от `count_cpu`
 
 **Пример использования:**
+
 ```python
 # Однопроцессорный режим (старая реализация)
-training_service.start_training(
-    total_timesteps=100000,
-    count_cpu=1  # или не указывать (по умолчанию)
+training_player_service.start_player_training(
+  total_timesteps=100000,
+  count_cpu=1  # или не указывать (по умолчанию)
 )
 
 # Многопроцессорный режим (4 параллельных процесса)
-training_service.start_training(
-    total_timesteps=100000,
-    count_cpu=4
+training_player_service.start_player_training(
+  total_timesteps=100000,
+  count_cpu=4
 )
 ```
 

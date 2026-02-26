@@ -9,7 +9,8 @@ if TYPE_CHECKING:
     from app.services.grpc_client import GameServiceGRPCClient
     from app.services.grpc_server import AIServiceServicer
     from app.services.inference_service import InferenceService
-    from app.services.trainer_service import TrainingService
+    from app.services.trainer_player_service import TrainingPlayerService
+    from app.services.trainer_enemy_service import TrainingEnemyService
 
 
 def get_redis_repository(request: Request) -> "RedisRepository":
@@ -24,8 +25,11 @@ def get_game_service_finder(request: Request) -> "GameServiceFinder":
 def get_game_service_grpc_client(request: Request) -> "GameServiceGRPCClient":
     return request.app.state.grpc_client
 
-def get_training_service(request: Request) -> "TrainingService":
-    return request.app.state.training_service
+def get_training_player_service(request: Request) -> "TrainingPlayerService":
+    return request.app.state.training_player_service
+
+def get_training_enemy_service(request: Request) -> "TrainingEnemyService":
+    return request.app.state.training_enemy_service
 
 def get_inference_service(request: Request) -> "InferenceService":
     return request.app.state.inference_service

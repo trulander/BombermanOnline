@@ -5,7 +5,8 @@ from concurrent import futures
 import grpc
 
 from app.services.inference_service import InferenceService
-from app.services.trainer_service import TrainingService
+from app.services.trainer_player_service import STATS_PLAYER_INFERENCE_SIZE, GRID_PLAYER_INFERENCE_CHANNELS
+from .trainer_enemy_service import GRID_ENEMY_INFERENCE_CHANNELS, STATS_ENEMY_INFERENCE_SIZE
 from ..config import settings
 from ..shared.proto.bomberman_ai_pb2 import Observation
 
@@ -21,17 +22,19 @@ except ImportError as e:
     raise Exception(e)
 
 
-def _parse_observation_from_request(
-    observation: Observation,
-) -> dict[str, np.ndarray] | None:
-    if observation is None:
-        return None
+def _parse_observation(observation: Observation, shape: tuple[int, ...], stats_size: int) -> dict[str, np.ndarray]:
     grid_flat: np.ndarray = np.array(observation.grid_values, dtype=np.float32)
     stats: np.ndarray = np.array(observation.stats_values, dtype=np.float32)
-    expected_grid: int = settings.GRID_CHANNELS * settings.WINDOW_SIZE * settings.WINDOW_SIZE
-    if grid_flat.size != expected_grid or stats.size != settings.STATS_SIZE:
-        return None
-    grid: np.ndarray = grid_flat.reshape(settings.GRID_CHANNELS, settings.WINDOW_SIZE, settings.WINDOW_SIZE)
+
+    expected_grid: int = shape[0] * shape[1] * shape[2]
+    if grid_flat.size == expected_grid:
+        grid: np.ndarray = grid_flat.reshape(shape[0], shape[1], shape[2])
+    else:
+        grid = np.zeros((shape[0], shape[1], shape[2]), dtype=np.float32)
+
+    if stats.size != stats_size:
+        stats = np.zeros(stats_size, dtype=np.float32)
+
     return {"grid": grid, "stats": stats}
 
 
@@ -40,47 +43,62 @@ class AIServiceServicer:
 
     def __init__(
         self,
-        training_service: TrainingService | None,
         inference_service: InferenceService | None,
     ) -> None:
-        self.training_service = training_service
         self.inference_service = inference_service
-        self.inference_service.load_model()
+        self.model_name_player_inference: str = "10000000"
+        self.model_name_enemy_inference: str = "enemy1000000"
 
-    def StartTraining(
-        self,
-        request: bomberman_ai_pb2.TrainingStartRequest,
-        context: grpc.ServicerContext,
-    ) -> bomberman_ai_pb2.TrainingStartResponse:
-        logger.info("gRPC StartTraining called")
-        if self.training_service is None:
-            logger.warning("StartTraining: training_service is None, returning empty response")
-            return bomberman_ai_pb2.TrainingStartResponse()
-        try:
-            self.training_service.start_training(
-                total_timesteps=1000,
-                log_name="bomberman_ai",
-            )
-            logger.info("StartTraining completed successfully")
-        except Exception as e:
-            logger.error(f"StartTraining failed: {e}", exc_info=True)
-        return bomberman_ai_pb2.TrainingStartResponse()
+        self.inference_service.load_model(
+            model_name=self.model_name_player_inference
+        )
+        self.inference_service.load_model(
+            model_name=self.model_name_enemy_inference
+        )
 
-    def InferAction(
+    def InferPlayerAction(
         self,
         request: bomberman_ai_pb2.InferActionRequest,
         context: grpc.ServicerContext,
+    ) -> bomberman_ai_pb2.InferActionResponse:
+        return self._infer_action(
+            request=request,
+            model_name=self.model_name_player_inference,
+            shape=(GRID_PLAYER_INFERENCE_CHANNELS, settings.WINDOW_SIZE, settings.WINDOW_SIZE),
+            stats_size=STATS_PLAYER_INFERENCE_SIZE
+        )
+
+    def InferEnemyAction(
+        self,
+        request: bomberman_ai_pb2.InferActionRequest,
+        context: grpc.ServicerContext,
+    ) -> bomberman_ai_pb2.InferActionResponse:
+        return self._infer_action(
+            request=request,
+            model_name=self.model_name_enemy_inference,
+            shape=(GRID_ENEMY_INFERENCE_CHANNELS, settings.WINDOW_SIZE, settings.WINDOW_SIZE),
+            stats_size=STATS_ENEMY_INFERENCE_SIZE
+        )
+
+    def _infer_action(
+            self,
+            request: bomberman_ai_pb2.InferActionRequest,
+            model_name: str,
+            shape: tuple[int, ...],
+            stats_size: int,
     ) -> bomberman_ai_pb2.InferActionResponse:
         logger.debug("gRPC InferAction called")
         if self.inference_service is None:
             logger.warning("InferAction: inference_service is None, returning action=0")
             return bomberman_ai_pb2.InferActionResponse(action=0)
-        if self.inference_service.model is None:
-            logger.info("InferAction: model not loaded, loading model")
-            self.inference_service.load_model()
 
-        obs: dict[str, np.ndarray] | None = _parse_observation_from_request(
+        # if self.inference_service.model is None:
+        #     logger.info("InferAction: model not loaded, loading model")
+
+        obs: dict[str, np.ndarray] | None = _parse_observation(
             observation=request.observation,
+            stats_size=stats_size,
+            shape=shape
         )
         if obs is None:
             logger.warning("InferAction: observation is empty or malformed, returning action=0")
@@ -92,7 +110,8 @@ class AIServiceServicer:
             action: int = self.inference_service.infer_action(
                 observation=obs,
                 entity_id=entity_id,
-                session_id=session_id
+                session_id=session_id,
+                model_name=model_name
             )
             logger.debug(f"InferAction: predicted action={action}")
         except Exception as e:

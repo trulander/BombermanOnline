@@ -9,7 +9,7 @@
 Наблюдения (observations) представлены в виде словаря с двумя ключами:
 
 - **`grid`**: Пространственные данные карты игры
-  - Форма: `(GRID_CHANNELS, WINDOW_SIZE, WINDOW_SIZE)` = `(5, 15, 15)`
+  - Форма: `(GRID_PLAYER_INFERENCE_CHANNELS, WINDOW_SIZE, WINDOW_SIZE)` = `(5, 15, 15)`
   - 5 каналов:
     1. `terrain` - рельеф местности (стены, разрушаемые блоки, выходы)
     2. `player` - позиция игрока
@@ -18,7 +18,7 @@
     5. `powerups` - позиции бонусов
 
 - **`stats`**: Векторные статистические данные
-  - Форма: `(STATS_SIZE,)` = `(9,)`
+  - Форма: `(STATS_PLAYER_INFERENCE_SIZE,)` = `(9,)`
   - Содержит нормализованные значения: lives, enemies, bombs, range, invulnerability, speed, time и др.
 
 ## Архитектура BombermanCNN
@@ -82,7 +82,7 @@ params = (kernel_h × kernel_w × in_channels + 1) × out_channels
 CNN feature extractor включается через параметр `use_cnn=True` в методе `start_training()`:
 
 ```python
-training_service.start_training(
+training_player_service.start_player_training(
     total_timesteps=100000,
     log_name="bomberman_cnn",
     use_cnn=True,
@@ -183,10 +183,10 @@ from app.services.training import TrainingService
 from app.services.grpc_client import GameServiceGRPCClient
 
 grpc_client = GameServiceGRPCClient(...)
-training_service = TrainingService(grpc_client=grpc_client)
+training_player_service = TrainingService(grpc_client=grpc_client)
 
 # Обучение с CNN
-training_service.start_training(
+training_player_service.start_player_training(
     total_timesteps=100000,
     log_name="bomberman_cnn_v1",
     use_cnn=True,
@@ -200,7 +200,7 @@ training_service.start_training(
 
 ```python
 # Обучение без CNN (используется стандартный MLP)
-training_service.start_training(
+training_player_service.start_player_training(
     total_timesteps=100000,
     log_name="bomberman_mlp_v1",
     use_cnn=False,
