@@ -149,13 +149,13 @@ class AIServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
-        self.StartTraining = channel.unary_unary(
-                '/bomberman.AIService/StartTraining',
-                request_serializer=app_dot_shared_dot_proto_dot_bomberman__ai__pb2.TrainingStartRequest.SerializeToString,
-                response_deserializer=app_dot_shared_dot_proto_dot_bomberman__ai__pb2.TrainingStartResponse.FromString,
+        self.InferPlayerAction = channel.unary_unary(
+                '/bomberman.AIService/InferPlayerAction',
+                request_serializer=app_dot_shared_dot_proto_dot_bomberman__ai__pb2.InferActionRequest.SerializeToString,
+                response_deserializer=app_dot_shared_dot_proto_dot_bomberman__ai__pb2.InferActionResponse.FromString,
                 _registered_method=True)
-        self.InferAction = channel.unary_unary(
-                '/bomberman.AIService/InferAction',
+        self.InferEnemyAction = channel.unary_unary(
+                '/bomberman.AIService/InferEnemyAction',
                 request_serializer=app_dot_shared_dot_proto_dot_bomberman__ai__pb2.InferActionRequest.SerializeToString,
                 response_deserializer=app_dot_shared_dot_proto_dot_bomberman__ai__pb2.InferActionResponse.FromString,
                 _registered_method=True)
@@ -164,13 +164,13 @@ class AIServiceStub(object):
 class AIServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
-    def StartTraining(self, request, context):
+    def InferPlayerAction(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def InferAction(self, request, context):
+    def InferEnemyAction(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -179,13 +179,13 @@ class AIServiceServicer(object):
 
 def add_AIServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'StartTraining': grpc.unary_unary_rpc_method_handler(
-                    servicer.StartTraining,
-                    request_deserializer=app_dot_shared_dot_proto_dot_bomberman__ai__pb2.TrainingStartRequest.FromString,
-                    response_serializer=app_dot_shared_dot_proto_dot_bomberman__ai__pb2.TrainingStartResponse.SerializeToString,
+            'InferPlayerAction': grpc.unary_unary_rpc_method_handler(
+                    servicer.InferPlayerAction,
+                    request_deserializer=app_dot_shared_dot_proto_dot_bomberman__ai__pb2.InferActionRequest.FromString,
+                    response_serializer=app_dot_shared_dot_proto_dot_bomberman__ai__pb2.InferActionResponse.SerializeToString,
             ),
-            'InferAction': grpc.unary_unary_rpc_method_handler(
-                    servicer.InferAction,
+            'InferEnemyAction': grpc.unary_unary_rpc_method_handler(
+                    servicer.InferEnemyAction,
                     request_deserializer=app_dot_shared_dot_proto_dot_bomberman__ai__pb2.InferActionRequest.FromString,
                     response_serializer=app_dot_shared_dot_proto_dot_bomberman__ai__pb2.InferActionResponse.SerializeToString,
             ),
@@ -201,7 +201,7 @@ class AIService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def StartTraining(request,
+    def InferPlayerAction(request,
             target,
             options=(),
             channel_credentials=None,
@@ -214,9 +214,9 @@ class AIService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/bomberman.AIService/StartTraining',
-            app_dot_shared_dot_proto_dot_bomberman__ai__pb2.TrainingStartRequest.SerializeToString,
-            app_dot_shared_dot_proto_dot_bomberman__ai__pb2.TrainingStartResponse.FromString,
+            '/bomberman.AIService/InferPlayerAction',
+            app_dot_shared_dot_proto_dot_bomberman__ai__pb2.InferActionRequest.SerializeToString,
+            app_dot_shared_dot_proto_dot_bomberman__ai__pb2.InferActionResponse.FromString,
             options,
             channel_credentials,
             insecure,
@@ -228,7 +228,7 @@ class AIService(object):
             _registered_method=True)
 
     @staticmethod
-    def InferAction(request,
+    def InferEnemyAction(request,
             target,
             options=(),
             channel_credentials=None,
@@ -241,7 +241,7 @@ class AIService(object):
         return grpc.experimental.unary_unary(
             request,
             target,
-            '/bomberman.AIService/InferAction',
+            '/bomberman.AIService/InferEnemyAction',
             app_dot_shared_dot_proto_dot_bomberman__ai__pb2.InferActionRequest.SerializeToString,
             app_dot_shared_dot_proto_dot_bomberman__ai__pb2.InferActionResponse.FromString,
             options,

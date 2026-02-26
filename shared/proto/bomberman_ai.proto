@@ -8,12 +8,9 @@ service GameService {
 }
 
 service AIService {
-  rpc StartTraining(TrainingStartRequest) returns (TrainingStartResponse);
-  rpc InferAction(InferActionRequest) returns (InferActionResponse);
+  rpc InferPlayerAction(InferActionRequest) returns (InferActionResponse);
+  rpc InferEnemyAction(InferActionRequest) returns (InferActionResponse);
 }
-
-message TrainingStartRequest {}
-message TrainingStartResponse {}
 
 message Observation {
   repeated float grid_values = 1;
@@ -24,10 +21,10 @@ message TrainingResetRequest {
   int32 map_width = 1;
   int32 map_height = 2;
   int32 enemy_count = 3;
-  bool enable_enemies = 4;
-  int32 bomb_power = 5;
-  int32 count_bombs = 6;
-  int32 player_lives = 7;
+  int32 bomb_power = 4;
+  int32 count_bombs = 5;
+  int32 player_lives = 6;
+  bool training_player = 7;
   int32 seed = 8;
 }
 
