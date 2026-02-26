@@ -28,10 +28,12 @@ class Settings(BaseSettings):
     REDIS_PORT: int = 6379
     REDIS_DB: int = 0
     REDIS_PASSWORD: str | None = None
+    REDIS_CACHE_TTL: int = 3600
     
 
     # NATS settings
     NATS_URL: str = "nats://localhost:4222"
+    NATS_TIMEOUT: float = 5
     
 
     # Logging settings

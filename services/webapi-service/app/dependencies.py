@@ -1,3 +1,4 @@
+from app.config import settings
 from fastapi import Depends
 from typing import AsyncGenerator
 import logging
@@ -15,7 +16,10 @@ logger = logging.getLogger(__name__)
 try:
     logger.debug("Initializing singleton instances")
     redis_repository = RedisRepository()
-    game_cache = GameInstanceCache(redis_repository=redis_repository)
+    game_cache = GameInstanceCache(
+        redis_repository=redis_repository,
+        ttl=settings.REDIS_CACHE_TTL
+    )
     nats_service = NatsService(game_cache=game_cache)
     game_service = GameService(nats_service)
     game_aggregator_service = GameAggregatorService(nats_service=nats_service)

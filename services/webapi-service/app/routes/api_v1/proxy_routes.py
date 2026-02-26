@@ -2,11 +2,10 @@ import logging
 
 import httpx
 from fastapi import APIRouter, Request, HTTPException, status
-from fastapi.params import Depends
 from fastapi.responses import Response
 
 from ...dependencies import game_cache
-from ...services.game_cache import GameInstanceCache
+
 
 logger = logging.getLogger(__name__)
 

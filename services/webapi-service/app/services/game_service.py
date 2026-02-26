@@ -63,7 +63,7 @@ class GameService:
             self,
             sid_user_id:str,
             game_id: str,
-            player_id: str = None
+            player_id: str | None = None
     ) -> Dict[str, Any]:
         """
         Команда: Присоединиться к существующей игре

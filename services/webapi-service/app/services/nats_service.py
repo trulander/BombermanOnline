@@ -5,11 +5,13 @@ from typing import Any, Callable, TYPE_CHECKING
 import nats
 from nats.aio.client import Client as NATS
 from nats.aio.msg import Msg
+
+
 from ..config import settings
 from ..models.game import GameCreateSettings
 
 if TYPE_CHECKING:
-    from game_cache import GameInstanceCache
+    from .game_cache import GameInstanceCache
 
 logger = logging.getLogger(__name__)
 
@@ -91,7 +93,7 @@ class NatsService:
             
             # Отправляем обновление всем подключенным клиентам через сокеты
             handler = self.socket_event_handlers.get(f"game_{game_id}", {}).get('game_update', None)
-            if handler:
+            if handler is not None:
                 await handler(game_id=game_id, game_state=game_state)
 
             logger.debug(f"Game update for game {game_id} forwarded to {handler} handler")
@@ -106,7 +108,7 @@ class NatsService:
             
             # Отправляем уведомление всем подключенным клиентам через сокеты
             handler = self.socket_event_handlers.get(f"game_{game_id}", {}).get('game_over', None)
-            if handler:
+            if handler is not None:
                 await handler(game_id=game_id)
 
             self.unregister_socket_handler(game_id=game_id)
@@ -126,7 +128,7 @@ class NatsService:
 
             # Отправляем уведомление всем подключенным клиентам в комнату через сокеты
             handler = self.socket_event_handlers.get(f"game_{game_id}", {}).get('player_disconnected', None)
-            if handler:
+            if handler is not None:
                 await handler(game_id=game_id, player_id=player_id)
 
             logger.debug(f"Player disconnected event for {player_id} in game {game_id} forwarded to {handler} handler")
@@ -155,7 +157,7 @@ class NatsService:
             response = await nc.request(
                 subject="game.instances.request",
                 payload=json.dumps({}).encode(),
-                timeout=5.0
+                timeout=settings.NATS_TIMEOUT
             )
             result = json.loads(response.data.decode())
             if result.get('success'):
@@ -189,7 +191,7 @@ class NatsService:
             response = await nc.request(
                 sharded_subject,
                 json.dumps(payload).encode(),
-                timeout=5.0
+                timeout=settings.NATS_TIMEOUT
             )
             result = json.loads(response.data.decode())
             if result.get('success'):
@@ -216,7 +218,7 @@ class NatsService:
             response = await nc.request(
                 sharded_subject,
                 json.dumps({"game_id": game_id, "player_id": player_id}).encode(),
-                timeout=5.0
+                timeout=settings.NATS_TIMEOUT
             )
             result = json.loads(response.data.decode())
             if result.get('success'):
@@ -268,7 +270,7 @@ class NatsService:
                     "player_id": player_id,
                     "weapon_type": weapon_type
                 }).encode(),
-                timeout=5.0
+                timeout=settings.NATS_TIMEOUT
             )
             result = json.loads(response.data.decode())
             if result.get('success'):
@@ -296,7 +298,7 @@ class NatsService:
             response = await nc.request(
                 sharded_subject,
                 json.dumps({"game_id": game_id}).encode(),
-                timeout=5.0
+                timeout=settings.NATS_TIMEOUT
             )
             result = json.loads(response.data.decode())
             if result.get('success'):
@@ -324,7 +326,7 @@ class NatsService:
             response = await nc.request(
                 sharded_subject,
                 json.dumps({"game_id": game_id, "player_id": player_id}).encode(),
-                timeout=5.0
+                timeout=settings.NATS_TIMEOUT
             )
             result = json.loads(response.data.decode())
             if result.get('success'):
