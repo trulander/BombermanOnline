@@ -37,7 +37,7 @@ def register_service():
             url=f"http://{settings.HOSTNAME}:{settings.PORT}/health",
             interval="10s",
             timeout="1s",
-            deregister="60s"
+            deregister="600s"
         )
     }
     c.agent.service.register(

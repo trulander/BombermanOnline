@@ -47,16 +47,15 @@ class Player(Entity, ABC):
 
     def __init__(
             self,
-            id: str,
             size: float,
             map: "Map",
             settings: "GameSettings",
             name: str = None,
             ai: bool = False,
+            id: str | None = None,
     ):
         try:
             super().__init__(
-                id=id,
                 width=size * self.scale_size,
                 height=size * self.scale_size,
                 speed=3.0,
@@ -65,7 +64,8 @@ class Player(Entity, ABC):
                 map = map,
                 settings = settings,
                 name=name,
-                ai=ai
+                ai=ai,
+                id = id,
             )
             self.team_id: str = ""  # ID команды
             self.disconnected_time: float = 0.0

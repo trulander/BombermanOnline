@@ -17,10 +17,12 @@ CELL_TERRAIN: dict[int, float] = {
 }
 
 DEFAULT_WINDOW_SIZE: int = 7
-GRID_CHANNELS: int = 5
+GRID_PLAYER_INFERENCE_CHANNELS: int = 6
+GRID_ENEMY_INFERENCE_CHANNELS: int = 4
 # closest_enemy, lives, enemies, bombs_left, invuln, in_blast_zone, time_left
 STATS_SIZE: int = 7
-GRID_SIZE: int = GRID_CHANNELS * DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_SIZE
+GRID_ENEMY_INFERENCE_SIZE: int = GRID_ENEMY_INFERENCE_CHANNELS * DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_SIZE
+GRID_PLAYER_INFERENCE_SIZE: int = GRID_PLAYER_INFERENCE_CHANNELS * DEFAULT_WINDOW_SIZE * DEFAULT_WINDOW_SIZE
 
 
 @dataclass
@@ -63,7 +65,7 @@ def _place_on_channel(
         if 0 <= lx < window_size and 0 <= ly < window_size:
             channel[ly, lx] = 1.0
 
-def _get_closest_enemy_distance(
+def get_closest_enemy_distance(
         *,
         px: float,
         py: float,
@@ -127,6 +129,8 @@ def _get_closest_enemy_distance(
 
 def build_observation(
     *,
+    is_player: bool,
+    is_cooperative: bool,
     map_grid: list | np.ndarray,
     map_width: int,
     map_height: int,
@@ -143,9 +147,11 @@ def build_observation(
     in_blast_zone: float,
     time_left: float,
     time_limit: float,
-    enemies_positions: list[tuple[float, float]] | None = None,
-    weapons_positions: list[tuple[float, float]] | None = None,
-    power_ups_positions: list[tuple[float, float]] | None = None,
+    closest_enemy: float,
+    enemies_positions: list[tuple[float, float]],
+    players_positions: list[tuple[float, float]],
+    weapons_positions: list[tuple[float, float]],
+    power_ups_positions: list[tuple[float, float]],
     window_size: int = DEFAULT_WINDOW_SIZE,
 ) -> ObservationData:
     width_cells: int = max(1, map_width)
@@ -169,6 +175,7 @@ def build_observation(
         grid_extent=terrain.shape[1],
         window_size=window_size,
     )
+
     start_y: int = _calc_window_origin(
         center=center_y,
         half=half,
@@ -202,6 +209,17 @@ def build_observation(
             window_size=window_size,
         )
 
+    ch_players: np.ndarray = np.zeros((window_size, window_size), dtype=np.float32)
+    if players_positions:
+        _place_on_channel(
+            channel=ch_players,
+            positions=players_positions,
+            cell_size=cell_size,
+            start_x=start_x,
+            start_y=start_y,
+            window_size=window_size,
+        )
+
     ch_weapons: np.ndarray = np.zeros((window_size, window_size), dtype=np.float32)
     if weapons_positions:
         _place_on_channel(
@@ -223,26 +241,22 @@ def build_observation(
             start_y=start_y,
             window_size=window_size,
         )
-
-    grid: np.ndarray = np.stack(
-        [terrain_window, ch_self, ch_enemies, ch_weapons, ch_powerups],
-        axis=0,
-    )
+    if is_player:
+        grid: np.ndarray = np.stack(
+            [terrain_window, ch_self, ch_players, ch_weapons, ch_enemies, ch_powerups],
+            axis=0,
+        )
+    else:
+        grid: np.ndarray = np.stack(
+            [terrain_window, ch_self, ch_players, ch_weapons],
+            axis=0,
+        )
 
     lives_norm: float = float(lives) / float(max(1, max_lives))
     enemy_norm: float = float(enemy_count) / float(max(1, max_enemies))
     bombs_left_norm: float = float(bombs_left) / float(max(1, max_bombs))
     invulnerable_val: float = 1.0 if is_invulnerable else 0.0
     time_left_norm: float = float(time_left) / float(max(1.0, time_limit)) if time_limit > 0 else 0.0
-
-    closest_enemy = _get_closest_enemy_distance(
-        px=entity_x,
-        py=entity_y,
-        enemies=enemies_positions,
-        cell_size=cell_size,
-        map_width=map_width,
-        map_height=map_height
-    )
 
     stats: list[float] = [
         closest_enemy,

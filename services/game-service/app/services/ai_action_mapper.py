@@ -26,7 +26,7 @@ def inputs_to_action(inputs: Inputs) -> int:
 
     return 0  # нет действия
 
-def action_to_direction(action: int, current: tuple[int, int]) -> tuple[int, int]:
+def action_to_direction(action: int, current: tuple[int, int] = (0, 0)) -> tuple[int, int]:
     if action == 0:
         return (0, 0)
     if action == 1:

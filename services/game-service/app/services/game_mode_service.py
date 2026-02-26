@@ -3,27 +3,26 @@ import random
 import time
 from collections import defaultdict
 
-import math
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, Optional
 
 from .team_service import TeamService
 from .ai_inference_service import AIInferenceService
 from .ai_action_mapper import action_to_inputs, action_to_direction
-from .ai_observation import build_observation
+from .ai_observation import build_observation, get_closest_enemy_distance
 from ..entities import Entity
 from ..entities.map import Map
-from ..entities.player import Player, UnitType, PlayerUpdate
+from ..entities.player import Player, PlayerUpdate
 from ..entities.enemy import Enemy, EnemyUpdate
 from ..entities.weapon import Weapon, WeaponType, WeaponUpdate, WeaponAction
 from ..entities.bomb import Bomb
 from ..entities.bullet import Bullet
 from ..entities.mine import Mine
-from ..entities.power_up import PowerUp, PowerUpType, PowerUpUpdate
+from ..entities.power_up import PowerUp, PowerUpType
 from ..models.game_models import GameSettings
 from ..services.map_service import MapService
-from ..models.map_models import MapState, PlayerState, EnemyState, WeaponState, PowerUpState, MapData, MapUpdate
+from ..models.map_models import MapState, PlayerState, EnemyState, WeaponState, PowerUpState, MapData
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +44,7 @@ class GameModeService(ABC):
         
         # Состояние игры
         self.players: Dict[str, Player] = {}
-        self.enemies: List[Enemy] = []
+        self.enemies: Dict[str, Enemy] = {}
         self.weapons: Dict[str, Weapon] = {}
         self.power_ups: Dict[str, PowerUp] = {}
         self.map: Optional[Map] = None
@@ -73,7 +72,7 @@ class GameModeService(ABC):
                 if not self.map:
                     logger.warning(f"Failed to load map from chain {self.settings.map_chain_id}, level {self.level}")
 
-            if not self.map:
+            else:
                 self.map = self.map_service.generate_random_map(
                     width=self.settings.default_map_width,
                     height=self.settings.default_map_height,
@@ -86,7 +85,8 @@ class GameModeService(ABC):
         except Exception as e:
             logger.error(f"Error initializing map: {e}", exc_info=True)
             self.map = Map(self.settings.default_map_width, self.settings.default_map_height)
-    
+
+
     def add_player(self, player: Player) -> bool:
         """Добавить игрока в игру"""
         try:
@@ -206,16 +206,16 @@ class GameModeService(ABC):
                 return {}
 
             result = defaultdict(dict)
-            # await self._apply_ai_actions(delta_time=delta_time)
+
+            # Обновляем врагов если включены
+            if self.settings.enable_enemies:
+                for enemy in list(self.enemies.values()):
+                    result["enemies_update"].update({enemy.id: self.update_enemy(enemy=enemy, delta_time=delta_time)})
+
             # Обновляем игроков
             for player in list(self.players.values()):
                 result["players_update"].update({player.id: self.update_player(player=player, delta_time=delta_time)})
-            
-            # Обновляем врагов если включены
-            if self.settings.enable_enemies:
-                for enemy in list(self.enemies):
-                    result["enemies_update"].update({enemy.id: self.update_enemy(enemy=enemy, delta_time=delta_time)})
-            
+
             # Обновляем оружие
             for weapon in list(self.weapons.values()):
                 result["weapons_update"].update({weapon.id: self.update_weapon(weapon=weapon, delta_time=delta_time)})
@@ -265,7 +265,7 @@ class GameModeService(ABC):
                     )
                     if is_player:
                         if action == 5:
-                            si_placed_weapon = self.place_weapon(player=entity, weapon_action=WeaponAction.PLACEWEAPON1)
+                            is_placed_weapon = self.place_weapon(player=entity, weapon_action=WeaponAction.PLACEWEAPON1)
                             entity.set_inputs(inputs=action_to_inputs(action=0))
                         else:
                             entity.set_inputs(inputs=action_to_inputs(action=action))
@@ -278,14 +278,22 @@ class GameModeService(ABC):
                             f"target cells reset"
                         )
             return
+        players_positions: list[tuple[float, float]] = []
+        max_enemies: int = 0
+        if is_player:
+            enemies_positions: list[tuple[float, float]] = [
+                (e.x, e.y) for e in self.enemies.values() if not e.is_alive() and e.id != entity_id
+            ]
+            max_enemies += self.map_service.enemy_count
+        else:
+            enemies_positions = []
 
-        enemies_positions: list[tuple[float, float]] = [
-            (e.x, e.y) for e in self.enemies if not e.is_alive() and e.id != entity_id
-        ]
-        if not is_cooperative:
-            enemies_positions.extend(
+
+        if not is_cooperative or not is_player:
+            players_positions.extend(
                 (p.x, p.y) for p in self.players.values() if p.is_alive() and p.id != entity_id
             )
+            max_enemies += self.settings.max_players
         weapons_positions: list[tuple[float, float]] = [
             (w.x, w.y) for w in self.weapons.values()
         ]
@@ -302,8 +310,26 @@ class GameModeService(ABC):
             max_lives_val = max(1, entity.lives)
 
         in_blast_zone: float = 1.0 if self.is_entity_in_any_blast_zone(entity_x=entity.x, entity_y=entity.y) else 0.0
+        entities_positions = []
+
+        if is_player:
+            entities_positions.extend(enemies_positions)
+        if not is_cooperative or not is_player:
+            entities_positions.extend(players_positions)
+
+        closest_enemy = get_closest_enemy_distance(
+            px=entity.x,
+            py=entity.y,
+            enemies=entities_positions,
+            cell_size=self.settings.cell_size,
+            map_width=self.map.width,
+            map_height=self.map.height
+        )
 
         obs_data = build_observation(
+            closest_enemy=closest_enemy,
+            is_player=is_player,
+            is_cooperative=is_cooperative,
             map_grid=self.map.grid,
             map_width=self.map.width,
             map_height=self.map.height,
@@ -312,8 +338,8 @@ class GameModeService(ABC):
             entity_y=entity.y,
             lives=entity.lives,
             max_lives=max_lives_val,
-            enemy_count=len(self.enemies),
-            max_enemies=self.map_service.enemy_count + (len(self.players) - 1),
+            enemy_count=len(enemies_positions),
+            max_enemies=max_enemies,
             bombs_left=max(0, max_bombs - active_bombs),
             max_bombs=max_bombs,
             is_invulnerable=entity.invulnerable,
@@ -321,6 +347,7 @@ class GameModeService(ABC):
             time_left=self.time_remaining,
             time_limit=float(self.settings.time_limit or 0),
             enemies_positions=enemies_positions,
+            players_positions=players_positions,
             weapons_positions=weapons_positions,
             power_ups_positions=power_ups_positions,
         )
@@ -335,11 +362,12 @@ class GameModeService(ABC):
             f"session={game_id}"
         )
         task = asyncio.create_task(
-            self.ai_inference_service.maybe_infer_action(
+            self.ai_inference_service.request_inference_action(
                 session_id=game_id,
                 entity_id=entity_id,
                 grid_values=obs_data.grid_values,
                 stats_values=obs_data.stats_values,
+                is_player=is_player
             )
         )
         self._ai_pending_tasks[entity_id] = task
@@ -357,7 +385,7 @@ class GameModeService(ABC):
         try:
             if not player.is_alive():
                 #TODO тут может нужно удалять игрока из списка, но не просто так, иначе в общем счете его не будет наверное
-                self.players.pop(player.id)
+                # self.players.pop(player.id)
                 return player.get_changes()
 
             if player.ai and player.can_handle_ai_action():
@@ -373,7 +401,7 @@ class GameModeService(ABC):
 
             # Проверка коллизии с врагами
             if not player.invulnerable and self.settings.enable_enemies:
-                for enemy in self.enemies:
+                for enemy in self.enemies.values():
                     if not enemy.destroyed and self.check_entity_collision(entity1=player, entity2=enemy):
                         logger.info(f"Player {player.id} hit by enemy {enemy.type.value}")
                         self.handle_player_hit(player=player)
@@ -389,7 +417,7 @@ class GameModeService(ABC):
                 self._cancel_ai_task(enemy.id)
                 enemy.destroy_animation_timer += delta_time
                 if enemy.destroy_animation_timer >= self.settings.destroy_animation_time:
-                    self.enemies.remove(enemy)
+                    self.enemies.pop(enemy.id)
                 return enemy.get_changes()
 
             if enemy.ai and enemy.can_handle_ai_action():
@@ -513,7 +541,7 @@ class GameModeService(ABC):
 
             # Проверка коллизии с врагами
             if self.settings.enable_enemies:
-                for enemy in list(self.enemies):
+                for enemy in list(self.enemies.values()):
                     if not enemy.destroyed and not enemy.invulnerable and self.check_explosion_collision(weapon=weapon, entity=enemy):
                         self.handle_enemy_hit(enemy=enemy, attacker_id=weapon.owner_id)
 
@@ -622,7 +650,7 @@ class GameModeService(ABC):
                 return
             
             enemies_data = self.map_service.generate_enemies_for_level(self.map, self.level)
-            self.enemies = []
+            self.enemies = {}
             
             for enemy_data in enemies_data:
                 enemy = Enemy(
@@ -635,7 +663,7 @@ class GameModeService(ABC):
                     settings=self.settings,
                     ai=ai_enemies
                 )
-                self.enemies.append(enemy)
+                self.enemies.update({enemy.id:enemy})
             
             logger.info(f"Created {len(self.enemies)} enemies for level {self.level}")
             
@@ -664,7 +692,7 @@ class GameModeService(ABC):
 
             enemies_data: dict[str, EnemyState] = {}
             if self.settings.enable_enemies:
-                for enemy in self.enemies:
+                for enemy in self.enemies.values():
                     enemies_data[enemy.id] = EnemyState(**enemy.get_changes(full_state=True))
 
             weapons_data: dict[str, WeaponState] = {}

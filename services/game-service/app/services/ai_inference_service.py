@@ -95,13 +95,14 @@ class AIInferenceService:
         )
         return min(delay, settings.AI_INFERENCE_BACKOFF_MAX_SEC)
 
-    async def maybe_infer_action(
+    async def request_inference_action(
         self,
         *,
         session_id: str | None,
         entity_id: str,
         grid_values: list[float],
         stats_values: list[float],
+        is_player: bool = True
     ) -> int | None:
         if not self._can_request_action(entity_id=entity_id):
             return None
@@ -124,10 +125,16 @@ class AIInferenceService:
             ),
         )
         try:
-            response = await asyncio.wait_for(
-                self._stub.InferAction(request),
-                timeout=settings.AI_INFERENCE_TIMEOUT_SEC,
-            )
+            if is_player:
+                response = await asyncio.wait_for(
+                    self._stub.InferPlayerAction(request),
+                    timeout=settings.AI_INFERENCE_TIMEOUT_SEC,
+                )
+            else:
+                response = await asyncio.wait_for(
+                    self._stub.InferEnemyAction(request),
+                    timeout=settings.AI_INFERENCE_TIMEOUT_SEC,
+                )
             self._consecutive_errors = 0
             return int(response.action)
         except asyncio.TimeoutError as exc:

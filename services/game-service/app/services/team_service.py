@@ -1,5 +1,7 @@
 from typing import Dict, List, Optional
 import random
+
+from app.entities import Entity
 from app.entities.team import Team
 from app.models.team_models import TeamModeSettings
 from app.entities.game_mode import GameModeType
@@ -111,7 +113,7 @@ class TeamService:
             
             self.create_team(team_name)
     
-    def auto_distribute_players(self, players: List[Player], redistribute_existing: bool = False) -> None:
+    def auto_distribute_players(self, players: List[Entity], redistribute_existing: bool = False) -> None:
         """Автоматически распределяет игроков по командам."""
         if not self.mode_settings.auto_distribute_players:
             return

@@ -11,6 +11,9 @@ class Map:
     """Упрощенный класс карты без логики генерации"""
     
     def __init__(self, width: int, height: int):
+        self.new_map(width=width, height=height)
+
+    def new_map(self, width: int, height: int):
         try:
             self.width: int = width
             self.height: int = height
@@ -18,7 +21,7 @@ class Map:
             self.grid: np.ndarray = np.zeros((height, width), dtype=np.int8)
             # Для отслеживания изменений на карте
             self.changed_cells: list[MapUpdate] = []
-            
+
             logger.info(f"Map initialized with dimensions {width}x{height}")
         except Exception as e:
             logger.error(f"Error initializing map: {e}", exc_info=True)
@@ -60,10 +63,10 @@ class Map:
                 return
             
             old_type = self.grid[y, x]
-            self.grid[y, x] = int(cell_type)
+            self.grid[y, x] = cell_type.value
             
             # Отслеживаем изменения если тип действительно изменился
-            if old_type != int(cell_type):
+            if old_type != cell_type.value:
                 self.changed_cells.append(
                     MapUpdate(
                         x = x,
@@ -81,7 +84,7 @@ class Map:
         offsets = [(-1, 0), (0, -1), (0, 1), (1, 0)]# только верх низ право лево
         neighbors = [(dx, dy) for dx, dy in offsets
                      if 0 <= x + dx < self.width and 0 <= y + dy < self.height
-                     and self.grid[y + dy, x + dx] not in [CellType.SOLID_WALL.value, CellType.BREAKABLE_BLOCK.value]]
+                     and self.grid[y + dy, x + dx] not in {CellType.SOLID_WALL.value, CellType.BREAKABLE_BLOCK.value, CellType.BLOCKED_BOMB.value}]
         return neighbors
     
     def is_wall(self, x: int, y: int) -> bool:
@@ -95,7 +98,7 @@ class Map:
     def is_solid(self, x: int, y: int) -> bool:
         """Проверяет, является ли ячейка твердой (стена или разрушаемый блок)"""
         cell_type = self.get_cell_type(x, y)
-        return cell_type in (CellType.SOLID_WALL, CellType.BREAKABLE_BLOCK, CellType.BLOCKED_BOMB)
+        return cell_type in {CellType.SOLID_WALL, CellType.BREAKABLE_BLOCK, CellType.BLOCKED_BOMB}
     
     def is_empty(self, x: int, y: int) -> bool:
         """Проверяет, является ли ячейка пустой"""
@@ -111,7 +114,7 @@ class Map:
                 return False
             
             # Разрушаем только разрушаемые блоки
-            if self.grid[y, x] == CellType.BREAKABLE_BLOCK:
+            if self.is_breakable_block(x=x, y=y):
                 self.set_cell_type(x, y, CellType.EMPTY)
                 logger.debug(f"Block destroyed at ({x}, {y})")
                 return True
@@ -129,7 +132,7 @@ class Map:
         """Получить список пустых клеток на карте с возможностью исключения клеток рядом с игроками"""
         try:
             # Находим все пустые клетки с помощью numpy
-            empty_mask = (self.grid == CellType.EMPTY)
+            empty_mask = (self.grid == CellType.EMPTY.value)
             empty_coords = np.where(empty_mask)
             empty_cells = list(zip(empty_coords[1], empty_coords[0]))  # (x, y) координаты
             
@@ -169,7 +172,7 @@ class Map:
             Список координат (x, y) для spawn точек
         """
         try:
-            spawn_mask = (self.grid == CellType.PLAYER_SPAWN)
+            spawn_mask = (self.grid == CellType.PLAYER_SPAWN.value)
             spawn_coords = np.where(spawn_mask)
             spawn_positions = list(zip(spawn_coords[1], spawn_coords[0]))  # (x, y) координаты
             
@@ -194,7 +197,7 @@ class Map:
     ) -> List[Tuple[int, int]]:
         """Получить позиции спавна врагов с возможностью исключения позиций рядом с игроками"""
         try:
-            spawn_mask = (self.grid == CellType.ENEMY_SPAWN)
+            spawn_mask = (self.grid == CellType.ENEMY_SPAWN.value)
             spawn_coords = np.where(spawn_mask)
             spawn_positions = list(zip(spawn_coords[1], spawn_coords[0]))  # (x, y) координаты
             

@@ -5,6 +5,7 @@ from enum import Enum
 from typing import Dict, Any, Callable, TYPE_CHECKING
 from nats.aio.msg import Msg
 
+from ..config import settings
 
 if TYPE_CHECKING:
     from ..repositories.nats_repository import NatsRepository
@@ -103,7 +104,7 @@ class EventService:
             response = await self.nats_repository.request(
                 subject="ai.instance.request",
                 payload=json.dumps({"resource_type": "cpu"}).encode(),
-                timeout=5.0
+                timeout=settings.NATS_TIMEOUT
             )
             result = json.loads(response.data.decode())
             if result.get('success') and result.get('instance'):

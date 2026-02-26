@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional, List
-from uuid import uuid4
+from uuid import uuid4, UUID
 
 from pydantic import BaseModel, Field, computed_field
 
@@ -138,6 +138,7 @@ class GameSettingsUpdate(BaseModel):
 
 class GameCreateSettings(GameSettingsUpdate):
     # Режим игры
+    game_id: str
     game_mode: GameModeType = GameModeType.CAMPAIGN
 
 
@@ -169,6 +170,7 @@ class GameSettings(BaseModel):
     mine_timer: float = 5.0
 
     # Настройки врагов
+    enemy_on_start: int = 0
     enemy_count_multiplier: float = 1.0
     enemy_invulnerable_time: float = 2.0
     enemy_ai_controlled: bool = True
@@ -179,6 +181,10 @@ class GameSettings(BaseModel):
     player_destroy_score: int = 500
     powerup_collect_score: int = 80
     level_complete_score: int = 500
+    timeout_enemy_win_score: int = 300
+
+    #параметр исключительно для режима тренеровки чтобы переопределять режим победы
+    ai_training_player: bool = True
 
     #очки при обучении AI модели
     player_moved_score: int = -1
@@ -191,6 +197,8 @@ class GameSettings(BaseModel):
     player_hit_score: int = 500
     enemy_hit_score: int = 500
     game_over_score: int = -500# не учитываем если игра проиграна после player destroyed
+    in_blast_zone_score: int = -5
+    compensation_move_toward_enemy_score: int = 2
 
 
     # Вероятности появления
@@ -256,7 +264,7 @@ class GameSettings(BaseModel):
                 return TeamModeSettings(
                     game_mode=GameModeType.TRAINING_IA,
                     default_team_count=0,
-                    max_team_count=10,
+                    max_team_count=30,
                     min_players_per_team=1,
                     max_players_per_team=1,
                     auto_distribute_players=True,

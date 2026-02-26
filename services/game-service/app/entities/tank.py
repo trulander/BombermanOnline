@@ -19,19 +19,19 @@ class Tank(Player):
 
     def __init__(
             self,
-            id: str,
             size: float,
             map: "Map",
             settings: "GameSettings",
             ai: bool = False,
+            id: str | None = None,
     ):
         try:
             super().__init__(
-                id=id,
                 size=size,
                 map=map,
                 settings=settings,
-                ai=ai
+                ai=ai,
+                id=id,
             )
             self.team_id: str | None = None
             self.direction: tuple[float, float] = (0, 1)

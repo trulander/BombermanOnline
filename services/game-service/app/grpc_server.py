@@ -74,6 +74,7 @@ class GameServiceServicer:
             count_bombs=request.count_bombs,
             player_lives=request.player_lives,
             seed=request.seed if request.seed != 0 else None,
+            training_player=request.training_player
         )
         return bomberman_ai_pb2.TrainingResetResponse(
             session_id=result.session_id,

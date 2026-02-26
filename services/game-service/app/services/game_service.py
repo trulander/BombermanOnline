@@ -115,7 +115,7 @@ class GameService:
             raise
 
 
-    def add_player(self, player_id: str, unit_type: UnitType = UnitType.BOMBERMAN, ai_player: bool = False) -> dict:
+    def add_player(self, player_id: str = None, unit_type: UnitType = UnitType.BOMBERMAN, ai_player: bool = False) -> dict:
         """Добавить игрока в игру"""
         try:
             if self.status not in [GameStatus.PENDING]:

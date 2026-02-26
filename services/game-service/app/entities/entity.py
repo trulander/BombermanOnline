@@ -19,6 +19,47 @@ logger = logging.getLogger(__name__)
 class Entity:
     """Базовый класс для всех игровых сущностей."""
     scale_size: float = 1.0
+    # _frontend_x: float = 0.0
+    # _map_x: int = 0
+    # _frontend_y: float = 0.0
+    # _map_y: int = 0
+    #
+    # @property
+    # def map_x(self):
+    #     return self._map_x
+    #
+    # @map_x.setter
+    # def map_x(self, value):
+    #     self._map_x = value
+    #     self._frontend_x = value * self.settings.cell_size
+    #
+    # @property
+    # def frontend_y(self):
+    #     return self._frontend_y
+    #
+    # @frontend_y.setter
+    # def frontend_y(self, value):
+    #     self._frontend_y = value
+    #     self._map_y = round(value / self.settings.cell_size)
+    #
+    # @property
+    # def map_y(self):
+    #     return self._map_y
+    #
+    # @map_y.setter
+    # def map_y(self, value):
+    #     self._map_y = value
+    #     self._frontend_x = value * self.settings.cell_size
+    #
+    # @property
+    # def frontend_y(self):
+    #     return self._frontend_y
+    #
+    # @frontend_y.setter
+    # def frontend_x(self, value):
+    #     self._frontend_y = value
+    #     self._map_y = round(value / self.settings.cell_size)
+
 
     def __init__(
         self,
@@ -85,7 +126,7 @@ class Entity:
         и базироваться на своей моделе обновлений данных"""
         return self._state
 
-    def get_direction(self, delta_time: float) -> tuple[float, float]:
+    def get_direction(self, delta_time: float) -> tuple[int, int]:
         """Get a random normalized direction vector"""
         try:
             # рассчет движерия ботов

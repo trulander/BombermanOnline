@@ -41,6 +41,7 @@ class Settings(BaseSettings):
 
     # NATS settings
     NATS_URL: str = "nats://localhost:4222"
+    NATS_TIMEOUT: float = 5
 
     # Logging settings
     LOG_LEVEL: str = "INFO"
@@ -54,7 +55,7 @@ class Settings(BaseSettings):
     AI_ACTION_INTERVAL: float = 0.33  # минимальный интервал в секундах между командами AI (3 команды/сек)
 
     # AI inference resilience: timeout for gRPC InferAction (seconds)
-    AI_INFERENCE_TIMEOUT_SEC: float = 1.0
+    AI_INFERENCE_TIMEOUT_SEC: float = 5.0
     # Backoff after consecutive inference errors: initial delay, step, max delay (seconds)
     AI_INFERENCE_BACKOFF_INITIAL_SEC: float = 0.5
     AI_INFERENCE_BACKOFF_STEP_SEC: float = 0.5
