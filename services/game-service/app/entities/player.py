@@ -96,6 +96,15 @@ class Player(Entity, ABC):
             logger.error(f"Error creating player {id}: {e}", exc_info=True)
             raise
 
+    def refresh_dead_player(self):
+        self.destroyed = False
+        self.lives = self.settings.player_start_lives
+        self.primary_weapon_max_count: int = self.settings.default_count_bombs
+        self.primary_weapon_power: int = self.settings.default_bomb_power
+        self.secondary_weapon: WeaponType = None
+        self.secondary_weapon_max_count: int = 1
+        self.secondary_weapon_power: int = 1
+
     def is_alive(self):
         if not self.destroyed or (not self.disconnected and time.time() - self.disconnected_time < self.settings.destroy_disconnected_time):
             return True

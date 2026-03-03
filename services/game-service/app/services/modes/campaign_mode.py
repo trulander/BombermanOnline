@@ -122,6 +122,8 @@ class CampaignMode(GameModeService):
                     x, y = spawn_positions[i]
                     player.x = x * self.settings.cell_size
                     player.y = y * self.settings.cell_size
+                    if not player.is_alive():
+                        player.refresh_dead_player()
                     
         except Exception as e:
             logger.error(f"Error handling level completion: {e}", exc_info=True) 
