@@ -23,6 +23,7 @@ class Map:
             self.changed_cells: list[MapUpdate] = []
 
             logger.info(f"Map initialized with dimensions {width}x{height}")
+            return self
         except Exception as e:
             logger.error(f"Error initializing map: {e}", exc_info=True)
             raise

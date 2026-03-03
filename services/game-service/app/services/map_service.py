@@ -21,15 +21,17 @@ class MapService:
         self.game_settings = game_settings
         self.enemy_count = 0
         
-    async def create_map_from_template(self, template_id: str) -> Optional[Map]:
+    async def create_map_from_template(self, template_id: str, map_instance: Map | None = None) -> Optional[Map]:
         """Создать карту на основе шаблона из базы данных"""
         try:
             template = await self.map_repository.get_map_template(template_id)
             if not template:
                 logger.warning(f"Map template {template_id} not found")
                 return None
-            
-            game_map = Map(width=template.width, height=template.height)
+            if not map_instance:
+                game_map = Map(width=template.width, height=template.height)
+            else:
+                game_map = map_instance.new_map(width=template.width, height=template.height)
             game_map.load_from_template(template.grid_data)
             
             logger.info(f"Map created from template {template_id}: {template.width}x{template.height}")
@@ -39,7 +41,7 @@ class MapService:
             logger.error(f"Error creating map from template {template_id}: {e}", exc_info=True)
             return None
     
-    async def create_map_from_chain(self, chain_id: str, level_index: int = 0) -> Optional[Map]:
+    async def create_map_from_chain(self, chain_id: str, level_index: int = 0, map_instance: Map | None = None) -> Optional[Map]:
         """Создать карту из цепочки карт по индексу уровня"""
         try:
             chain = await self.map_repository.get_map_chain(chain_id)
@@ -52,13 +54,13 @@ class MapService:
                 return None
                 
             template_id = chain.map_ids[level_index]
-            return await self.create_map_from_template(template_id)
+            return await self.create_map_from_template(template_id=template_id, map_instance=map_instance)
             
         except Exception as e:
             logger.error(f"Error creating map from chain {chain_id}, level {level_index}: {e}", exc_info=True)
             return None
     
-    async def create_map_from_group(self, group_id: str) -> Optional[Map]:
+    async def create_map_from_group(self, group_id: str, map_instance: Map | None = None) -> Optional[Map]:
         """Создать случайную карту из группы карт"""
         try:
             group = await self.map_repository.get_map_group(group_id)
@@ -72,16 +74,20 @@ class MapService:
                 
             # Выбираем случайную карту из группы
             template_id = random.choice(group.map_ids)
-            return await self.create_map_from_template(template_id)
+            return await self.create_map_from_template(template_id=template_id, map_instance=map_instance)
             
         except Exception as e:
             logger.error(f"Error creating map from group {group_id}: {e}", exc_info=True)
             return None
     
-    def generate_random_map(self, width: int, height: int, difficulty: int = 1) -> Map:
+    def generate_random_map(self, width: int, height: int, difficulty: int = 1, map_instance: Map | None = None) -> Map:
         """Генерировать случайную карту"""
         try:
-            game_map = Map(width=width, height=height)
+            if not map_instance:
+                game_map = Map(width=width, height=height)
+            else:
+                game_map = map_instance.new_map(width=width, height=height)
+
             
             # Заполняем границы твердыми стенами
             self._add_border_walls(game_map)
@@ -107,7 +113,11 @@ class MapService:
         except Exception as e:
             logger.error(f"Error generating random map: {e}", exc_info=True)
             # Возвращаем базовую карту при ошибке
-            return Map(width=width, height=height)
+            if not map_instance:
+                return Map(width=width, height=height)
+            else:
+                return map_instance.new_map(width=width, height=height)
+
     
     def _add_border_walls(self, game_map: Map) -> None:
         """Добавить стены по границам карты"""

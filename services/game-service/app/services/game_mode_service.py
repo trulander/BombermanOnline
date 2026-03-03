@@ -59,7 +59,7 @@ class GameModeService(ABC):
         """Инициализировать карту для игры"""
         try:
             if self.settings.map_template_id:
-                self.map = await self.map_service.create_map_from_template(self.settings.map_template_id)
+                self.map = await self.map_service.create_map_from_template(template_id=self.settings.map_template_id, map_instance=self.map)
                 if not self.map:
                     logger.warning(f"Failed to load map from chain {self.settings.map_template_id}, level {self.level}")
 
@@ -67,7 +67,8 @@ class GameModeService(ABC):
                 # Загрузка из цепочки карт с учетом текущего уровня
                 self.map = await self.map_service.create_map_from_chain(
                     chain_id=self.settings.map_chain_id,
-                    level_index=self.level - 1
+                    level_index=self.level - 1,
+                    map_instance=self.map
                 )
                 if not self.map:
                     logger.warning(f"Failed to load map from chain {self.settings.map_chain_id}, level {self.level}")
@@ -76,7 +77,8 @@ class GameModeService(ABC):
                 self.map = self.map_service.generate_random_map(
                     width=self.settings.default_map_width,
                     height=self.settings.default_map_height,
-                    difficulty=self.level
+                    difficulty=self.level,
+                    map_instance=self.map
                 )
             
             # Создаем врагов если включены
@@ -84,7 +86,12 @@ class GameModeService(ABC):
                 self._create_enemies(ai_enemies=self.settings.enemy_ai_controlled)
         except Exception as e:
             logger.error(f"Error initializing map: {e}", exc_info=True)
-            self.map = Map(self.settings.default_map_width, self.settings.default_map_height)
+            self.map = self.map_service.generate_random_map(
+                    width=self.settings.default_map_width,
+                    height=self.settings.default_map_height,
+                    difficulty=self.level,
+                    map_instance=self.map
+                )
 
 
     def add_player(self, player: Player) -> bool:

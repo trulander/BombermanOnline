@@ -388,7 +388,7 @@ class GameService:
         """Получить состояние игры"""
         try:
             state = self.game_mode.get_state()
-            state.status = self.status.value
+            state.status = self.status
             state.is_active = self.is_active()
 
             # Добавляем состояние команд из TeamService

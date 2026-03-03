@@ -170,7 +170,7 @@ class GameSettings(BaseModel):
     mine_timer: float = 5.0
 
     # Настройки врагов
-    enemy_on_start: int = 0
+    enemy_on_start: int = 3
     enemy_count_multiplier: float = 1.0
     enemy_invulnerable_time: float = 2.0
     enemy_ai_controlled: bool = True
