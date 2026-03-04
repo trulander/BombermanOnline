@@ -221,7 +221,8 @@ class GameModeService(ABC):
 
             # Обновляем игроков
             for player in list(self.players.values()):
-                result["players_update"].update({player.id: self.update_player(player=player, delta_time=delta_time)})
+                if player.is_alive():
+                    result["players_update"].update({player.id: self.update_player(player=player, delta_time=delta_time)})
 
             # Обновляем оружие
             for weapon in list(self.weapons.values()):
@@ -390,10 +391,10 @@ class GameModeService(ABC):
     def update_player(self, player: Player, delta_time: float) -> PlayerUpdate | None:
         """Обновить одного игрока"""
         try:
-            if not player.is_alive():
-                #TODO тут может нужно удалять игрока из списка, но не просто так, иначе в общем счете его не будет наверное
-                # self.players.pop(player.id)
-                return player.get_changes()
+            # if not player.is_alive():
+            #     #TODO тут может нужно удалять игрока из списка, но не просто так, иначе в общем счете его не будет наверное
+            #     # self.players.pop(player.id)
+            #     return player.get_changes()
 
             if player.ai and player.can_handle_ai_action():
                 self._handle_ai_action(entity=player, is_cooperative=False)

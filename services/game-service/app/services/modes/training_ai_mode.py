@@ -197,7 +197,8 @@ class TrainingAiMode(GameModeService):
 
             # Обновляем игроков
             for player in list(self.players.values()):
-                result["players_update"].update({player.id: self.update_player(player=player, delta_time=delta_time)})
+                if player.is_alive():
+                    result["players_update"].update({player.id: self.update_player(player=player, delta_time=delta_time)})
 
             # Обновляем оружие
             for weapon in list(self.weapons.values()):

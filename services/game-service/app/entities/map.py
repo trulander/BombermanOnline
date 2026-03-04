@@ -1,5 +1,5 @@
 import logging
-from typing import List, Dict, Tuple
+from typing import List, Tuple
 import numpy as np
 from .cell_type import CellType
 from ..models.map_models import MapData, MapUpdate
@@ -13,7 +13,7 @@ class Map:
     def __init__(self, width: int, height: int):
         self.new_map(width=width, height=height)
 
-    def new_map(self, width: int, height: int):
+    def new_map(self, width: int, height: int) -> "Map":
         try:
             self.width: int = width
             self.height: int = height

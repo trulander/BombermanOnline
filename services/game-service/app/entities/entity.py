@@ -271,23 +271,22 @@ class Entity:
 
     def _move_continuous(self, delta_time: float) -> bool:
         """
-        Continuous movement for non-AI entities (original logic).
+        Continuous movement for non-AI entities (оригинальная логика + corner assist).
         
         Returns:
-            True if movement occurred, False otherwise
+            True если было движение, False иначе.
         """
         try:
-            dx, dy = self.get_direction(delta_time=delta_time)
-            # Попытка движения в текущем направлении
-            dx: float = dx * self.speed
-            dy: float = dy * self.speed
+            # Получаем желаемое направление движения от сущности
+            dx_raw, dy_raw = self.get_direction(delta_time=delta_time)
 
-            # Применяем delta time
+            # Преобразуем направление в шаг с учётом скорости и delta time
+            dx: float = dx_raw * self.speed
+            dy: float = dy_raw * self.speed
+
             dx *= delta_time * 60
             dy *= delta_time * 60
 
-            # Движение с проверкой коллизий (ось X)
-            # Движение с проверкой коллизий (ось Y)
             if dx != 0 or dy != 0:
                 new_x: float = self.x + dx
                 new_y: float = self.y + dy
@@ -295,18 +294,45 @@ class Entity:
                 # чтобы сразу отсечь невозможные направления и вернуть только то что возможно
                 # Move with collision detection (X axis)
                 collision_x = self.check_collision(new_x, self.y)
+                # Corner assist при движении только по X
+                if collision_x and dy == 0:
+                    assist_result = self._try_corner_assist(
+                        move_dx=dx,
+                        move_dy=0.0,
+                    )
+                    if assist_result is not None:
+                        assist_x, assist_y = assist_result
+                        self.x = assist_x
+                        self.y = assist_y
+                        # Перепроверяем коллизию уже из выровненной позиции
+                        collision_x = self.check_collision(new_x, self.y)
+
+                # Проверка коллизии по оси Y
+                collision_y = self.check_collision(self.x, new_y)
+                # Corner assist при движении только по Y
+                if collision_y and dx == 0:
+                    assist_result = self._try_corner_assist(
+                        move_dx=0.0,
+                        move_dy=dy,
+                    )
+                    if assist_result is not None:
+                        assist_x, assist_y = assist_result
+                        self.x = assist_x
+                        self.y = assist_y
+                        # Перепроверяем коллизию уже из выровненной позиции
+                        collision_y = self.check_collision(self.x, new_y)
+
                 if not collision_x:
                     self.x = new_x
 
-                # Move with collision detection (Y axis)
-                collision_y = self.check_collision(self.x, new_y)
                 if not collision_y:
                     self.y = new_y
 
-                # If collision occurred, change direction
+                # Если была коллизия по любой оси — даём сигнал сменить направление
                 if collision_x or collision_y:
                     self.move_timer = 10
                     self.direction = self.get_direction(delta_time=delta_time)
+
                 return True
 
             return False
@@ -408,6 +434,74 @@ class Entity:
         except Exception as e:
             logger.error(f"Error updating entity {self.id} ({self.name}): {e}", exc_info=True)
             return False
+
+    def _try_corner_assist(
+        self,
+        *,
+        move_dx: float,
+        move_dy: float,
+    ) -> tuple[float, float] | None:
+        """
+        Attempt to slightly align entity to grid line to allow a turn.
+
+        Используется только для непрерывного движения non-AI сущностей.
+        Если движение по одной оси блокируется стеной, метод пытается
+        выровнять сущность по перпендикулярной оси к ближайшей линии
+        сетки (кратной размеру клетки), если смещение не превышает
+        половину клетки.
+
+        Args:
+            move_dx: Шаг движения по оси X (0 если движение по Y).
+            move_dy: Шаг движения по оси Y (0 если движение по X).
+
+        Returns:
+            Кортеж (new_x, new_y) с выровненной позицией или None,
+            если автоподтягивание недоступно или невозможно без коллизии.
+        """
+        try:
+            # Разрешаем corner assist только при движении строго по одной оси
+            moving_horizontal: bool = move_dx != 0 and move_dy == 0
+            moving_vertical: bool = move_dy != 0 and move_dx == 0
+
+            if not moving_horizontal and not moving_vertical:
+                return None
+
+            cell_size: float = float(self.settings.cell_size)
+            half_cell: float = cell_size * 0.5
+
+            # Выравнивание по оси, перпендикулярной движению
+            if moving_horizontal:
+                # Двигаемся по X, выравниваемся по Y к ближайшей линии сетки
+                current_y: float = self.y
+                target_line_y: float = round(current_y / cell_size) * cell_size
+                distance_y: float = abs(target_line_y - current_y)
+
+                # Если сущность слишком далеко от центра полосы, не тянем
+                if distance_y > half_cell:
+                    return None
+
+                # Проверяем, что выравнивание по Y не приведёт к коллизии
+                if not self.check_collision(self.x, target_line_y):
+                    return self.x, target_line_y
+
+            if moving_vertical:
+                # Двигаемся по Y, выравниваемся по X к ближайшей линии сетки
+                current_x: float = self.x
+                target_line_x: float = round(current_x / cell_size) * cell_size
+                distance_x: float = abs(target_line_x - current_x)
+
+                # Если сущность слишком далеко от центра полосы, не тянем
+                if distance_x > half_cell:
+                    return None
+
+                # Проверяем, что выравнивание по X не приведёт к коллизии
+                if not self.check_collision(target_line_x, self.y):
+                    return target_line_x, self.y
+
+            return None
+        except Exception as e:
+            logger.error(f"Error in corner assist: {e}", exc_info=True)
+            return None
 
     def _is_on_grid_cell(self, tolerance: float = 0.1) -> bool:
         """
